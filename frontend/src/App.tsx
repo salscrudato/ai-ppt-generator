@@ -71,13 +71,29 @@ export default function App() {
     updateState({ loading: true, error: undefined });
 
     try {
-      // Remove design field to avoid validation errors with enhanced backend
-      const { design, ...cleanParams } = params;
+      // Prepare request data
+      const { image, design, ...cleanParams } = params;
+
+      let requestBody: string | FormData;
+      let headers: Record<string, string> = {};
+
+      if (image) {
+        // Use FormData for image uploads
+        const formData = new FormData();
+        formData.append('image', image);
+        formData.append('data', JSON.stringify(cleanParams));
+        requestBody = formData;
+        // Don't set Content-Type header - let browser set it with boundary
+      } else {
+        // Use JSON for text-only requests
+        requestBody = JSON.stringify(cleanParams);
+        headers['Content-Type'] = 'application/json';
+      }
 
       const response = await fetch(API_ENDPOINTS.draft, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanParams)
+        headers,
+        body: requestBody
       });
 
       if (!response.ok) {

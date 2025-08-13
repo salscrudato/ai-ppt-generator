@@ -1,10 +1,10 @@
 /**
  * Optimized Zod Schema Definitions for AI PowerPoint Generator
  *
- * Enhanced schemas with support for chained generation and image integration.
- * Ensures data integrity for multi-step AI processes and professional outputs.
+ * Enhanced schemas with support for chained generation, image integration, and advanced layouts.
+ * Ensures data integrity for multi-step AI processes and professional outputs, with improved validation for accessibility, readability, and content quality.
  *
- * @version 3.3.0-enhanced
+ * @version 3.5.0-enhanced
  * @author AI PowerPoint Generator Team (enhanced by expert co-pilot)
  */
 
@@ -60,12 +60,13 @@ export const SLIDE_LAYOUTS = [
 
 export type SlideLayout = typeof SLIDE_LAYOUTS[number];
 
-// Content type definitions for better validation
+// Content type definitions for better validation, with added support for icons and metrics
 const ContentItemSchema = z.object({
   type: z.enum(['text', 'bullet', 'number', 'icon', 'metric']),
   content: VALIDATION_PATTERNS.shortText,
   emphasis: z.enum(['normal', 'bold', 'italic', 'highlight']).optional(),
-  color: VALIDATION_PATTERNS.colorHex.optional()
+  color: VALIDATION_PATTERNS.colorHex.optional(),
+  iconName: z.string().max(50, 'Icon name too long').optional() // New: Support for icon names
 });
 
 /**
@@ -107,7 +108,8 @@ export const SlideSpecSchema = z.object({
       label: VALIDATION_PATTERNS.shortText,
       value: z.string().max(20, 'Metric value too long'),
       unit: z.string().max(10, 'Unit too long').optional()
-    })).max(5, 'Maximum 5 metrics per column').optional()
+    })).max(5, 'Maximum 5 metrics per column').optional(),
+    imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional() // New: Support for images in left column
   }).optional(),
 
   /** Two-column layout support - right column content with enhanced image and metrics support */
@@ -184,7 +186,8 @@ export const SlideSpecSchema = z.object({
       primary: VALIDATION_PATTERNS.colorHex.optional(),
       secondary: VALIDATION_PATTERNS.colorHex.optional(),
       accent: VALIDATION_PATTERNS.colorHex.optional(),
-      fontFamily: VALIDATION_PATTERNS.fontFamily.optional()
+      fontFamily: VALIDATION_PATTERNS.fontFamily.optional(),
+      logo: VALIDATION_PATTERNS.url.optional()
     }).optional()
   }).optional(),
 
@@ -194,7 +197,10 @@ export const SlideSpecSchema = z.object({
   /** Source citations for credibility and references */
   sources: z.array(z.string().url('Must be a valid URL').or(z.string().min(1)))
     .max(5, 'Maximum 5 sources allowed')
-    .optional()
+    .optional(),
+
+  /** New: Image prompt for full-image layouts */
+  imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional()
 });
 
 /** TypeScript type inferred from the slide specification schema */
@@ -205,7 +211,7 @@ export type SlideSpec = z.infer<typeof SlideSpecSchema>;
  * Comprehensive validation and sanitization for AI-powered slide generation with multi-scenario support
  */
 export const GenerationParamsSchema = z.object({
-  /** User's input prompt - the core content description with enhanced validation */
+  /** User's input prompt - the the core content description with enhanced validation */
   prompt: z.string()
     .min(10, 'Prompt must be at least 10 characters for meaningful content generation')
     .max(2000, 'Prompt must be under 2000 characters for optimal AI processing')

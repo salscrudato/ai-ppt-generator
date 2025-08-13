@@ -200,7 +200,7 @@ export default function SlidePreview({
                         "w-4 h-4 rounded-full flex-shrink-0",
                         item.milestone ? "bg-indigo-600" : "bg-indigo-400"
                       )} />
-                      {index < draft.timeline.length - 1 && (
+                      {index < (draft.timeline?.length || 0) - 1 && (
                         <div className="w-0.5 h-12 bg-indigo-200 mt-2" />
                       )}
                     </div>

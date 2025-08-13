@@ -73,6 +73,17 @@ export default function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
+  // Filter out conflicting props to avoid conflicts with motion.button
+  const {
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    ...buttonProps
+  } = props;
+
   return (
     <motion.button
       className={clsx(
@@ -87,7 +98,7 @@ export default function Button({
       whileHover={!isDisabled ? { scale: 1.02, y: -1 } : {}}
       whileTap={!isDisabled ? { scale: 0.98 } : {}}
       transition={{ duration: 0.2 }}
-      {...props}
+      {...buttonProps}
     >
       {loading ? (
         <div className="flex items-center justify-center gap-2">
@@ -131,6 +142,17 @@ export function IconButton({
     lg: 'w-12 h-12'
   };
 
+  // Filter out conflicting props to avoid conflicts with motion.button
+  const {
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    ...buttonProps
+  } = props;
+
   return (
     <motion.button
       className={clsx(
@@ -143,7 +165,7 @@ export function IconButton({
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      {...props}
+      {...buttonProps}
     >
       {icon}
     </motion.button>

@@ -13,7 +13,7 @@ export interface SlideSpec {
   title: string;
 
   /** The layout type that determines how content is arranged on the slide */
-  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution';
+  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution' | 'mixed-content';
 
   /** Bullet points for scannable, list-based content */
   bullets?: string[];
@@ -26,6 +26,11 @@ export interface SlideSpec {
     heading?: string;
     bullets?: string[];
     paragraph?: string;
+    metrics?: Array<{
+      value: string;
+      label: string;
+      unit?: string;
+    }>;
   };
 
   /** Right column content for two-column layouts */
@@ -34,6 +39,11 @@ export interface SlideSpec {
     bullets?: string[];
     paragraph?: string;
     imagePrompt?: string;
+    metrics?: Array<{
+      value: string;
+      label: string;
+      unit?: string;
+    }>;
   };
 
   /** Timeline configuration for chronological content */
@@ -90,9 +100,15 @@ export interface GenerationParams {
   /** Desired content length and detail level */
   contentLength?: 'brief' | 'moderate' | 'detailed';
 
+  /** Preferred layout type for the slide */
+  layout?: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution';
+
+  /** User-uploaded image file */
+  image?: File;
+
   /** Design and layout preferences */
   design?: {
-    layout?: string;
+    theme?: string;
     layoutName?: string;
     brand?: {
       primary?: string;
@@ -101,8 +117,6 @@ export interface GenerationParams {
       fontFamily?: string;
     };
   };
-
-
 }
 
 /**

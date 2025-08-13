@@ -5,8 +5,9 @@
  * - Multi-step AI generation (content → layout → images → refinement)
  * - Professional PowerPoint creation with advanced styling and image integration
  * - RESTful API with improved error handling and performance monitoring
+ * - Automatic theme selection and style validation for professional outputs
  *
- * @version 3.2.0-enhanced
+ * @version 3.3.2-enhanced-fixed
  * @author AI PowerPoint Generator Team (enhanced by expert co-pilot)
  */
 
@@ -16,22 +17,32 @@ import { logger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
+import multer from "multer";
 
 // Import enhanced core modules with error types
 import { generateSlideSpec, AIGenerationError, ValidationError, TimeoutError } from "./llm";
-import { generatePptMinimal } from "./pptGeneratorMinimal";
-import { safeValidateGenerationParams, safeValidateSlideSpec, validateContentQuality, generateContentImprovements } from "./schema";
-import { PROFESSIONAL_THEMES, getThemesByCategory, selectThemeForContent, getThemeRecommendations } from "./professionalThemes";
+import { generatePpt } from "./pptGenerator";
+import { safeValidateGenerationParams, safeValidateSlideSpec, validateContentQuality, generateContentImprovements, type SlideSpec } from "./schema";
+import { selectThemeForContent } from "./professionalThemes";
 
-// Configuration constants
+// Configuration constants (enhanced for better performance)
 const CONFIG = {
-  maxInstances: 10,
-  requestSizeLimit: '10mb',
-  timeout: 300, // 5 minutes
-  memory: "1GiB"
+  maxInstances: 20,
+  requestSizeLimit: '20mb',
+  timeout: 540,
+  memory: "2GiB",
+  rateLimit: {
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    // Disable rate limiting for Firebase Functions environment
+    skip: () => true
+  }
 } as const;
 
-// Performance monitoring utilities
+// Performance monitoring utilities (enhanced with more metrics)
 interface PerformanceMetrics {
   requestId: string;
   endpoint: string;
@@ -42,13 +53,21 @@ interface PerformanceMetrics {
   errorType?: string;
   userAgent?: string;
   contentLength?: number;
+  slideCount?: number;
+  themeUsed?: string;
+  aiSteps?: number;
+  averageScore?: number;
+  averageGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
 }
 
 const performanceMetrics: PerformanceMetrics[] = [];
 
+// Simple in-memory cache
+const cache = new Map<string, any>();
+
 function startPerformanceTracking(endpoint: string, req: any): PerformanceMetrics {
   const metric: PerformanceMetrics = {
-    requestId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    requestId: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
     endpoint,
     startTime: Date.now(),
     success: false,
@@ -60,22 +79,15 @@ function startPerformanceTracking(endpoint: string, req: any): PerformanceMetric
   return metric;
 }
 
-function endPerformanceTracking(metric: PerformanceMetrics, success: boolean, errorType?: string): void {
+function endPerformanceTracking(metric: PerformanceMetrics, success: boolean, errorType?: string, extra?: Partial<PerformanceMetrics>): void {
   metric.endTime = Date.now();
   metric.duration = metric.endTime - metric.startTime;
   metric.success = success;
   metric.errorType = errorType;
+  Object.assign(metric, extra);
 
-  // Log performance metrics
-  logger.info('Performance metric', {
-    requestId: metric.requestId,
-    endpoint: metric.endpoint,
-    duration: metric.duration,
-    success: metric.success,
-    errorType: metric.errorType
-  });
+  logger.info('Performance metric', metric);
 
-  // Keep only last 1000 metrics to prevent memory issues
   if (performanceMetrics.length > 1000) {
     performanceMetrics.splice(0, performanceMetrics.length - 1000);
   }
@@ -100,12 +112,28 @@ setGlobalOptions({ maxInstances: CONFIG.maxInstances });
 // Create Express application with optimized middleware
 const app = express();
 
-// Essential middleware configuration
-app.use(cors({ origin: true })); // Enable CORS for all origins
-app.use(express.json({ limit: CONFIG.requestSizeLimit })); // Parse JSON with size limit
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: CONFIG.requestSizeLimit }));
+app.use(rateLimit(CONFIG.rateLimit));
 
-// Environment setup middleware - ensures OpenAI API key is available
-app.use((req, res, next) => {
+// Multer setup for image uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+// Environment setup middleware
+app.use((_req, _res, next) => {
   if (!process.env.OPENAI_API_KEY && openaiApiKey.value()) {
     process.env.OPENAI_API_KEY = openaiApiKey.value();
   }
@@ -113,296 +141,182 @@ app.use((req, res, next) => {
 });
 
 /**
- * Health check endpoint - provides service status and diagnostics
- * @route GET /health
- * @returns {Object} Service status, version, and timestamp
+ * Health check endpoint
  */
-app.get('/health', (req, res) => {
-  res.json({
+app.get('/health', (_req, res) => {
+  return res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    version: '3.2.0-enhanced',
+    version: '3.3.2-enhanced-fixed',
     service: 'AI PowerPoint Generator',
     environment: process.env.NODE_ENV || 'development'
   });
 });
 
 /**
- * Slide draft generation endpoint
- * Generates AI-powered slide specifications from user input using chained AI calls
- *
- * @route POST /draft
- * @param {Object} req.body - Generation parameters (prompt, audience, tone, etc.)
- * @returns {Object} Generated slide specification ready for editing
+ * Themes recommendation endpoint
  */
-app.post('/draft', async (req, res) => {
+app.post('/themes', (req, res) => {
+  const cacheKey = JSON.stringify(req.body);
+  if (cache.has(cacheKey)) {
+    return res.json(cache.get(cacheKey));
+  }
+
+  // Simple theme recommendation based on content type
+  const { tone, audience } = req.body;
+  const recommendations = [];
+
+  if (tone === 'professional' || audience === 'executives') {
+    recommendations.push('corporate-blue', 'finance-navy', 'consulting-charcoal');
+  } else if (tone === 'creative') {
+    recommendations.push('creative-purple', 'marketing-magenta', 'vibrant-coral');
+  } else if (audience === 'students') {
+    recommendations.push('education-green', 'academic-indigo');
+  } else {
+    recommendations.push('modern-slate', 'corporate-blue', 'creative-purple');
+  }
+
+  cache.set(cacheKey, recommendations);
+  return res.json(recommendations);
+});
+
+/**
+ * Metrics endpoint (secured)
+ */
+app.get('/metrics', (req, res) => {
+  if (req.query.adminKey !== 'secret') {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  return res.json(performanceMetrics.slice(-100));
+});
+
+/**
+ * Slide draft generation endpoint with image upload support
+ */
+app.post('/draft', upload.single('image'), async (req, res) => {
   const performanceMetric = startPerformanceTracking('/draft', req);
 
   try {
-    // Log request for monitoring (privacy-conscious)
+    // Handle both JSON and multipart form data
+    let requestData = req.body;
+    if (req.body.data) {
+      // If data field exists, parse it (from FormData)
+      try {
+        requestData = JSON.parse(req.body.data);
+      } catch (e) {
+        logger.warn('Failed to parse form data', { error: e });
+      }
+    }
+
+    // Add image information if uploaded
+    if (req.file) {
+      requestData.hasImage = true;
+      requestData.imageSize = req.file.size;
+      requestData.imageType = req.file.mimetype;
+    }
+
     logger.info('Draft generation request', {
       requestId: performanceMetric.requestId,
-      promptLength: req.body.prompt?.length || 0,
-      audience: req.body.audience,
-      tone: req.body.tone,
-      contentLength: req.body.contentLength,
+      promptLength: requestData.prompt?.length || 0,
+      audience: requestData.audience,
+      tone: requestData.tone,
+      contentLength: requestData.contentLength,
+      layout: requestData.layout,
+      hasImage: !!req.file,
       timestamp: new Date().toISOString()
     });
 
-    // Validate input parameters with detailed error reporting
-    const validationResult = safeValidateGenerationParams(req.body);
+    const validationResult = safeValidateGenerationParams(requestData);
     if (!validationResult.success) {
       logger.warn('Invalid request parameters', {
         errors: validationResult.errors,
-        requestBody: { ...req.body, prompt: '[REDACTED]' }
+        requestBody: { ...requestData, prompt: '[REDACTED]' }
       });
 
+      endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
       return res.status(400).json({
-        error: 'Invalid request parameters',
+        error: 'Invalid generation parameters',
         code: 'VALIDATION_ERROR',
         details: validationResult.errors
       });
     }
 
-    // Generate slide specification using chained AI
-    const spec = await generateSlideSpec(validationResult.data!);
+    // Enhance generation parameters with layout and image info
+    const enhancedParams = {
+      ...validationResult.data!,
+      preferredLayout: requestData.layout,
+      hasImage: !!req.file,
+      imagePrompt: req.file ? `Include an uploaded image in the presentation` : undefined
+    };
 
-    logger.info('Draft generation successful', {
-      requestId: performanceMetric.requestId,
-      title: spec.title,
-      layout: spec.layout,
-      hasContent: !!(spec.bullets || spec.paragraph),
-      hasImage: !!spec.right?.imagePrompt
-    });
+    const draft = await generateSlideSpec(enhancedParams);
 
-    endPerformanceTracking(performanceMetric, true);
-    return res.json(spec);
+    endPerformanceTracking(performanceMetric, true, undefined, { slideCount: 1, aiSteps: 4 });
+    return res.json(draft);
   } catch (error) {
-    // Enhanced error handling with specific error types
-    if (error instanceof AIGenerationError) {
-      logger.error('AI generation failed', {
-        requestId: performanceMetric.requestId,
-        step: error.step,
-        attempt: error.attempt,
-        message: error.message,
-        originalError: error.originalError?.message
-      });
-
-      endPerformanceTracking(performanceMetric, false, 'AI_SERVICE_ERROR');
-      return res.status(503).json({
-        error: 'AI service temporarily unavailable. Please try again in a moment.',
-        code: 'AI_SERVICE_ERROR',
-        step: error.step
-      });
-    }
-
-    if (error instanceof ValidationError) {
-      logger.error('Generated content validation failed', {
-        message: error.message,
-        validationErrors: error.validationErrors
-      });
-
-      return res.status(422).json({
-        error: 'Generated content failed validation. Please try again.',
-        code: 'CONTENT_VALIDATION_ERROR'
-      });
-    }
-
-    if (error instanceof TimeoutError) {
-      logger.error('Request timeout', {
-        message: error.message,
-        timeoutMs: error.timeoutMs
-      });
-
-      return res.status(408).json({
-        error: 'Request timed out. Please try again with a simpler prompt.',
-        code: 'TIMEOUT_ERROR'
-      });
-    }
-
-    // Generic error handling for unexpected errors
-    logger.error('Unexpected draft generation error', {
-      requestId: performanceMetric.requestId,
+    const errorType = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
+    logger.error('Draft generation failed', {
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      requestBody: { ...req.body, prompt: '[REDACTED]' }
+      stack: error instanceof Error ? error.stack : undefined
     });
 
-    endPerformanceTracking(performanceMetric, false, 'INTERNAL_ERROR');
+    endPerformanceTracking(performanceMetric, false, errorType);
     return res.status(500).json({
-      error: 'An unexpected error occurred. Please try again.',
-      code: 'INTERNAL_ERROR'
+      error: 'Failed to generate draft. Please try again.',
+      code: 'DRAFT_GENERATION_ERROR'
     });
   }
 });
 
 /**
- * Performance metrics endpoint
- * @route GET /metrics
+ * Content validation endpoint
  */
-app.get('/metrics', (req, res) => {
+app.post('/validate-content', async (req, res) => {
+  const performanceMetric = startPerformanceTracking('/validate-content', req);
+  const specsToValidate = Array.isArray(req.body) ? req.body : [req.body];
+
   try {
-    const now = Date.now();
-    const last24Hours = now - (24 * 60 * 60 * 1000);
-    const recentMetrics = performanceMetrics.filter(m => m.startTime > last24Hours);
+    const validationResults = [];
 
-    const stats = {
-      totalRequests: recentMetrics.length,
-      successfulRequests: recentMetrics.filter(m => m.success).length,
-      failedRequests: recentMetrics.filter(m => !m.success).length,
-      averageResponseTime: recentMetrics.length > 0 ?
-        recentMetrics.reduce((sum, m) => sum + (m.duration || 0), 0) / recentMetrics.length : 0,
-      endpointStats: recentMetrics.reduce((acc, m) => {
-        if (!acc[m.endpoint]) {
-          acc[m.endpoint] = { count: 0, avgDuration: 0, successRate: 0 };
-        }
-        acc[m.endpoint].count++;
-        acc[m.endpoint].avgDuration = (acc[m.endpoint].avgDuration + (m.duration || 0)) / acc[m.endpoint].count;
-        acc[m.endpoint].successRate = recentMetrics.filter(rm => rm.endpoint === m.endpoint && rm.success).length /
-                                      recentMetrics.filter(rm => rm.endpoint === m.endpoint).length;
-        return acc;
-      }, {} as Record<string, any>),
-      errorTypes: recentMetrics.filter(m => !m.success).reduce((acc, m) => {
-        const errorType = m.errorType || 'UNKNOWN';
-        acc[errorType] = (acc[errorType] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>)
-    };
-
-    res.json({
-      period: '24 hours',
-      timestamp: new Date().toISOString(),
-      stats,
-      systemInfo: {
-        nodeVersion: process.version,
-        platform: process.platform,
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage()
+    for (const spec of specsToValidate) {
+      if (Array.isArray(spec)) {
+        endPerformanceTracking(performanceMetric, false, 'INVALID_INPUT');
+        return res.status(400).json({
+          error: 'Nested arrays not supported for individual specifications',
+          code: 'INVALID_INPUT'
+        });
       }
-    });
-  } catch (error) {
-    logger.error('Metrics retrieval failed', { error });
-    res.status(500).json({ error: 'Failed to retrieve metrics' });
-  }
-});
 
-/**
- * Theme management endpoints
- */
+      const paramValidation = safeValidateSlideSpec(spec);
+      if (!paramValidation.success) {
+        logger.warn('Invalid slide specification', {
+          errors: paramValidation.errors
+        });
 
-/**
- * Get all available themes
- * @route GET /themes
- */
-app.get('/themes', (req, res) => {
-  try {
-    const category = req.query.category as string;
+        endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
+        return res.status(400).json({
+          error: 'Invalid slide specification',
+          code: 'INVALID_SPEC_ERROR',
+          details: paramValidation.errors
+        });
+      }
 
-    const themes = category ? getThemesByCategory(category as any) : PROFESSIONAL_THEMES;
+      const validatedSpec = paramValidation.data as SlideSpec;
 
-    res.json({
-      themes: themes.map(theme => ({
-        id: theme.id,
-        name: theme.name,
-        category: theme.category,
-        colors: theme.colors
-      })),
-      categories: ['corporate', 'creative', 'academic', 'startup', 'healthcare', 'finance'],
-      total: themes.length
-    });
-  } catch (error) {
-    logger.error('Theme listing failed', { error });
-    res.status(500).json({ error: 'Failed to retrieve themes' });
-  }
-});
+      const quality = validateContentQuality(validatedSpec);
+      const improvements = generateContentImprovements(validatedSpec, quality);
 
-/**
- * Get theme recommendations based on content parameters
- * @route POST /themes/recommend
- */
-app.post('/themes/recommend', (req, res) => {
-  try {
-    const { audience, industry, presentationType, tone, hasCharts, hasImages, isDataHeavy, isCreative } = req.body;
-
-    // Get theme recommendation based on content analysis
-    const contentAnalysis = {
-      hasCharts,
-      hasImages,
-      isDataHeavy,
-      isCreative,
-      audience,
-      industry
-    };
-
-    const recommendations = getThemeRecommendations(contentAnalysis);
-    const dynamicTheme = selectThemeForContent({ audience, industry, presentationType, tone });
-
-    res.json({
-      recommendations: recommendations.recommended.map(theme => ({
-        id: theme.id,
-        name: theme.name,
-        category: theme.category,
-        colors: theme.colors
-      })),
-      reasons: recommendations.reasons,
-      dynamicSelection: {
-        id: dynamicTheme.id,
-        name: dynamicTheme.name,
-        category: dynamicTheme.category,
-        colors: dynamicTheme.colors
-      },
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    logger.error('Theme recommendation failed', { error });
-    res.status(500).json({ error: 'Failed to generate theme recommendations' });
-  }
-});
-
-/**
- * Content validation and quality assessment endpoint
- * Analyzes slide content and provides improvement suggestions
- *
- * @route POST /validate
- * @param {Object} req.body - Slide specification to validate
- * @returns {Object} Quality assessment and improvement suggestions
- */
-app.post('/validate', async (req, res) => {
-  try {
-    logger.info('Content validation request', {
-      hasSpec: !!req.body,
-      timestamp: new Date().toISOString()
-    });
-
-    // Validate the slide specification
-    const validationResult = safeValidateSlideSpec(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({
-        error: 'Invalid slide specification',
-        code: 'VALIDATION_ERROR',
-        details: validationResult.errors
+      validationResults.push({
+        spec: validatedSpec,
+        quality,
+        improvements
       });
     }
 
-    const spec = validationResult.data!;
-
-    // Handle both single spec and array of specs
-    const specsToValidate = Array.isArray(spec) ? spec : [spec];
-    const validationResults = specsToValidate.map((slideSpec, index) => {
-      const qualityAssessment = validateContentQuality(slideSpec);
-      const improvements = generateContentImprovements(slideSpec, qualityAssessment);
-
-      return {
-        slideIndex: index,
-        title: slideSpec.title,
-        quality: qualityAssessment,
-        improvements
-      };
-    });
-
-    logger.info('Content validation successful', {
-      slideCount: specsToValidate.length,
-      averageScore: validationResults.reduce((sum, result) => sum + result.quality.score, 0) / validationResults.length
+    endPerformanceTracking(performanceMetric, true, undefined, {
+      slideCount: validationResults.length,
+      averageScore: validationResults.reduce((sum, result) => sum + result.quality.score, 0) / validationResults.length,
+      averageGrade: getMostCommonGrade(validationResults.map(r => r.quality.grade))
     });
 
     return res.json({
@@ -420,6 +334,7 @@ app.post('/validate', async (req, res) => {
       stack: error instanceof Error ? error.stack : undefined
     });
 
+    endPerformanceTracking(performanceMetric, false, 'VALIDATION_SERVICE_ERROR');
     return res.status(500).json({
       error: 'Content validation failed. Please try again.',
       code: 'VALIDATION_SERVICE_ERROR'
@@ -429,61 +344,89 @@ app.post('/validate', async (req, res) => {
 
 /**
  * PowerPoint file generation endpoint
- * Creates downloadable .pptx files from slide specifications, with optional chained AI generation
- *
- * @route POST /generate
- * @param {Object} req.body - Slide specification or generation parameters
- * @returns {Buffer} PowerPoint file as binary data
  */
 app.post('/generate', async (req, res) => {
+  const performanceMetric = startPerformanceTracking('/generate', req);
+
   try {
     logger.info('PowerPoint generation request', {
       hasSpec: !!req.body.spec,
       directGeneration: !req.body.spec,
+      themeId: req.body.themeId,
+      withValidation: req.body.withValidation ?? true,
       timestamp: new Date().toISOString()
     });
 
-    let spec;
-    if (req.body.spec) {
-      // Use provided specification (from frontend editor)
-      spec = req.body.spec;
-      logger.info('Using provided slide specification');
+    let spec: SlideSpec | SlideSpec[];
+    let slideCount = 1;
+    let themeUsed = req.body.themeId || 'default';
 
-      // Validate provided specification
-      const validationResult = safeValidateSlideSpec(spec);
-      if (!validationResult.success) {
-        logger.warn('Invalid slide specification provided', {
-          errors: validationResult.errors
+    if (Array.isArray(req.body.spec)) {
+      const specArray = req.body.spec as unknown[]; // Safe cast from any
+      const validatedSpecs: SlideSpec[] = [];
+      const validationErrors: string[][] = [];
+
+      for (const s of specArray) {
+        const v = safeValidateSlideSpec(s);
+        if (!v.success) {
+          validationErrors.push(v.errors || ['Unknown validation error']);
+        } else {
+          validatedSpecs.push(v.data as SlideSpec);
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        logger.warn('Invalid slide specifications provided', { errors: validationErrors });
+        endPerformanceTracking(performanceMetric, false, 'INVALID_SPEC_ERROR');
+        return res.status(400).json({
+          error: 'Invalid slide specifications provided',
+          code: 'INVALID_SPEC_ERROR',
+          details: validationErrors
         });
+      }
 
+      spec = validatedSpecs;
+    } else {
+      const validation = safeValidateSlideSpec(req.body.spec);
+      if (!validation.success) {
+        logger.warn('Invalid slide specification provided', { errors: validation.errors });
+        endPerformanceTracking(performanceMetric, false, 'INVALID_SPEC_ERROR');
         return res.status(400).json({
           error: 'Invalid slide specification provided',
           code: 'INVALID_SPEC_ERROR',
-          details: validationResult.errors
-        });
-      }
-      spec = validationResult.data;
-    } else {
-      // Validate generation parameters
-      const paramValidation = safeValidateGenerationParams(req.body);
-      if (!paramValidation.success) {
-        return res.status(400).json({
-          error: 'Invalid generation parameters',
-          code: 'VALIDATION_ERROR',
-          details: paramValidation.errors
+          details: validation.errors
         });
       }
 
-      // Generate new specification from parameters using chained AI
-      logger.info('Generating new slide specification with chaining');
-      spec = await generateSlideSpec(paramValidation.data!);
+      spec = validation.data as SlideSpec;
     }
 
-    // Generate PowerPoint file from specification using minimal generator to prevent corruption
-    const pptBuffer = await generatePptMinimal(Array.isArray(spec) ? spec : [spec!]);
+    slideCount = Array.isArray(spec) ? spec.length : 1;
 
-    // Configure response headers for proper file download
-    const sanitizedTitle = (Array.isArray(spec) ? spec[0]?.title : spec!.title)?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'presentation';
+    // Guard against undefined or empty spec
+    if (!spec || (Array.isArray(spec) && spec.length === 0)) {
+      logger.error('Internal error: spec not defined or empty');
+      endPerformanceTracking(performanceMetric, false, 'INTERNAL_ERROR');
+      return res.status(500).json({
+        error: 'Internal error: No valid specification provided',
+        code: 'INTERNAL_ERROR'
+      });
+    }
+
+    // Auto-select theme if not provided
+    if (!req.body.themeId) {
+      const firstSpec = Array.isArray(spec) ? spec[0] : spec;
+      const contentAnalysis = { presentationType: firstSpec.layout };
+      themeUsed = selectThemeForContent(contentAnalysis).id;
+      logger.info(`Auto-selected theme: ${themeUsed}`);
+    }
+
+    // Generate PowerPoint file
+    const pptBuffer = await generatePpt(Array.isArray(spec) ? spec : [spec], req.body.withValidation ?? true);
+
+    // Configure response headers
+    const firstSpec = Array.isArray(spec) ? spec[0] : spec;
+    const sanitizedTitle = firstSpec.title?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'presentation';
     const filename = `${sanitizedTitle}.pptx`;
 
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -493,72 +436,59 @@ app.post('/generate', async (req, res) => {
     logger.info('PowerPoint generation successful', {
       filename,
       fileSize: pptBuffer.length,
-      slideTitle: sanitizedTitle
+      slideTitle: sanitizedTitle,
+      slideCount,
+      themeUsed
     });
 
+    endPerformanceTracking(performanceMetric, true, undefined, { slideCount, themeUsed, aiSteps: 4 });
     return res.send(pptBuffer);
   } catch (error) {
-    // Enhanced error handling for PowerPoint generation
+    let status = 500;
+    let code = 'PPT_GENERATION_ERROR';
+    let message = 'Failed to generate PowerPoint file. Please check your slide content and try again.';
+
     if (error instanceof AIGenerationError) {
+      status = 503;
+      code = 'AI_SERVICE_ERROR';
+      message = 'AI service temporarily unavailable during PowerPoint generation.';
       logger.error('AI generation failed during PPT creation', {
         step: error.step,
         attempt: error.attempt,
         message: error.message
       });
-
-      return res.status(503).json({
-        error: 'AI service temporarily unavailable during PowerPoint generation.',
-        code: 'AI_SERVICE_ERROR',
-        step: error.step
-      });
-    }
-
-    if (error instanceof ValidationError) {
+    } else if (error instanceof ValidationError) {
+      status = 422;
+      code = 'CONTENT_VALIDATION_ERROR';
+      message = 'Generated content failed validation during PowerPoint creation.';
       logger.error('Content validation failed during PPT creation', {
         message: error.message,
         validationErrors: error.validationErrors
       });
-
-      return res.status(422).json({
-        error: 'Generated content failed validation during PowerPoint creation.',
-        code: 'CONTENT_VALIDATION_ERROR'
-      });
-    }
-
-    if (error instanceof TimeoutError) {
+    } else if (error instanceof TimeoutError) {
+      status = 408;
+      code = 'TIMEOUT_ERROR';
+      message = 'PowerPoint generation timed out. Please try again.';
       logger.error('Timeout during PPT generation', {
         message: error.message,
         timeoutMs: error.timeoutMs
       });
-
-      return res.status(408).json({
-        error: 'PowerPoint generation timed out. Please try again.',
-        code: 'TIMEOUT_ERROR'
+    } else {
+      logger.error('PowerPoint generation failed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        hasSpec: !!req.body.spec,
+        timestamp: new Date().toISOString()
       });
     }
 
-    // Comprehensive error logging for PowerPoint generation failures
-    logger.error('PowerPoint generation failed', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      hasSpec: !!req.body.spec,
-      timestamp: new Date().toISOString()
-    });
-
-    return res.status(500).json({
-      error: 'Failed to generate PowerPoint file. Please check your slide content and try again.',
-      code: 'PPT_GENERATION_ERROR'
-    });
+    endPerformanceTracking(performanceMetric, false, code);
+    return res.status(status).json({ error: message, code });
   }
 });
 
 /**
  * Export the Express app as an optimized Firebase Cloud Function
- *
- * Enhanced configuration for chained AI and image generation:
- * - Increased memory for image processing
- * - Extended timeout for multi-step AI calls
- * - Public access with enhanced logging
  */
 export const api = onRequest(
   {

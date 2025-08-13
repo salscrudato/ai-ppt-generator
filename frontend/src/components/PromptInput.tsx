@@ -7,7 +7,10 @@ import {
   HiExclamationTriangle,
   HiSparkles,
   HiUsers,
-  HiChatBubbleLeftRight
+  HiChatBubbleLeftRight,
+  HiPhoto,
+  HiRectangleStack,
+  HiXMark
 } from 'react-icons/hi2';
 import clsx from 'clsx';
 
@@ -183,6 +186,93 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           </div>
         </motion.div>
 
+        {/* Layout and Image Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
+          {/* Layout Selection */}
+          <div className="space-y-3">
+            <label htmlFor="layout" className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <HiRectangleStack className="w-4 h-4 text-primary-500" />
+              Slide Layout
+            </label>
+            <select
+              id="layout"
+              value={localParams.layout || ''}
+              onChange={(e) => updateParam('layout', e.target.value as any)}
+              className="input"
+            >
+              <option value="">Auto-select (Recommended)</option>
+              <option value="title">Title Only</option>
+              <option value="title-bullets">Title with Bullet Points</option>
+              <option value="title-paragraph">Title with Paragraph</option>
+              <option value="two-column">Two Column Layout</option>
+              <option value="image-right">Image on Right</option>
+              <option value="image-left">Image on Left</option>
+              <option value="quote">Quote/Testimonial</option>
+              <option value="chart">Chart/Data Visualization</option>
+              <option value="timeline">Timeline</option>
+              <option value="process-flow">Process Flow</option>
+              <option value="comparison-table">Comparison Table</option>
+              <option value="before-after">Before & After</option>
+              <option value="problem-solution">Problem & Solution</option>
+            </select>
+          </div>
+
+          {/* Image Upload */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <HiPhoto className="w-4 h-4 text-primary-500" />
+              Upload Image (Optional)
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                id="image-upload"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  updateParam('image', file);
+                }}
+                className="hidden"
+              />
+              <label
+                htmlFor="image-upload"
+                className={clsx(
+                  'flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200',
+                  localParams.image
+                    ? 'border-primary-300 bg-primary-50 text-primary-700'
+                    : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700'
+                )}
+              >
+                <HiPhoto className="w-5 h-5" />
+                <span className="text-sm font-medium">
+                  {localParams.image ? localParams.image.name : 'Choose image file'}
+                </span>
+              </label>
+              {localParams.image && (
+                <button
+                  type="button"
+                  onClick={() => updateParam('image', undefined)}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <HiXMark className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {localParams.image && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-green-700">
+                  <HiPhoto className="w-4 h-4" />
+                  <span>Image will be included in your presentation</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
 
 
 
