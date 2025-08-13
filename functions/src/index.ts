@@ -111,7 +111,27 @@ setGlobalOptions({ maxInstances: CONFIG.maxInstances });
 // Create Express application with optimized middleware
 const app = express();
 
-app.use(cors({ origin: true }));
+// Enhanced CORS configuration for production security
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://your-domain.com', 'https://your-domain.firebaseapp.com']
+    : true,
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Security headers middleware
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
+  next();
+});
+
 app.use(express.json({ limit: CONFIG.requestSizeLimit }));
 app.use(rateLimit(CONFIG.rateLimit));
 
@@ -208,12 +228,8 @@ app.post('/draft', async (req, res) => {
       });
     }
 
-    // Enhance generation parameters with layout and image info
-    const enhancedParams = {
-      ...validationResult.data!,
-      preferredLayout: requestData.layout,
-      withImage: requestData.withImage || false
-    };
+    // Use validated parameters directly
+    const enhancedParams = validationResult.data!;
 
     const draft = await generateSlideSpec(enhancedParams);
 

@@ -384,6 +384,100 @@ export default function SlidePreview({
           </div>
         );
 
+      case 'problem-solution':
+        return (
+          <div className="space-y-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
+              {draft.title}
+            </h1>
+            {draft.paragraph && (
+              <p className="text-slate-700 leading-relaxed text-lg mb-6">
+                {draft.paragraph}
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-8">
+              {/* Problem Side */}
+              <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <h3 className="text-lg font-semibold text-red-800 border-b border-red-200 pb-2">
+                  {draft.left?.heading || 'Challenge'}
+                </h3>
+                {draft.left?.paragraph && (
+                  <p className="text-red-700 leading-relaxed">
+                    {draft.left.paragraph}
+                  </p>
+                )}
+                {draft.left?.bullets && (
+                  <div className="space-y-2">
+                    {draft.left.bullets.map((bullet, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 bg-red-500" />
+                        <span className="text-red-700">{bullet}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Solution Side */}
+              <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <h3 className="text-lg font-semibold text-green-800 border-b border-green-200 pb-2">
+                  {draft.right?.heading || 'Solution'}
+                </h3>
+                {draft.right?.paragraph && (
+                  <p className="text-green-700 leading-relaxed">
+                    {draft.right.paragraph}
+                  </p>
+                )}
+                {draft.right?.bullets && (
+                  <div className="space-y-2">
+                    {draft.right.bullets.map((bullet, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 bg-green-500" />
+                        <span className="text-green-700">{bullet}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'comparison-table':
+        return (
+          <div className="space-y-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
+              {draft.title}
+            </h1>
+            {draft.comparisonTable && (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="w-full">
+                  <thead className="bg-indigo-50">
+                    <tr>
+                      {draft.comparisonTable.headers?.map((header, index) => (
+                        <th key={index} className="px-4 py-3 text-left text-sm font-semibold text-indigo-900 border-b border-indigo-200">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white">
+                    {draft.comparisonTable.rows?.map((row, rowIndex) => (
+                      <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex} className="px-4 py-3 text-sm text-slate-700 border-b border-gray-200">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-6">
@@ -407,7 +501,59 @@ export default function SlidePreview({
                   ))}
                 </div>
               )}
-              {!draft.paragraph && !draft.bullets && (
+              {(draft.left || draft.right) && (
+                <div className="grid grid-cols-2 gap-6 mt-6">
+                  {draft.left && (
+                    <div className="space-y-3">
+                      {draft.left.heading && (
+                        <h3 className="text-lg font-semibold text-slate-800">
+                          {draft.left.heading}
+                        </h3>
+                      )}
+                      {draft.left.paragraph && (
+                        <p className="text-slate-700 leading-relaxed">
+                          {draft.left.paragraph}
+                        </p>
+                      )}
+                      {draft.left.bullets && (
+                        <div className="space-y-2">
+                          {draft.left.bullets.map((bullet, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 bg-indigo-500" />
+                              <span className="text-slate-700">{bullet}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {draft.right && (
+                    <div className="space-y-3">
+                      {draft.right.heading && (
+                        <h3 className="text-lg font-semibold text-slate-800">
+                          {draft.right.heading}
+                        </h3>
+                      )}
+                      {draft.right.paragraph && (
+                        <p className="text-slate-700 leading-relaxed">
+                          {draft.right.paragraph}
+                        </p>
+                      )}
+                      {draft.right.bullets && (
+                        <div className="space-y-2">
+                          {draft.right.bullets.map((bullet, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 bg-indigo-500" />
+                              <span className="text-slate-700">{bullet}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!draft.paragraph && !draft.bullets && !draft.left && !draft.right && (
                 <div className="text-slate-500 italic">
                   Content is being processed for {draft.layout} layout...
                 </div>

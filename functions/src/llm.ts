@@ -16,18 +16,10 @@ import OpenAI from 'openai';
 import { safeValidateSlideSpec, type SlideSpec, type GenerationParams } from './schema';
 import { SYSTEM_PROMPT, generateContentPrompt, generateLayoutPrompt, generateImagePrompt, generateRefinementPrompt } from './prompts';
 import { defineSecret } from 'firebase-functions/params';
+import { getTextModelConfig, logCostEstimate } from './config/aiModels';
 
-// Enhanced configuration constants for AI operations with resilience settings
-const AI_CONFIG = {
-  model: 'gpt-4o' as const,
-  fallbackModel: 'gpt-4' as const, // Fallback model if primary fails
-  temperature: 0.7, // Balanced creativity and consistency
-  maxTokens: 2000, // Sufficient for detailed slide content
-  maxRetries: 3, // Retry failed requests
-  retryDelay: 1000, // 1 second delay between retries
-  timeoutMs: 30000, // 30 second timeout for API calls
-  maxBackoffDelay: 10000 // Maximum backoff delay
-} as const;
+// Get AI configuration based on current mode (testing vs production)
+const AI_CONFIG = getTextModelConfig();
 
 // Enhanced error types for better error handling
 export class AIGenerationError extends Error {
@@ -91,11 +83,19 @@ function getOpenAI(): OpenAI {
  */
 export async function generateSlideSpec(input: GenerationParams): Promise<SlideSpec> {
   const startTime = Date.now();
-  console.log('Starting chained slide generation with GPT-4o...', {
+  console.log(`Starting chained slide generation with ${AI_CONFIG.model}...`, {
     promptLength: input.prompt?.length,
     audience: input.audience,
     tone: input.tone,
-    contentLength: input.contentLength
+    contentLength: input.contentLength,
+    withImage: input.withImage
+  });
+
+  // Log cost estimate for transparency
+  logCostEstimate({
+    textTokens: 3000, // Estimated tokens for 4-step generation
+    imageCount: input.withImage ? 1 : 0,
+    operation: 'Slide Generation'
   });
 
   // Step 1: Generate core content

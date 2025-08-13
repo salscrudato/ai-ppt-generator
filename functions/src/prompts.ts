@@ -314,28 +314,92 @@ export const LAYOUT_SELECTION_GUIDE = {
  */
 export function generateContentPrompt(input: GenerationParams): string {
   const framework = STORYTELLING_FRAMEWORKS.problemSolution; // Default framework, can be dynamic
+  const audienceGuidance = AUDIENCE_GUIDANCE[input.audience] || AUDIENCE_GUIDANCE.general;
+  const toneSpec = TONE_SPECIFICATIONS[input.tone] || TONE_SPECIFICATIONS.professional;
+  const lengthSpec = CONTENT_LENGTH_SPECS[input.contentLength] || CONTENT_LENGTH_SPECS.moderate;
 
-  return `Generate professional slide content based on: "${input.prompt}".
+  return `You are a professional presentation designer. Generate slide content for: "${input.prompt}"
 
-Apply ${framework.name} storytelling: ${framework.structure}.
+AUDIENCE: ${input.audience} - ${audienceGuidance.focus}
+TONE: ${input.tone} - ${toneSpec.style}
+CONTENT LENGTH: ${input.contentLength} - ${lengthSpec.description}
 
-Content must be persuasive, clear, and styled for clean visuals.
+STORYTELLING FRAMEWORK: ${framework.name}
+Structure: ${framework.structure}
+${framework.bulletPattern ? 'Bullet Pattern: ' + framework.bulletPattern.join(' → ') : ''}
 
-OUTPUT: JSON with title, appropriate content fields, notes, sources.`;
+AUDIENCE GUIDANCE:
+- Language: ${audienceGuidance.language}
+- Psychology: ${audienceGuidance.psychology}
+- Structure: ${audienceGuidance.structure}
+
+TONE GUIDANCE:
+- Approach: ${toneSpec.approach}
+- Language: ${toneSpec.language}
+- Bullet Style: ${toneSpec.bulletStyle}
+
+REQUIREMENTS:
+1. Create a compelling, clear title (10-80 characters)
+2. Generate appropriate content based on the topic and audience
+3. Include speaker notes for delivery guidance
+4. Add relevant sources if applicable
+5. Follow the specified tone and audience guidelines
+
+OUTPUT FORMAT: Valid JSON with these fields:
+{
+  "title": "Compelling slide title",
+  "layout": "title-paragraph",
+  "paragraph": "Main content paragraph (if narrative content)",
+  "bullets": ["Bullet point 1", "Bullet point 2"],
+  "notes": "Speaker notes for delivery",
+  "sources": ["Source 1", "Source 2"]
+}
+
+Generate professional, engaging content that serves the audience and achieves the presentation goals.`;
 }
 
 /**
  * Step 2: Enhanced layout refinement prompt with comprehensive layout support
  * Improved with trend-aware selection and validation.
  */
-export function generateLayoutPrompt(_input: GenerationParams, partialSpec: Partial<SlideSpec>): string {
-  return `Refine layout for content: ${JSON.stringify(partialSpec)}.
+export function generateLayoutPrompt(input: GenerationParams, partialSpec: Partial<SlideSpec>): string {
+  return `You are a professional presentation designer. Refine the layout and structure for this slide content:
 
-Select from ${SLIDE_LAYOUTS.join(', ')} based on guide: ${JSON.stringify(LAYOUT_SELECTION_GUIDE)}.
+CURRENT CONTENT: ${JSON.stringify(partialSpec, null, 2)}
 
-Ensure 2024 trends: minimalism, accessibility.
+USER PREFERENCES:
+- Audience: ${input.audience}
+- Tone: ${input.tone}
+- Preferred Layout: ${input.design?.layout || 'auto-select'}
+- With Image: ${input.withImage || false}
 
-OUTPUT: Updated JSON with optimal layout.`;
+AVAILABLE LAYOUTS: ${SLIDE_LAYOUTS.join(', ')}
+
+LAYOUT SELECTION GUIDE:
+${Object.entries(LAYOUT_SELECTION_GUIDE).map(([layout, guide]) => `- ${layout}: ${guide}`).join('\n')}
+
+INSTRUCTIONS:
+1. Analyze the content type and structure
+2. Select the most appropriate layout from the available options
+3. Ensure content is properly structured for the chosen layout
+4. If layout requires specific fields (left/right for two-column, chart data for chart, etc.), add them
+5. Maintain all existing content while optimizing structure
+6. Follow 2024 design trends: minimalism, accessibility, visual hierarchy
+
+LAYOUT-SPECIFIC REQUIREMENTS:
+- two-column: Add "left" and "right" objects with content (bullets, paragraph, or metrics)
+- image-right/image-left: Add image content to appropriate side
+- chart: Add "chart" object with type, categories, and series data
+- comparison-table: Add "comparisonTable" with headers array and rows array (each row is an array of strings)
+- timeline: Add "timeline" array with time-based events
+- process-flow: Add "processSteps" array with sequential steps
+
+CRITICAL DATA STRUCTURE EXAMPLES:
+- comparisonTable: {"headers": ["Feature", "Us", "Competitor"], "rows": [["Speed", "Fast", "Slow"], ["Price", "$10", "$15"]]}
+- chart: {"type": "bar", "categories": ["Q1", "Q2"], "series": [{"name": "Revenue", "data": [100, 150]}]}
+- left/right: {"bullets": ["Point 1", "Point 2"]} OR {"paragraph": "Text content"}
+
+OUTPUT: Complete JSON slide specification with optimized layout and properly structured content.`;
 }
 
 /**

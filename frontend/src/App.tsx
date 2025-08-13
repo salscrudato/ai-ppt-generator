@@ -71,13 +71,15 @@ export default function App() {
     updateState({ loading: true, error: undefined });
 
     try {
-      // Prepare request data - remove design field to avoid validation errors
-      const { design, ...cleanParams } = params;
+      // Prepare request data - keep layout at top level for backend compatibility
+      const requestData = {
+        ...params
+      };
 
       const response = await fetch(API_ENDPOINTS.draft, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanParams)
+        body: JSON.stringify(requestData)
       });
 
       if (!response.ok) {
@@ -113,10 +115,17 @@ export default function App() {
     updateState({ loading: true, error: undefined });
 
     try {
+      // Check if the original generation request included images
+      const shouldIncludeImages = state.params.withImage || false;
+
       const response = await fetch(API_ENDPOINTS.generate, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spec: spec, withImage: false })
+        body: JSON.stringify({
+          spec: spec,
+          withImage: shouldIncludeImages,
+          themeId: state.params.design?.theme || 'corporate-blue'
+        })
       });
 
       if (!response.ok) {

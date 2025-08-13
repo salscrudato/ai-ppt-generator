@@ -65,6 +65,12 @@ export interface SlideSpec {
     }>;
   };
 
+  /** Comparison table configuration for feature/option comparisons */
+  comparisonTable?: {
+    headers?: string[];
+    rows?: string[][];
+  };
+
   /** Design and branding configuration */
   design?: {
     layout?: string;

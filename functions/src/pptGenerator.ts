@@ -25,6 +25,7 @@ import { getThemeById, selectThemeForContent, customizeTheme, type ProfessionalT
 import { validateSlideStyle, type StyleValidationResult } from './styleValidator';
 import OpenAI from 'openai';
 import { defineSecret } from 'firebase-functions/params';
+import { getImageModelConfig } from './config/aiModels';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -265,9 +266,12 @@ async function renderMixedContent(slide: pptxgen.Slide, spec: SlideSpec, theme: 
 
 /**
  * Render image-right layout
+ * Text on LEFT side (x: 0.5), image on RIGHT side (x: 5.5)
  */
 async function renderImageRight(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentY: number): Promise<void> {
   let currentY = contentY;
+
+  // Text content goes on the LEFT side
   if (spec.paragraph) {
     addParagraph(slide, spec.paragraph, theme, 0.5, currentY, 4.5);
     currentY += 2.0;
@@ -275,28 +279,68 @@ async function renderImageRight(slide: pptxgen.Slide, spec: SlideSpec, theme: Pr
   if (spec.bullets) {
     addBullets(slide, spec.bullets, theme, 0.5, currentY, 4.5);
   }
+  // Add left column content if available
+  if (spec.left && !spec.left.imagePrompt) {
+    if (spec.left.paragraph) {
+      addParagraph(slide, spec.left.paragraph, theme, 0.5, currentY, 4.5);
+      currentY += 1.5;
+    }
+    if (spec.left.bullets) {
+      addBullets(slide, spec.left.bullets, theme, 0.5, currentY, 4.5);
+    }
+  }
+
+  // Image goes on the RIGHT side - check multiple locations
   if (spec.right?.imagePrompt) {
     await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
+  }
+  // Fallback: check left column for backward compatibility
+  else if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt) {
+    await addImage(slide, spec.left.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
+  }
+  // Fallback: check root imagePrompt
+  else if (spec.imagePrompt) {
+    await addImage(slide, spec.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
   }
 }
 
 /**
  * Render image-left layout
+ * Image on LEFT side (x: 0.5), text on RIGHT side (x: 5.5)
  */
 async function renderImageLeft(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentY: number): Promise<void> {
   let currentY = contentY;
 
-  // Check for image in right column (since this is image-left layout)
-  if (spec.right && 'imagePrompt' in spec.right && spec.right.imagePrompt) {
+  // Check for image in LEFT column (image-left layout)
+  if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt) {
+    await addImage(slide, spec.left.imagePrompt, theme, 0.5, contentY, 4.0, 4.0);
+  }
+  // Fallback: check right column for backward compatibility
+  else if (spec.right && 'imagePrompt' in spec.right && spec.right.imagePrompt) {
     await addImage(slide, spec.right.imagePrompt, theme, 0.5, contentY, 4.0, 4.0);
   }
+  // Fallback: check root imagePrompt
+  else if (spec.imagePrompt) {
+    await addImage(slide, spec.imagePrompt, theme, 0.5, contentY, 4.0, 4.0);
+  }
 
+  // Text content goes on the RIGHT side
   if (spec.paragraph) {
     addParagraph(slide, spec.paragraph, theme, 5.5, currentY, 4.5);
     currentY += 2.0;
   }
   if (spec.bullets) {
     addBullets(slide, spec.bullets, theme, 5.5, currentY, 4.5);
+  }
+  // Add right column content if available
+  if (spec.right && !spec.right.imagePrompt) {
+    if (spec.right.paragraph) {
+      addParagraph(slide, spec.right.paragraph, theme, 5.5, currentY, 4.5);
+      currentY += 1.5;
+    }
+    if (spec.right.bullets) {
+      addBullets(slide, spec.right.bullets, theme, 5.5, currentY, 4.5);
+    }
   }
 }
 
@@ -453,28 +497,36 @@ async function addColumnContent(slide: pptxgen.Slide, content: ExtendedColumnCon
  * Add separator (simplified to prevent corruption)
  */
 function addSeparator(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  slide.addShape(pptxgen.ShapeType.rect, {
-    x,
-    y,
-    w,
-    h,
-    fill: { color: safeColorFormat(theme.colors.borders.light) }
-    // Removed: complex styling (can cause corruption)
-  });
+  try {
+    slide.addShape('rect', {
+      x,
+      y,
+      w,
+      h,
+      fill: { color: safeColorFormat(theme.colors.borders.light) }
+    });
+  } catch (error) {
+    console.warn('Failed to add separator, skipping:', error);
+    // Separator is optional, continue without it
+  }
 }
 
 /**
  * Add content background (simplified to prevent corruption)
  */
 function addContentBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  slide.addShape(pptxgen.ShapeType.rect, {
-    x,
-    y,
-    w,
-    h,
-    fill: { color: safeColorFormat(theme.colors.surface) }
-    // Removed: transparency, line (can cause corruption)
-  });
+  try {
+    slide.addShape('rect', {
+      x,
+      y,
+      w,
+      h,
+      fill: { color: safeColorFormat(theme.colors.surface) }
+    });
+  } catch (error) {
+    console.warn('Failed to add content background, skipping:', error);
+    // Background is optional, continue without it
+  }
 }
 
 /**
@@ -515,19 +567,29 @@ function addParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalThe
 
 /**
  * Add image with AI generation and fallback
+ * Uses centralized configuration for testing vs production modes
  */
 async function addImage(slide: pptxgen.Slide, prompt: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  console.log(`🎨 Attempting to generate image with prompt: "${prompt.substring(0, 100)}..."`);
+
   try {
+    const imageConfig = getImageModelConfig();
+    console.log(`   Using ${imageConfig.model} (${imageConfig.size})`);
+
     const response = await getOpenAI().images.generate({
-      model: 'dall-e-3',
-      prompt: `${prompt}, professional, high-resolution, clean design`,
+      model: imageConfig.model,
+      prompt: `${prompt}${imageConfig.promptSuffix}`,
       n: 1,
-      size: '1024x1024',
+      size: imageConfig.size,
       response_format: 'b64_json'
     });
 
+    console.log(`   ✓ DALL-E API call successful`);
+
     if (response.data && response.data[0] && response.data[0].b64_json) {
       const base64 = response.data[0].b64_json;
+      console.log(`   ✓ Image data received (${Math.round(base64.length / 1024)}KB base64)`);
+
       slide.addImage({
         data: `data:image/png;base64,${base64}`,
         x,
@@ -535,24 +597,31 @@ async function addImage(slide: pptxgen.Slide, prompt: string, theme: Professiona
         w,
         h
       });
+
+      console.log(`   ✓ Image added to slide at position (${x}, ${y}) size ${w}x${h}`);
     } else {
-      throw new Error('No image data returned');
+      throw new Error('No image data returned from DALL-E');
     }
   } catch (error) {
-    console.error('Failed to generate image:', error);
-    slide.addShape(pptxgen.ShapeType.rect, {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Image generation failed: ${errorMessage}`);
+    console.error(`   Prompt: "${prompt}"`);
+    console.error(`   Position: (${x}, ${y}) size ${w}x${h}`);
+
+    // Add visible placeholder so user knows image was attempted
+    slide.addShape('rect', {
       x,
       y,
       w,
       h,
-      fill: { color: safeColorFormat(theme.colors.surface) }
-      // Removed: line (can cause corruption)
+      fill: { color: safeColorFormat(theme.colors.surface) },
+      line: { color: safeColorFormat(theme.colors.primary), width: 2 }
     });
-    slide.addText('Image Placeholder', {
+    slide.addText('🖼️ Image Generation Failed', {
       x,
-      y: y + h / 2 - 0.2,
+      y: y + h / 2 - 0.3,
       w,
-      h: 0.4,
+      h: 0.6,
       align: 'center',
       color: safeColorFormat(theme.colors.text.muted),
       fontSize: Math.min(theme.typography.body.sizes.small, 12)
