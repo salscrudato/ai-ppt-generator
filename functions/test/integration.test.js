@@ -9,7 +9,7 @@
  */
 
 const request = require('supertest');
-const { describe, it, expect, beforeAll, afterAll, jest } = require('@jest/globals');
+const { describe, it, expect, beforeAll, afterAll } = require('@jest/globals');
 
 // Mock Firebase and external services for integration testing
 jest.mock('firebase-functions/logger', () => ({

@@ -1,16 +1,34 @@
 /**
  * AI PowerPoint Generator - Main Application Component
  *
- * Root component managing the complete slide generation workflow with a streamlined
- * three-step process: Input → Preview → Edit → Generate. Provides an intuitive
- * user experience with real-time feedback and professional presentation output.
+ * CORE FUNCTIONALITY:
+ * This is the root React component that orchestrates the complete AI-powered slide generation
+ * workflow. It manages a three-step process: Input → Preview → Edit → Generate, providing
+ * users with full control over their presentation creation.
  *
- * Architecture:
- * - State management for multi-step workflow
- * - API integration for AI-powered slide generation
- * - Responsive design with smooth animations
- * - Error handling and user feedback
- * - Professional UI/UX patterns
+ * WORKFLOW STEPS:
+ * 1. INPUT: User provides prompt, audience, tone, and content preferences
+ * 2. PREVIEW: AI generates slide draft for user review and approval
+ * 3. EDIT: User can modify title, content, layout, and styling before final generation
+ * 4. GENERATE: Creates and downloads professional PowerPoint (.pptx) file
+ *
+ * STATE MANAGEMENT:
+ * - Uses React useState for centralized application state
+ * - Manages current workflow step, user parameters, AI-generated draft, and edited specifications
+ * - Handles loading states and error messages throughout the process
+ *
+ * API INTEGRATION:
+ * - Communicates with Firebase Cloud Functions backend
+ * - POST /draft: Generates initial slide content using AI
+ * - POST /generate: Creates final PowerPoint file from slide specification
+ * - Includes comprehensive error handling and user feedback
+ *
+ * UI/UX FEATURES:
+ * - Responsive design with Tailwind CSS
+ * - Smooth animations using Framer Motion
+ * - Professional gradient backgrounds and glass morphism effects
+ * - Step indicator showing current progress
+ * - Real-time form validation and feedback
  *
  * @version 3.1.0-optimized
  * @author AI PowerPoint Generator Team

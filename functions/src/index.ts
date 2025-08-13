@@ -1,14 +1,36 @@
 /**
  * AI PowerPoint Generator - Firebase Cloud Functions Backend
  *
- * Enhanced backend service with chained AI processing for superior slide quality:
- * - Multi-step AI generation (content → layout → images → refinement)
- * - Professional PowerPoint creation with advanced styling and image integration
- * - RESTful API with improved error handling and performance monitoring
- * - Automatic theme selection and style validation for professional outputs
+ * CORE FUNCTIONALITY:
+ * This is the main backend service that provides RESTful API endpoints for AI-powered
+ * PowerPoint slide generation. The service uses OpenAI's GPT-4 for content generation
+ * and DALL-E 3 for image creation, with comprehensive error handling and performance monitoring.
+ *
+ * KEY FEATURES:
+ * - Multi-step AI generation pipeline: content → layout → images → refinement
+ * - Professional PowerPoint (.pptx) file creation using PptxGenJS
+ * - Advanced styling with theme system and brand customization
+ * - Comprehensive input validation using Zod schemas
+ * - Performance monitoring and detailed logging
+ * - Rate limiting and security headers for production use
+ *
+ * API ENDPOINTS:
+ * - GET /health - Service health check
+ * - POST /draft - Generate slide content draft for preview
+ * - POST /generate - Create final PowerPoint file from slide specification
+ * - POST /validate-content - Validate slide content quality
+ * - POST /themes - Get theme recommendations based on content
+ * - GET /metrics - Performance metrics (admin only)
+ *
+ * ARCHITECTURE:
+ * - Express.js application wrapped in Firebase Cloud Function
+ * - Stateless design with no database dependencies
+ * - OpenAI API integration with retry logic and fallback strategies
+ * - Comprehensive error handling with typed error classes
+ * - Memory-efficient caching for theme recommendations
  *
  * @version 3.3.2-enhanced-fixed
- * @author AI PowerPoint Generator Team (enhanced by expert co-pilot)
+ * @author AI PowerPoint Generator Team
  */
 
 import { setGlobalOptions } from "firebase-functions";

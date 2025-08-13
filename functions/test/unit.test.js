@@ -22,17 +22,18 @@ jest.mock('firebase-functions/params', () => ({
 }));
 
 // Import modules to test
-const { 
-  validateSlideSpec, 
-  safeValidateSlideSpec, 
+// Import from compiled JavaScript files in lib directory
+const {
+  validateSlideSpec,
+  safeValidateSlideSpec,
   validateGenerationParams,
   safeValidateGenerationParams,
   validateContentQuality,
   generateContentImprovements,
   SLIDE_LAYOUTS
-} = require('../src/schema');
+} = require('../lib/schema');
 
-const { 
+const {
   PROFESSIONAL_THEMES,
   getThemeById,
   getDefaultTheme,
@@ -40,7 +41,7 @@ const {
   customizeTheme,
   validateThemeAccessibility,
   getThemeRecommendations
-} = require('../src/professionalThemes');
+} = require('../lib/professionalThemes');
 
 const {
   generateContentPrompt,
@@ -50,7 +51,7 @@ const {
   CONTENT_LENGTH_SPECS,
   AUDIENCE_GUIDANCE,
   TONE_SPECIFICATIONS
-} = require('../src/prompts');
+} = require('../lib/prompts');
 
 describe('Schema Validation', () => {
   describe('SlideSpec Validation', () => {

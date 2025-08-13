@@ -1,215 +1,503 @@
-# AI PowerPoint Generator
+# 🎯 AI PowerPoint Generator
 
-A streamlined web application that uses AI to generate professional PowerPoint presentations with an intuitive three-step workflow for maximum control and customization.
+> **Professional AI-Powered Presentation Creation Platform**
+> Transform your ideas into stunning PowerPoint presentations using advanced AI technology with complete control over the creative process.
 
-## ✨ Features
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/salscrudato/ai-ppt-generator)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node.js-22+-brightgreen.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-19.1-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-5.8-blue.svg)](https://www.typescriptlang.org/)
 
-### **Simple 3-Step Workflow**
-1. **Input & Parameters** - Describe your slide with audience and tone settings
-2. **AI Preview** - Review and refine the generated content
-3. **Download** - Get your professional PowerPoint file instantly
+## 🚀 Overview
 
-### **Smart AI Controls**
-- **Audience Targeting**: General, Executives, Technical, Sales, Investors, Students
-- **Tone Selection**: Professional, Casual, Persuasive, Educational, Inspiring
-- **Content Length**: Brief, Moderate, or Detailed content generation
-- **Professional Themes**: Multiple color schemes and layouts
-- **AI Images**: Optional DALL-E generated images for visual impact
+The AI PowerPoint Generator is a cutting-edge web application that leverages OpenAI's GPT-4 and DALL-E 3 to create professional presentations. Built with modern technologies and optimized for AI agent collaboration, it provides a streamlined three-step workflow that gives users complete control over their presentation creation process.
 
-### **Professional Output**
-- Multiple layout types (Title, Bullets, Two-Column, Charts, etc.)
-- Brand color customization
-- Speaker notes and source citations
-- High-quality PowerPoint (.pptx) files
-- Compatible with PowerPoint, Keynote, and Google Slides
+## ✨ Key Features
 
-## 🏗️ Architecture
+### **🎨 Intelligent 3-Step Workflow**
+1. **📝 Input & Configuration** - Define your presentation with smart parameters
+2. **👁️ AI Preview & Review** - Examine AI-generated content before committing
+3. **✏️ Edit & Customize** - Fine-tune every detail to match your vision
+4. **📥 Generate & Download** - Receive professional PowerPoint files instantly
 
-### Backend (Firebase Functions + TypeScript)
-- **Firebase Cloud Functions** - Serverless backend hosting
-- **OpenAI GPT-4o** - Latest AI model for content generation
-- **PptxGenJS** - Professional PowerPoint file creation
-- **DALL-E 3** - AI image generation
-- **Zod** - Runtime schema validation
+### **🧠 Advanced AI Capabilities**
+- **Multi-Step AI Processing**: Content → Layout → Images → Refinement pipeline
+- **Audience Intelligence**: Tailored content for Executives, Technical teams, Students, etc.
+- **Tone Adaptation**: Professional, Casual, Persuasive, Educational, Inspiring voices
+- **Content Scaling**: Brief, Moderate, or Comprehensive detail levels
+- **Smart Layout Selection**: AI automatically chooses optimal slide layouts
+- **DALL-E 3 Integration**: Optional AI-generated images for visual impact
 
-### Frontend (React + TypeScript)
-- **React 19** - Modern React with latest features
-- **Vite** - Lightning-fast development and builds
-- **TypeScript** - Full type safety throughout
-- **Tailwind CSS** - Utility-first styling
-- **Framer Motion** - Smooth animations and transitions
+### **🎯 Professional Output**
+- **22+ Layout Types**: Title, Bullets, Two-Column, Charts, Timelines, Comparisons
+- **Theme System**: Professional color schemes and typography
+- **Brand Customization**: Custom colors, fonts, and styling
+- **Speaker Notes**: AI-generated presentation guidance
+- **Source Citations**: Automatic credibility and reference tracking
+- **Universal Compatibility**: Works with PowerPoint, Keynote, Google Slides
 
-## 🚀 Quick Start
+## 📁 Project Structure
 
-### Prerequisites
-- Node.js 18+
-- OpenAI API key
-- Firebase CLI (installed automatically)
+```
+ai-ppt-gen/
+├── 📂 functions/                    # Firebase Cloud Functions Backend
+│   ├── 📂 src/                     # TypeScript source code
+│   │   ├── 📄 index.ts             # Main API endpoints and Express app
+│   │   ├── 📄 llm.ts               # OpenAI integration and AI processing
+│   │   ├── 📄 pptGenerator.ts      # PowerPoint file generation logic
+│   │   ├── 📄 schema.ts            # Zod validation schemas
+│   │   ├── 📄 prompts.ts           # AI prompt templates and engineering
+│   │   ├── 📄 professionalThemes.ts # Theme system and styling
+│   │   ├── 📄 styleValidator.ts    # Style validation and quality checks
+│   │   └── 📂 config/              # Configuration files
+│   │       └── 📄 aiModels.ts      # AI model configuration and cost tracking
+│   ├── 📂 test/                    # Jest test suite
+│   │   ├── 📄 unit.test.js         # Unit tests for core functionality
+│   │   ├── 📄 integration.test.js  # API integration tests
+│   │   └── 📄 setup.js             # Test configuration and mocks
+│   ├── 📄 package.json             # Backend dependencies and scripts
+│   └── 📄 tsconfig.json            # TypeScript configuration
+├── 📂 frontend/                     # React Frontend Application
+│   ├── 📂 src/                     # React source code
+│   │   ├── 📄 App.tsx              # Main application component
+│   │   ├── 📄 main.tsx             # React application entry point
+│   │   ├── 📄 types.ts             # TypeScript type definitions
+│   │   ├── 📄 config.ts            # API configuration and endpoints
+│   │   ├── 📂 components/          # Reusable React components
+│   │   │   ├── 📄 Button.tsx       # Optimized button component
+│   │   │   ├── 📄 LoadingSpinner.tsx # Loading states and animations
+│   │   │   ├── 📄 PromptInput.tsx  # User input form component
+│   │   │   ├── 📄 SlidePreview.tsx # AI-generated content preview
+│   │   │   ├── 📄 SlideEditor.tsx  # Content editing interface
+│   │   │   └── 📄 StepIndicator.tsx # Workflow progress indicator
+│   │   ├── 📂 layouts/             # Presentation layout definitions
+│   │   │   └── 📄 presentationLayouts.ts # Layout types and utilities
+│   │   └── 📂 themes/              # Frontend theme system
+│   │       └── 📄 professionalThemes.ts # Theme definitions
+│   ├── 📄 package.json             # Frontend dependencies and scripts
+│   ├── 📄 vite.config.ts           # Vite build configuration
+│   ├── 📄 tailwind.config.js       # Tailwind CSS configuration
+│   └── 📄 tsconfig.json            # TypeScript configuration
+├── 📄 firebase.json                # Firebase project configuration
+├── 📄 firestore.rules              # Firestore security rules
+├── 📄 firestore.indexes.json       # Firestore database indexes
+├── 📄 package.json                 # Root project configuration
+├── 📄 test-app.js                  # Comprehensive test runner
+├── 📄 setup-local-dev.sh           # Development environment setup
+├── 📄 start-dev.sh                 # Development server launcher
+└── 📄 README.md                    # This documentation file
+```
 
-### Installation
+## 🏗️ Technical Architecture
 
-1. **Clone and Setup**
-   ```bash
-   git clone <repository-url>
-   cd ai-ppt-gen
-   ./setup-local-dev.sh
-   ```
+### **🔧 Backend Stack (Firebase Functions + TypeScript)**
+- **Firebase Cloud Functions** - Serverless backend with auto-scaling
+- **OpenAI GPT-4** - Latest AI model for intelligent content generation
+- **DALL-E 3** - AI-powered image generation and integration
+- **PptxGenJS** - Professional PowerPoint file creation library
+- **Zod** - Runtime schema validation and type safety
+- **Express.js** - RESTful API framework with middleware
+- **TypeScript** - Full type safety and enhanced developer experience
 
-2. **Add Your OpenAI API Key**
-   ```bash
-   # Edit functions/.env and add your key
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
+### **🎨 Frontend Stack (React + TypeScript)**
+- **React 19** - Latest React with concurrent features and optimizations
+- **Vite** - Lightning-fast development server and build tool
+- **TypeScript** - Complete type safety across the application
+- **Tailwind CSS** - Utility-first CSS framework with custom design system
+- **Framer Motion** - Smooth animations and micro-interactions
+- **React Icons** - Comprehensive icon library for UI elements
 
-3. **Start Development**
-   ```bash
-   ./start-dev.sh
-   ```
+## 🚀 Quick Start Guide
 
-4. **Open Application**
-   - Frontend: http://localhost:5173
-   - Firebase Emulators: http://localhost:4000
+### **📋 Prerequisites**
+- **Node.js 22+** - Latest LTS version recommended
+- **OpenAI API Key** - Required for AI content generation
+- **Git** - For version control and repository cloning
+- **Modern Browser** - Chrome, Firefox, Safari, or Edge
 
-## 📖 Usage Guide
+### **⚡ Installation & Setup**
 
-### Step 1: Input & Configure
-- Enter your slide description or topic
-- Select target audience (executives, technical, etc.)
-- Choose tone (professional, casual, persuasive, etc.)
-- Set content length (brief, moderate, detailed)
-- Configure design preferences and colors
-- Optionally enable AI-generated images
+#### **1. Clone Repository**
+```bash
+git clone https://github.com/salscrudato/ai-ppt-generator.git
+cd ai-ppt-generator
+```
 
-### Step 2: Preview & Edit
-- Review the AI-generated slide structure
-- Edit title, content, and layout as needed
-- Adjust bullet points and formatting
-- Add speaker notes or source citations
-- Preview the final design
+#### **2. Automated Setup**
+```bash
+# Run the automated setup script
+./setup-local-dev.sh
+```
+*This script will:*
+- ✅ Verify Node.js version compatibility
+- ✅ Install Firebase CLI if needed
+- ✅ Install all dependencies for both frontend and backend
+- ✅ Set up development environment
 
-### Step 3: Generate & Download
-- Generate professional PowerPoint file
-- Download .pptx file instantly
-- Compatible with PowerPoint, Keynote, and Google Slides
-- Includes professional formatting and brand colors
+#### **3. Configure OpenAI API Key**
+```bash
+# Create environment file
+cp functions/.env.example functions/.env
 
-## API Endpoints
+# Edit the file and add your OpenAI API key
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
-### `POST /draft`
-Generate slide structure for preview/editing
+#### **4. Start Development Environment**
+```bash
+# Launch both frontend and backend servers
+./start-dev.sh
+```
+
+#### **5. Access Application**
+- 🌐 **Frontend Application**: http://localhost:5173
+- 🔥 **Firebase Emulators**: http://localhost:4000
+- ⚡ **Functions API**: http://localhost:5001
+
+## 📖 Comprehensive Usage Guide
+
+### **🎯 Step-by-Step Workflow**
+
+#### **Step 1: Input & Configuration**
+1. **📝 Describe Your Presentation**
+   - Enter your slide topic or detailed description
+   - Be specific about key points you want to cover
+   - Include any important context or background information
+
+2. **👥 Select Target Audience**
+   - **Executives**: High-level strategic content with key metrics
+   - **Technical**: Detailed technical information with specifications
+   - **Sales**: Persuasive content focused on benefits and ROI
+   - **Students**: Educational content with clear explanations
+   - **Investors**: Financial focus with growth projections
+   - **General**: Balanced content suitable for mixed audiences
+
+3. **🎨 Choose Presentation Tone**
+   - **Professional**: Formal, authoritative, business-appropriate
+   - **Casual**: Relaxed, conversational, approachable
+   - **Persuasive**: Compelling, action-oriented, influential
+   - **Educational**: Informative, clear, instructional
+   - **Inspiring**: Motivational, uplifting, visionary
+
+4. **📏 Set Content Depth**
+   - **Brief**: Concise, high-level overview (3-5 key points)
+   - **Moderate**: Balanced detail with supporting information
+   - **Comprehensive**: Detailed analysis with examples and context
+
+#### **Step 2: AI Preview & Review**
+- 🤖 **AI Processing**: Multi-step content generation pipeline
+- 👁️ **Content Review**: Examine AI-generated title, layout, and content
+- ✅ **Quality Check**: Verify accuracy and relevance
+- 🔄 **Iteration Option**: Regenerate if needed
+
+#### **Step 3: Edit & Customize**
+- ✏️ **Content Editing**: Modify title, bullets, paragraphs
+- 🎨 **Layout Adjustment**: Change slide layout if needed
+- 📝 **Speaker Notes**: Add presentation guidance
+- 🔗 **Source Citations**: Include references and credibility
+
+#### **Step 4: Generate & Download**
+- 🚀 **PowerPoint Creation**: Professional .pptx file generation
+- 📥 **Instant Download**: Receive file immediately
+- 🔄 **Universal Compatibility**: Works with PowerPoint, Keynote, Google Slides
+- 🎨 **Professional Formatting**: Includes themes, colors, and styling
+
+## 🔌 API Reference
+
+### **Core Endpoints**
+
+#### **`GET /health`** - Service Health Check
+```bash
+curl http://localhost:5001/plsfixthx-ai/us-central1/api/health
+```
+**Response:**
 ```json
 {
-  "prompt": "Quarterly sales results...",
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "version": "3.3.2-enhanced-fixed",
+  "service": "AI PowerPoint Generator",
+  "environment": "development"
+}
+```
+
+#### **`POST /draft`** - Generate Slide Draft
+Creates AI-generated slide content for preview and editing.
+
+**Request:**
+```json
+{
+  "prompt": "Quarterly sales results showing 25% growth with key achievements",
   "audience": "executives",
   "tone": "professional",
   "contentLength": "moderate",
+  "withImage": false,
   "design": {
-    "theme": "light",
+    "theme": "corporate-blue",
     "brand": {
       "primary": "#3b82f6",
       "secondary": "#64748b"
     }
-  },
-  "withImage": false
+  }
 }
 ```
 
-### `POST /generate`
-Generate PowerPoint from slide specification
+**Response:**
 ```json
 {
   "title": "Q3 Sales Results",
   "layout": "title-bullets",
-  "bullets": ["25% revenue growth", "Key achievements", "Future outlook"],
-  "design": { "theme": "light", "brand": { "primary": "#3b82f6" } }
+  "bullets": [
+    "25% revenue growth year-over-year",
+    "Exceeded targets in all key markets",
+    "Strong customer acquisition metrics",
+    "Positive outlook for Q4"
+  ],
+  "notes": "Emphasize the consistent growth trend...",
+  "sources": ["Internal sales data", "Market analysis"]
 }
 ```
 
-## Customization
+#### **`POST /generate`** - Create PowerPoint File
+Generates final .pptx file from slide specification.
 
-### Brand Colors
-- Primary: Main accent color for titles and highlights
-- Secondary: Supporting color for text and elements
-- Automatic contrast adjustment for readability
-
-### Layout Types
-- **Title**: Simple title-only slides
-- **Title-Bullets**: Title with bullet points
-- **Two-Column**: Side-by-side content
-- **Image-Right**: Content with image placeholder
-- **Quote**: Centered quote display
-- **Chart**: Data visualization
-
-## Testing
-
-### Comprehensive Workflow Test
-```bash
-node test-workflow.js
+**Request:**
+```json
+{
+  "spec": {
+    "title": "Q3 Sales Results",
+    "layout": "title-bullets",
+    "bullets": ["25% revenue growth", "Key achievements", "Future outlook"],
+    "design": { "theme": "corporate-blue" }
+  },
+  "withImage": false,
+  "themeId": "corporate-blue"
+}
 ```
 
-### AI Prompt Testing
-```bash
-# Test all scenarios
-node test-prompts.js
+**Response:** Binary .pptx file download
 
-# Test specific scenario
-node test-prompts.js executive-brief
-node test-prompts.js technical-detailed
+## 🎨 Customization & Themes
+
+### **🎯 Professional Theme System**
+The application includes a comprehensive theme system with carefully crafted color palettes:
+
+#### **Corporate Themes**
+- **Corporate Blue**: Professional blue with clean typography
+- **Finance Navy**: Deep navy for financial presentations
+- **Consulting Charcoal**: Sophisticated gray for consulting decks
+
+#### **Creative Themes**
+- **Creative Purple**: Vibrant purple for innovative presentations
+- **Marketing Magenta**: Bold magenta for marketing materials
+- **Vibrant Coral**: Energetic coral for dynamic content
+
+#### **Specialized Themes**
+- **Education Green**: Calming green for educational content
+- **Healthcare Teal**: Trustworthy teal for healthcare presentations
+- **Startup Orange**: Energetic orange for startup pitches
+
+### **🎨 Brand Customization**
+- **Primary Color**: Main accent color for titles and highlights
+- **Secondary Color**: Supporting color for text and elements
+- **Accent Color**: Call-to-action and emphasis elements
+- **Typography**: Professional font pairings optimized for readability
+- **Automatic Contrast**: Ensures WCAG accessibility compliance
+
+### **📐 Layout Types (22+ Available)**
+
+#### **Basic Layouts**
+- **Title**: Clean title-only slides for section breaks
+- **Title-Bullets**: Classic bullet point presentations
+- **Title-Paragraph**: Narrative content with flowing text
+
+#### **Advanced Layouts**
+- **Two-Column**: Side-by-side content comparison
+- **Image-Right/Left**: Content with AI-generated images
+- **Quote**: Centered inspirational quotes
+- **Chart**: Data visualization with multiple chart types
+- **Timeline**: Chronological process flows
+- **Comparison Table**: Feature and option comparisons
+- **Before-After**: Transformation showcases
+- **Problem-Solution**: Structured problem-solving format
+
+## 🧪 Testing & Quality Assurance
+
+### **🔍 Comprehensive Test Suite**
+
+#### **Application Workflow Test**
+```bash
+# Run complete end-to-end workflow test
+node test-app.js
+```
+*Tests the entire user journey from input to PowerPoint generation*
+
+#### **Backend API Tests**
+```bash
+# Unit tests for core functionality
+cd functions && npm test
+
+# Integration tests for API endpoints
+cd functions && npm run test:integration
 ```
 
-Tests cover:
-- Draft generation with parameters
-- PowerPoint file creation
-- Multiple layout types
-- API error handling
-- Prompt quality assessment
-- Response time monitoring
-
-## AI Prompt Management
-
-All AI prompts are centralized in `backend/src/prompts.ts` for easy modification without touching code files.
-
-### Key Components:
-- **SYSTEM_PROMPT**: Defines AI role and output format
-- **AUDIENCE_GUIDANCE**: Content adaptation for different audiences
-- **TONE_SPECIFICATIONS**: Style guidelines for different tones
-- **CONTENT_LENGTH_SPECS**: Detail level specifications
-
-### Improving Prompts:
-1. Edit `backend/src/prompts.ts`
-2. Test changes with `node test-prompts.js`
-3. Server automatically reloads with hot-reload
-4. See `backend/PROMPTS_GUIDE.md` for detailed guidance
-
-## Production Deployment
-
-### Build Backend
+#### **Frontend Component Tests**
 ```bash
-cd backend
-npm run build
-npm start
+# React component and UI tests
+cd frontend && npm test
+
+# Run tests in watch mode during development
+cd frontend && npm run test:watch
 ```
 
-### Build Frontend
+### **🎯 Test Coverage Areas**
+- ✅ **AI Content Generation**: Prompt processing and response quality
+- ✅ **PowerPoint Creation**: File generation and formatting
+- ✅ **API Endpoints**: Request/response validation and error handling
+- ✅ **Layout Systems**: All 22+ layout types and theme applications
+- ✅ **User Interface**: Component behavior and user interactions
+- ✅ **Performance**: Response times and memory usage optimization
+- ✅ **Error Handling**: Graceful failure and recovery scenarios
+
+## 🤖 AI Optimization & Prompt Engineering
+
+### **🎯 AI-Optimized Codebase Design**
+This codebase is specifically optimized for AI agent collaboration and iteration:
+
+#### **Code Organization for AI Consumption**
+- **Comprehensive Comments**: Every function, component, and module includes detailed AI-readable documentation
+- **Type Safety**: Full TypeScript implementation with explicit type definitions
+- **Modular Architecture**: Clear separation of concerns with single-responsibility modules
+- **Consistent Patterns**: Standardized code patterns and naming conventions throughout
+- **Error Context**: Detailed error messages with actionable debugging information
+
+#### **AI Prompt Management System**
+All AI prompts are centralized in `functions/src/prompts.ts` for easy modification:
+
+**Key Components:**
+- **SYSTEM_PROMPT**: Defines AI role and output format specifications
+- **AUDIENCE_GUIDANCE**: Content adaptation strategies for different audiences
+- **TONE_SPECIFICATIONS**: Style guidelines and voice adaptation rules
+- **CONTENT_LENGTH_SPECS**: Detail level and content depth specifications
+- **LAYOUT_SELECTION**: Smart layout recommendation logic
+
+**Prompt Optimization Workflow:**
+1. Edit prompts in `functions/src/prompts.ts`
+2. Test changes with comprehensive test suite
+3. Hot-reload automatically applies changes
+4. Monitor performance metrics and quality scores
+5. Iterate based on AI output quality assessment
+
+#### **AI Agent Integration Points**
+- **Schema Validation**: Zod schemas provide clear data structure contracts
+- **API Documentation**: OpenAPI-style documentation for all endpoints
+- **Type Definitions**: Comprehensive TypeScript interfaces for all data structures
+- **Error Handling**: Structured error responses with context and suggestions
+- **Performance Monitoring**: Built-in metrics for AI response quality and speed
+
+## 🚀 Production Deployment
+
+### **📦 Build Process**
+
+#### **Backend Build**
+```bash
+cd functions
+npm run build          # Compile TypeScript to JavaScript
+npm run test          # Run all tests before deployment
+```
+
+#### **Frontend Build**
 ```bash
 cd frontend
-npm run build
-npm run preview
+npm run build         # Create optimized production build
+npm run preview       # Preview production build locally
 ```
 
-## Contributing
+#### **Complete Deployment**
+```bash
+# Build everything and deploy to Firebase
+npm run build
+firebase deploy
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+# Deploy specific services
+firebase deploy --only functions    # Backend API only
+firebase deploy --only hosting     # Frontend only
+```
 
-## License
+### **🔧 Environment Configuration**
 
-This project is licensed under the MIT License.
+#### **Production Environment Variables**
+```bash
+# Set production OpenAI API key
+firebase functions:config:set openai.api_key="your_production_key"
 
-## Acknowledgments
+# View current configuration
+firebase functions:config:get
+```
+
+#### **Local Development Environment**
+```bash
+# functions/.env (for local development)
+OPENAI_API_KEY=your_development_key_here
+NODE_ENV=development
+```
+
+### **📊 Performance Monitoring**
+- **Firebase Performance**: Automatic performance tracking
+- **Error Reporting**: Comprehensive error logging and alerts
+- **Usage Analytics**: API endpoint usage and response time monitoring
+- **Cost Tracking**: OpenAI API usage and cost optimization
+
+## 🤝 Contributing & Development
+
+### **🔧 Development Workflow**
+1. **Fork & Clone**: Fork the repository and clone your fork
+2. **Setup Environment**: Run `./setup-local-dev.sh` for automated setup
+3. **Create Branch**: Create a feature branch from `main`
+4. **Develop**: Make changes with comprehensive testing
+5. **Test**: Run full test suite with `node test-app.js`
+6. **Document**: Update documentation and comments for AI consumption
+7. **Submit PR**: Create pull request with detailed description
+
+### **📋 Contribution Guidelines**
+- **Code Style**: Follow existing TypeScript and React patterns
+- **Testing**: Add tests for all new functionality
+- **Documentation**: Update README and inline comments
+- **AI Optimization**: Ensure code is AI-agent friendly
+- **Performance**: Consider OpenAI API cost implications
+- **Security**: Follow security best practices for API keys
+
+### **🎯 Areas for Contribution**
+- **New Layout Types**: Additional PowerPoint slide layouts
+- **Theme Expansion**: More professional color schemes
+- **AI Improvements**: Enhanced prompt engineering
+- **Performance**: Optimization and caching strategies
+- **Accessibility**: WCAG compliance improvements
+- **Internationalization**: Multi-language support
+
+## 📄 License & Credits
+
+### **License**
+MIT License - see [LICENSE](LICENSE) file for complete details.
+
+### **Credits**
+- **OpenAI**: GPT-4 and DALL-E 3 AI models
+- **Firebase**: Cloud hosting and serverless functions
+- **PptxGenJS**: PowerPoint file generation library
+- **React & Vite**: Modern frontend development stack
+- **Tailwind CSS**: Utility-first CSS framework
+
+### **Version History**
+- **v3.3.2**: Enhanced AI processing with multi-step pipeline
+- **v3.1.0**: Optimized user experience and performance
+- **v2.0.0**: Complete TypeScript rewrite with modern stack
+- **v1.0.0**: Initial release with basic AI generation
+
+---
+
+**🚀 Ready to create amazing presentations with AI?**
+[Get Started](#-quick-start-guide) • [View API Docs](#-api-reference) • [Contribute](#-contributing--development)
 
 - OpenAI for GPT-4 API
 - PptxGenJS for PowerPoint generation
