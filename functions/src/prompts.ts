@@ -343,11 +343,13 @@ OUTPUT: Updated JSON with optimal layout.`;
  * Improved with professional styles and emotional alignment.
  */
 export function generateImagePrompt(_input: GenerationParams, partialSpec: Partial<SlideSpec>): string {
-  return `Create image prompt for slide: ${JSON.stringify(partialSpec)}.
+  return `Add an appropriate image prompt to this slide specification: ${JSON.stringify(partialSpec)}.
 
-Style: professional, clean, emotionally resonant.
+Create a professional, clean, emotionally resonant image prompt that complements the content.
 
-OUTPUT: JSON with imagePrompt in appropriate field.`;
+IMPORTANT: Return the COMPLETE slide specification with the imagePrompt field added. Do not remove any existing fields.
+
+OUTPUT: Complete JSON slide specification with imagePrompt field added.`;
 }
 
 /**
