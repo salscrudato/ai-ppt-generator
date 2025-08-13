@@ -18,7 +18,6 @@ import { defineSecret } from "firebase-functions/params";
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import multer from "multer";
 
 // Import enhanced core modules with error types
 import { generateSlideSpec, AIGenerationError, ValidationError, TimeoutError } from "./llm";
@@ -116,22 +115,6 @@ app.use(cors({ origin: true }));
 app.use(express.json({ limit: CONFIG.requestSizeLimit }));
 app.use(rateLimit(CONFIG.rateLimit));
 
-// Multer setup for image uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 1
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  }
-});
-
 // Environment setup middleware
 app.use((_req, _res, next) => {
   if (!process.env.OPENAI_API_KEY && openaiApiKey.value()) {
@@ -191,29 +174,13 @@ app.get('/metrics', (req, res) => {
 });
 
 /**
- * Slide draft generation endpoint with image upload support
+ * Slide draft generation endpoint with AI image generation support
  */
-app.post('/draft', upload.single('image'), async (req, res) => {
+app.post('/draft', async (req, res) => {
   const performanceMetric = startPerformanceTracking('/draft', req);
 
   try {
-    // Handle both JSON and multipart form data
-    let requestData = req.body;
-    if (req.body.data) {
-      // If data field exists, parse it (from FormData)
-      try {
-        requestData = JSON.parse(req.body.data);
-      } catch (e) {
-        logger.warn('Failed to parse form data', { error: e });
-      }
-    }
-
-    // Add image information if uploaded
-    if (req.file) {
-      requestData.hasImage = true;
-      requestData.imageSize = req.file.size;
-      requestData.imageType = req.file.mimetype;
-    }
+    const requestData = req.body;
 
     logger.info('Draft generation request', {
       requestId: performanceMetric.requestId,
@@ -222,7 +189,7 @@ app.post('/draft', upload.single('image'), async (req, res) => {
       tone: requestData.tone,
       contentLength: requestData.contentLength,
       layout: requestData.layout,
-      hasImage: !!req.file,
+      withImage: requestData.withImage,
       timestamp: new Date().toISOString()
     });
 
@@ -245,8 +212,7 @@ app.post('/draft', upload.single('image'), async (req, res) => {
     const enhancedParams = {
       ...validationResult.data!,
       preferredLayout: requestData.layout,
-      hasImage: !!req.file,
-      imagePrompt: req.file ? `Include an uploaded image in the presentation` : undefined
+      withImage: requestData.withImage || false
     };
 
     const draft = await generateSlideSpec(enhancedParams);

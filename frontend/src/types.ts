@@ -103,8 +103,8 @@ export interface GenerationParams {
   /** Preferred layout type for the slide */
   layout?: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution';
 
-  /** User-uploaded image file */
-  image?: File;
+  /** Whether to generate an AI image using DALL-E */
+  withImage?: boolean;
 
   /** Design and layout preferences */
   design?: {

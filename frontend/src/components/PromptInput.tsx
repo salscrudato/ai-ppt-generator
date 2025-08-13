@@ -9,8 +9,7 @@ import {
   HiUsers,
   HiChatBubbleLeftRight,
   HiPhoto,
-  HiRectangleStack,
-  HiXMark
+  HiRectangleStack
 } from 'react-icons/hi2';
 import clsx from 'clsx';
 
@@ -222,52 +221,38 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             </select>
           </div>
 
-          {/* Image Upload */}
+          {/* AI Image Generation */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">
               <HiPhoto className="w-4 h-4 text-primary-500" />
-              Upload Image (Optional)
+              AI Image Generation
             </label>
-            <div className="relative">
+            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl bg-gray-50">
               <input
-                type="file"
-                id="image-upload"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  updateParam('image', file);
-                }}
-                className="hidden"
+                type="checkbox"
+                id="with-image"
+                checked={localParams.withImage || false}
+                onChange={(e) => updateParam('withImage', e.target.checked)}
+                className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
               />
-              <label
-                htmlFor="image-upload"
-                className={clsx(
-                  'flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200',
-                  localParams.image
-                    ? 'border-primary-300 bg-primary-50 text-primary-700'
-                    : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700'
-                )}
-              >
-                <HiPhoto className="w-5 h-5" />
-                <span className="text-sm font-medium">
-                  {localParams.image ? localParams.image.name : 'Choose image file'}
-                </span>
+              <label htmlFor="with-image" className="flex-1 cursor-pointer">
+                <div className="text-sm font-medium text-gray-900">
+                  Generate AI image with DALL-E
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Automatically create a relevant image for your presentation using AI
+                </div>
               </label>
-              {localParams.image && (
-                <button
-                  type="button"
-                  onClick={() => updateParam('image', undefined)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                >
-                  <HiXMark className="w-4 h-4" />
-                </button>
-              )}
+              <HiSparkles className={clsx(
+                "w-5 h-5 transition-colors",
+                localParams.withImage ? "text-primary-500" : "text-gray-400"
+              )} />
             </div>
-            {localParams.image && (
-              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 text-sm text-green-700">
-                  <HiPhoto className="w-4 h-4" />
-                  <span>Image will be included in your presentation</span>
+            {localParams.withImage && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <HiSparkles className="w-4 h-4" />
+                  <span>AI will generate a custom image based on your presentation content</span>
                 </div>
               </div>
             )}
