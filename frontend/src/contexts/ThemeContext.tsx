@@ -5,7 +5,8 @@
  * and real-time theme switching capabilities.
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import type { ProfessionalTheme } from '../themes/professionalThemes';
 import { getThemeById, getDefaultTheme } from '../themes/professionalThemes';
 import { applyGlobalTheme, removeGlobalTheme } from '../utils/themeUtils';
@@ -185,13 +186,11 @@ export function Themed({ children, themeId }: ThemedProps) {
  * Theme selector component for quick theme switching
  */
 interface ThemeSelectorProps {
-  compact?: boolean;
-  showPreview?: boolean;
   className?: string;
 }
 
-export function ThemeSelector({ compact = false, showPreview = false, className = '' }: ThemeSelectorProps) {
-  const { themeId, setTheme } = useThemeContext();
+export function ThemeSelector({ className = '' }: ThemeSelectorProps) {
+  const { themeId } = useThemeContext();
 
   return (
     <div className={className}>

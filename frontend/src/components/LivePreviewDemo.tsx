@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
 import LiveSlidePreview from './LiveSlidePreview';
 import type { GenerationParams } from '../types';
 import { HiSparkles, HiEye } from 'react-icons/hi2';

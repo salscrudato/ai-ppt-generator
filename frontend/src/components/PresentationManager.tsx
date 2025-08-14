@@ -10,17 +10,14 @@
  * - Responsive layout
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   HiPlus,
-  HiPlay,
   HiArrowDownTray,
-  HiCog6Tooth,
   HiPresentationChartLine,
   HiArrowLeft,
   HiEye,
-  HiSparkles,
   HiPaintBrush
 } from 'react-icons/hi2';
 import DraggableSlideList from './DraggableSlideList';
@@ -30,8 +27,7 @@ import ThemeGallery from './ThemeGallery';
 import ThemePreview from './ThemePreview';
 import type { Presentation, SlideSpec } from '../types';
 import { createNewSlide, generateSlideId } from '../types';
-import { useTheme, themeToCSS } from '../utils/themeUtils';
-import clsx from 'clsx';
+import { useTheme } from '../utils/themeUtils';
 
 interface PresentationManagerProps {
   /** The presentation to manage */

@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { HiSparkles, HiEye } from 'react-icons/hi2';
+import { HiEye } from 'react-icons/hi2';
 import type { ProfessionalTheme } from '../themes/professionalThemes';
 import type { SlideSpec } from '../types';
 import clsx from 'clsx';
