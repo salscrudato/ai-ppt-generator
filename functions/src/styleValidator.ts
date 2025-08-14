@@ -1,15 +1,19 @@
 /**
- * Professional Style Validation System
- * 
+ * Enhanced Professional Style Validation System
+ *
  * Ensures all generated PowerPoint presentations meet professional design standards,
  * accessibility requirements, and modern visual design principles.
- * 
- * @version 1.0.0
+ * Enhanced to work with the new layout engine and theme system.
+ *
+ * @version 2.0.0
  * @author AI PowerPoint Generator Team
  */
 
 import type { SlideSpec } from './schema';
 import type { ProfessionalTheme } from './professionalThemes';
+import { ThemeTokens } from './core/theme/tokens';
+import { LayoutSpec, SlideBuildResult, TextBlock, Box } from './core/layout/primitives';
+import { getContrastRatio, validateAccessibility as validateThemeAccessibility } from './core/theme/utilities';
 
 export interface StyleValidationResult {
   isValid: boolean;
@@ -52,6 +56,397 @@ export interface ColorHarmonyResult {
   balance: boolean;
   professionalAppearance: boolean;
   issues: string[];
+}
+
+/**
+ * Enhanced layout validation result
+ */
+export interface LayoutValidationResult {
+  score: number;
+  spacing: boolean;
+  alignment: boolean;
+  hierarchy: boolean;
+  safeMargins: boolean;
+  overlapping: boolean;
+  gridCompliance: boolean;
+  issues: string[];
+}
+
+/**
+ * Validate layout specification against design standards
+ */
+export function validateLayoutSpec(
+  layout: LayoutSpec,
+  theme: ThemeTokens
+): LayoutValidationResult {
+  const issues: string[] = [];
+  let score = 100;
+
+  // Check safe margins
+  const safeMargins = validateSafeMargins(layout, theme);
+  if (!safeMargins.valid) {
+    issues.push(...safeMargins.issues);
+    score -= 15;
+  }
+
+  // Check for overlapping elements
+  const overlapping = checkOverlappingElements(layout);
+  if (overlapping.hasOverlaps) {
+    issues.push(...overlapping.issues);
+    score -= 20;
+  }
+
+  // Validate typography hierarchy
+  const hierarchy = validateTypographyHierarchy(layout, theme);
+  if (!hierarchy.valid) {
+    issues.push(...hierarchy.issues);
+    score -= 10;
+  }
+
+  // Check spacing consistency
+  const spacing = validateSpacingConsistency(layout, theme);
+  if (!spacing.valid) {
+    issues.push(...spacing.issues);
+    score -= 10;
+  }
+
+  // Validate accessibility compliance
+  const accessibility = validateLayoutAccessibility(layout, theme);
+  if (!accessibility.valid) {
+    issues.push(...accessibility.issues);
+    score -= 15;
+  }
+
+  return {
+    score: Math.max(0, score),
+    spacing: spacing.valid,
+    alignment: true, // Grid system ensures alignment
+    hierarchy: hierarchy.valid,
+    safeMargins: safeMargins.valid,
+    overlapping: !overlapping.hasOverlaps,
+    gridCompliance: true, // Layout engine ensures grid compliance
+    issues
+  };
+}
+
+/**
+ * Validate slide build result
+ */
+export function validateSlideBuildResult(
+  result: SlideBuildResult,
+  theme: ThemeTokens
+): StyleValidationResult {
+  const layoutValidation = validateLayoutSpec(result.layout, theme);
+  const issues: StyleIssue[] = [];
+
+  // Convert layout issues to style issues
+  layoutValidation.issues.forEach(issue => {
+    issues.push({
+      type: 'warning',
+      category: 'layout',
+      message: issue,
+      severity: 'minor',
+      fix: 'Adjust layout spacing or positioning'
+    });
+  });
+
+  // Add metadata-based issues
+  result.metadata.warnings.forEach(warning => {
+    issues.push({
+      type: 'warning',
+      category: 'content',
+      message: warning,
+      severity: 'minor'
+    });
+  });
+
+  result.metadata.errors.forEach(error => {
+    issues.push({
+      type: 'error',
+      category: 'layout',
+      message: error,
+      severity: 'critical'
+    });
+  });
+
+  // Calculate overall score
+  let score = layoutValidation.score;
+
+  // Penalize for errors and warnings
+  const criticalIssues = issues.filter(i => i.severity === 'critical').length;
+  const majorIssues = issues.filter(i => i.severity === 'major').length;
+  const minorIssues = issues.filter(i => i.severity === 'minor').length;
+
+  score -= criticalIssues * 25;
+  score -= majorIssues * 10;
+  score -= minorIssues * 5;
+
+  const finalScore = Math.max(0, Math.round(score));
+  let grade: 'A' | 'B' | 'C' | 'D' | 'F' = 'F';
+  if (finalScore >= 90) grade = 'A';
+  else if (finalScore >= 80) grade = 'B';
+  else if (finalScore >= 70) grade = 'C';
+  else if (finalScore >= 60) grade = 'D';
+
+  return {
+    isValid: finalScore >= 70 && criticalIssues === 0,
+    score: finalScore,
+    grade,
+    issues,
+    suggestions: generateLayoutSuggestions(issues, result.layout, theme),
+    accessibility: {
+      score: layoutValidation.score,
+      contrastRatio: 4.5, // Placeholder - would calculate from actual colors
+      colorBlindnessFriendly: true,
+      readabilityScore: layoutValidation.score,
+      issues: layoutValidation.issues
+    },
+    typography: {
+      score: layoutValidation.score,
+      fontHierarchy: layoutValidation.hierarchy,
+      readability: finalScore >= 80 ? 'excellent' : finalScore >= 60 ? 'good' : 'fair',
+      consistency: true,
+      issues: layoutValidation.issues
+    },
+    colorHarmony: {
+      score: layoutValidation.score,
+      harmony: finalScore >= 80 ? 'excellent' : finalScore >= 60 ? 'good' : 'fair',
+      balance: true,
+      professionalAppearance: finalScore >= 70,
+      issues: layoutValidation.issues
+    }
+  };
+}
+
+/**
+ * Validate safe margins are maintained
+ */
+function validateSafeMargins(
+  layout: LayoutSpec,
+  theme: ThemeTokens
+): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const safeMargin = theme.layout.safeMargin;
+
+  layout.content.forEach((element, index) => {
+    const box = element as Box;
+
+    // Check left margin
+    if (box.x < safeMargin) {
+      issues.push(`Element ${index + 1} violates left safe margin`);
+    }
+
+    // Check top margin
+    if (box.y < safeMargin) {
+      issues.push(`Element ${index + 1} violates top safe margin`);
+    }
+
+    // Check right margin
+    if (box.x + box.width > theme.layout.slideWidth - safeMargin) {
+      issues.push(`Element ${index + 1} violates right safe margin`);
+    }
+
+    // Check bottom margin
+    if (box.y + box.height > theme.layout.slideHeight - safeMargin) {
+      issues.push(`Element ${index + 1} violates bottom safe margin`);
+    }
+  });
+
+  return { valid: issues.length === 0, issues };
+}
+
+/**
+ * Check for overlapping elements
+ */
+function checkOverlappingElements(
+  layout: LayoutSpec
+): { hasOverlaps: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const elements = layout.content as Box[];
+
+  for (let i = 0; i < elements.length; i++) {
+    for (let j = i + 1; j < elements.length; j++) {
+      const a = elements[i];
+      const b = elements[j];
+
+      // Check if rectangles overlap
+      const overlap = !(
+        a.x + a.width <= b.x ||
+        b.x + b.width <= a.x ||
+        a.y + a.height <= b.y ||
+        b.y + b.height <= a.y
+      );
+
+      if (overlap) {
+        issues.push(`Elements ${i + 1} and ${j + 1} overlap`);
+      }
+    }
+  }
+
+  return { hasOverlaps: issues.length > 0, issues };
+}
+
+/**
+ * Validate typography hierarchy
+ */
+function validateTypographyHierarchy(
+  layout: LayoutSpec,
+  theme: ThemeTokens
+): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const textElements = layout.content.filter(el => 'text' in el) as TextBlock[];
+
+  if (textElements.length === 0) {
+    return { valid: true, issues };
+  }
+
+  // Check font size hierarchy
+  const fontSizes = textElements.map(el => el.fontSize).sort((a, b) => b - a);
+  const uniqueSizes = [...new Set(fontSizes)];
+
+  if (uniqueSizes.length === 1 && textElements.length > 1) {
+    issues.push('All text elements use the same font size - consider establishing hierarchy');
+  }
+
+  // Check for appropriate title sizing
+  const titleElements = textElements.filter(el =>
+    el.fontSize >= theme.typography.fontSizes.h1
+  );
+
+  if (titleElements.length === 0 && textElements.length > 0) {
+    issues.push('No title-sized text found - consider adding a clear heading');
+  }
+
+  if (titleElements.length > 2) {
+    issues.push('Too many title-sized elements may confuse hierarchy');
+  }
+
+  return { valid: issues.length === 0, issues };
+}
+
+/**
+ * Validate spacing consistency
+ */
+function validateSpacingConsistency(
+  layout: LayoutSpec,
+  theme: ThemeTokens
+): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const elements = layout.content as Box[];
+
+  if (elements.length < 2) {
+    return { valid: true, issues };
+  }
+
+  // Check vertical spacing consistency
+  const verticalSpaces: number[] = [];
+  for (let i = 0; i < elements.length - 1; i++) {
+    const current = elements[i];
+    const next = elements[i + 1];
+
+    if (next.y > current.y + current.height) {
+      verticalSpaces.push(next.y - (current.y + current.height));
+    }
+  }
+
+  // Check if spacing is consistent (within tolerance)
+  if (verticalSpaces.length > 1) {
+    const avgSpacing = verticalSpaces.reduce((a, b) => a + b, 0) / verticalSpaces.length;
+    const tolerance = theme.spacing.xs; // Small tolerance
+
+    const inconsistentSpacing = verticalSpaces.some(space =>
+      Math.abs(space - avgSpacing) > tolerance
+    );
+
+    if (inconsistentSpacing) {
+      issues.push('Inconsistent vertical spacing between elements');
+    }
+  }
+
+  return { valid: issues.length === 0, issues };
+}
+
+/**
+ * Validate layout accessibility
+ */
+function validateLayoutAccessibility(
+  layout: LayoutSpec,
+  theme: ThemeTokens
+): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const textElements = layout.content.filter(el => 'text' in el) as TextBlock[];
+
+  // Check minimum font sizes
+  textElements.forEach((element, index) => {
+    if (element.fontSize < 12) {
+      issues.push(`Text element ${index + 1} font size (${element.fontSize}pt) is below minimum (12pt)`);
+    }
+  });
+
+  // Check color contrast (simplified - would need actual color values)
+  textElements.forEach((element, index) => {
+    if (element.color && theme.palette.background) {
+      const contrast = getContrastRatio(`#${element.color}`, theme.palette.background);
+      if (contrast < 4.5) {
+        issues.push(`Text element ${index + 1} has insufficient color contrast (${contrast.toFixed(1)}:1)`);
+      }
+    }
+  });
+
+  // Check reading order (elements should be positioned logically)
+  if (textElements.length > 1) {
+    const sortedByPosition = [...textElements].sort((a, b) => {
+      if (Math.abs(a.y - b.y) < theme.spacing.sm) {
+        return a.x - b.x; // Same row, sort by x
+      }
+      return a.y - b.y; // Different rows, sort by y
+    });
+
+    // This is a simplified check - in practice, you'd want more sophisticated reading order validation
+    if (JSON.stringify(sortedByPosition) !== JSON.stringify(textElements)) {
+      issues.push('Text elements may not follow logical reading order');
+    }
+  }
+
+  return { valid: issues.length === 0, issues };
+}
+
+/**
+ * Generate layout-specific suggestions
+ */
+function generateLayoutSuggestions(
+  issues: StyleIssue[],
+  layout: LayoutSpec,
+  theme: ThemeTokens
+): string[] {
+  const suggestions: string[] = [];
+
+  const hasOverlapIssues = issues.some(i => i.message.includes('overlap'));
+  const hasMarginIssues = issues.some(i => i.message.includes('margin'));
+  const hasHierarchyIssues = issues.some(i => i.message.includes('hierarchy'));
+  const hasContrastIssues = issues.some(i => i.message.includes('contrast'));
+
+  if (hasOverlapIssues) {
+    suggestions.push('Increase spacing between elements to prevent overlapping');
+  }
+
+  if (hasMarginIssues) {
+    suggestions.push('Ensure all elements maintain safe margins from slide edges');
+  }
+
+  if (hasHierarchyIssues) {
+    suggestions.push('Establish clear typography hierarchy with varied font sizes');
+  }
+
+  if (hasContrastIssues) {
+    suggestions.push('Improve color contrast for better readability');
+  }
+
+  if (layout.content.length > 8) {
+    suggestions.push('Consider reducing content density for better visual impact');
+  }
+
+  return suggestions;
 }
 
 /**

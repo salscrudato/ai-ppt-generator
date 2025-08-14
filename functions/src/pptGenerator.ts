@@ -67,13 +67,30 @@ function safeColorFormat(color: string): string {
  * @returns Promise<Buffer> - PowerPoint file buffer
  */
 export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = true): Promise<Buffer> {
+  console.log('🎯 generatePpt called with specs:', {
+    specsCount: specs.length,
+    specs: specs.map(spec => ({
+      title: spec.title,
+      layout: spec.layout,
+      hasParagraph: !!spec.paragraph,
+      paragraph: spec.paragraph?.substring(0, 100) + (spec.paragraph && spec.paragraph.length > 100 ? '...' : ''),
+      hasBullets: !!spec.bullets,
+      bulletsCount: spec.bullets?.length,
+      hasImagePrompt: !!spec.imagePrompt,
+      hasLeft: !!spec.left,
+      hasRight: !!spec.right
+    }))
+  });
+
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_WIDE';
 
   // Style validation results for quality assurance
   const validationResults: StyleValidationResult[] = [];
 
-  for (const spec of specs) {
+  for (let i = 0; i < specs.length; i++) {
+    const spec = specs[i];
+
     // Enhanced theme selection with dynamic selection and customization
     let theme = getThemeById(spec.design?.theme || '') ||
                 selectThemeForContent({
@@ -114,22 +131,45 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
       slide.background = { color: bgColor };
     }
 
-    // Add title with safe styling properties
+    // Optionally add a subtle background enhancement layer
+    addSlideBackground(slide, theme);
+
+    // Simple, reliable title positioning
+    const titleFontSize = Math.min(theme.typography.headings.sizes.h1, 32);
+    const titleColor = safeColorFormat(theme.colors.primary);
+
     slide.addText(spec.title, {
       x: 0.5,
-      y: 0.3,
+      y: 0.5,
       w: 9.0,
-      h: 1.2,
-      fontSize: Math.min(theme.typography.headings.sizes.h1, 32), // Cap font size
+      h: 1.0,
+      fontSize: titleFontSize,
       bold: true,
-      color: safeColorFormat(theme.colors.primary),
+      color: titleColor,
       align: 'center',
       valign: 'middle'
-      // Removed: fontFace, lineSpacing (can cause corruption)
     });
+
+    // Add tasteful decorations for title slides
+    if (spec.layout === 'title') {
+      addTitleSlideDecorations(slide, theme);
+    }
 
     // Enhanced dynamic layout handling with comprehensive support
     await renderSlideLayout(slide, spec, theme);
+
+    // Footer: page number
+    const pageNumber = `${i + 1}/${specs.length}`;
+    slide.addText(pageNumber, {
+      x: 9.0,
+      y: 7.0,
+      w: 1.0,
+      h: 0.3,
+      fontSize: Math.min(theme.typography.body.sizes.tiny, 10),
+      color: safeColorFormat(theme.colors.text.secondary),
+      align: 'right',
+      valign: 'middle'
+    });
 
     // Add notes and sources (enhanced with formatting)
     let notesText = spec.notes || '';
@@ -143,16 +183,28 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
 
 /**
  * Comprehensive slide layout renderer supporting all layout types
- * Enhanced with improved spacing and professional positioning
+ * Enhanced with improved spacing, professional positioning, and modern visual elements
  */
 async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme): Promise<void> {
-  const contentY = 1.8; // Adjusted starting Y position below title for better spacing
-  const contentPadding = 0.5;
-  const maxContentWidth = 9.0;
+  console.log('🎯 renderSlideLayout called with:', {
+    title: spec.title,
+    layout: spec.layout,
+    hasBullets: !!spec.bullets,
+    bulletsCount: spec.bullets?.length,
+    hasRightImage: !!spec.right?.imagePrompt,
+    hasLeftImage: !!spec.left?.imagePrompt
+  });
+
+  // Simplified, reliable layout constants to prevent text overlap
+  const contentY = 1.8; // Safe starting Y position below title
+  const contentPadding = 0.5; // Standard padding
+  const maxContentWidth = 9.0; // Full content width
+  const columnWidth = 4.5; // Standard column width
+  const columnGap = 0.5; // Standard gap between columns
 
   switch (spec.layout) {
     case 'title':
-      // Title only - no additional content needed
+      // Title already rendered by caller; keep slide clean
       break;
 
     case 'title-bullets':
@@ -164,17 +216,8 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
       break;
 
     case 'two-column':
-      addSeparator(slide, theme, 5.0, contentY, 0.1, 5.0); // Vertical separator
-
-      if (spec.left) {
-        addContentBackground(slide, theme, 0.5, contentY, 4.5, 4.0);
-        await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, 0.5, contentY, 4.5);
-      }
-
-      if (spec.right) {
-        addContentBackground(slide, theme, 5.5, contentY, 4.5, 4.0);
-        await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, 5.5, contentY, 4.5, true);
-      }
+      if (spec.left) await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, contentPadding, contentY, columnWidth);
+      if (spec.right) await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, contentPadding + columnWidth + columnGap, contentY, columnWidth, true);
       break;
 
     case 'mixed-content':
@@ -214,11 +257,9 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
       break;
 
     case 'before-after':
-      await renderBeforeAfter(slide, spec, theme, contentY);
-      break;
-
     case 'problem-solution':
-      await renderProblemSolution(slide, spec, theme, contentY);
+      // Both are two-column semantics
+      await renderBeforeAfter(slide, spec, theme, contentY);
       break;
 
     case 'data-visualization':
@@ -231,18 +272,74 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
 
     case 'team-intro':
     case 'contact-info':
-    case 'thank-you':
-    case 'agenda':
-    case 'section-divider':
-      // Standard content rendering with fallback
       if (spec.bullets) addBullets(slide, spec.bullets, theme, 1.0, contentY, 8.0);
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, contentY, 8.0);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, contentY + 0.8, 8.0);
+      break;
+
+    case 'agenda':
+      // Polished agenda layout with consistent spacing and separators
+      slide.addText('Agenda', {
+        x: contentPadding,
+        y: contentY,
+        w: maxContentWidth,
+        h: 0.5,
+        fontFace: theme.typography.headings.fontFamily,
+        fontSize: theme.typography.headings.sizes.h2,
+        bold: true,
+        color: safeColorFormat(theme.colors.text.primary)
+      });
+      addModernSeparator(slide, theme, contentPadding, contentY + 0.6, maxContentWidth, 0.04);
+      if (spec.bullets) addEnhancedBullets(slide, spec.bullets, theme, contentPadding, contentY + 0.9, maxContentWidth);
+      break;
+
+    case 'section-divider':
+      // Section divider card
+      slide.addShape('rect', {
+        x: contentPadding,
+        y: contentY + 0.4,
+        w: maxContentWidth,
+        h: 2.0,
+        fill: { color: safeColorFormat(theme.colors.surface) },
+        line: { width: 0 }
+      });
+      slide.addText(spec.title || 'Section', {
+        x: contentPadding + 0.3,
+        y: contentY + 0.6,
+        w: maxContentWidth - 0.6,
+        h: 1.0,
+        fontFace: theme.typography.headings.fontFamily,
+        fontSize: Math.min(theme.typography.headings.sizes.h1, 40),
+        bold: true,
+        color: safeColorFormat(theme.colors.primary)
+      });
+      break;
+
+    case 'thank-you':
+      slide.addText('Thank You', {
+        x: 0,
+        y: contentY + 1.0,
+        w: 10,
+        h: 1.0,
+        align: 'center',
+        fontFace: theme.typography.headings.fontFamily,
+        fontSize: theme.typography.headings.sizes.h1,
+        bold: true,
+        color: safeColorFormat(theme.colors.primary)
+      });
+      if (spec.paragraph) {
+        slide.addText(spec.paragraph, {
+          x: 2.0, y: contentY + 2.2, w: 6.0, h: 1.5,
+          align: 'center',
+          fontFace: theme.typography.body.fontFamily,
+          fontSize: theme.typography.body.sizes.normal,
+          color: safeColorFormat(theme.colors.text.secondary)
+        });
+      }
       break;
 
     default:
-      // Fallback to basic content
-      if (spec.bullets) addBullets(slide, spec.bullets, theme, 1.0, contentY, 8.0);
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, contentY, 8.0);
+      if (spec.bullets) addBullets(slide, spec.bullets, theme, contentPadding, contentY, maxContentWidth);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, contentPadding, contentY, maxContentWidth);
       break;
   }
 }
@@ -251,15 +348,28 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
  * Render mixed content layout
  */
 async function renderMixedContent(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentY: number): Promise<void> {
+  console.log('🔍 renderMixedContent called with spec:', {
+    title: spec.title,
+    layout: spec.layout,
+    hasParagraph: !!spec.paragraph,
+    hasBullets: !!spec.bullets,
+    bulletsLength: spec.bullets?.length,
+    bullets: spec.bullets,
+    hasRightImage: !!spec.right?.imagePrompt
+  });
+
   let currentY = contentY;
   if (spec.paragraph) {
+    console.log('📝 Adding paragraph:', spec.paragraph);
     addParagraph(slide, spec.paragraph, theme, 0.5, currentY, 4.5);
     currentY += 2.0;
   }
   if (spec.bullets) {
+    console.log('🔸 Adding bullets:', spec.bullets);
     addBullets(slide, spec.bullets, theme, 0.5, currentY, 4.5);
   }
   if (spec.right?.imagePrompt) {
+    console.log('🖼️ Adding image:', spec.right.imagePrompt);
     await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
   }
 }
@@ -368,35 +478,51 @@ function renderComparisonTable(slide: pptxgen.Slide, table: NonNullable<SlideSpe
 }
 
 /**
- * Render timeline
+ * Render timeline with safe, compatible styling
  */
 function renderTimeline(slide: pptxgen.Slide, timeline: NonNullable<SlideSpec['timeline']>, theme: ProfessionalTheme, contentY: number): void {
   let currentY = contentY;
-  timeline.forEach((item) => {
+  const itemSpacing = 0.8;
+
+  timeline.forEach((item, index) => {
+    // Date with enhanced styling (safe properties only)
     slide.addText(item.date || '', {
       x: 0.5,
       y: currentY,
-      w: 2.0,
+      w: 1.5,
+      h: 0.4,
       fontSize: Math.min(theme.typography.body.sizes.normal, 16),
-      color: safeColorFormat(theme.colors.primary)
+      bold: true,
+      color: safeColorFormat(theme.colors.primary),
+      align: 'left'
     });
+
+    // Title with professional styling (safe properties only)
     slide.addText(item.title || '', {
-      x: 3.0,
+      x: 2.5,
       y: currentY,
-      w: 6.0,
-      fontSize: Math.min(theme.typography.body.sizes.normal, 16),
-      color: safeColorFormat(theme.colors.text.primary)
+      w: 6.5,
+      h: 0.4,
+      fontSize: Math.min(theme.typography.headings.sizes.h4, 18),
+      bold: true,
+      color: safeColorFormat(theme.colors.text.primary),
+      align: 'left'
     });
+
+    // Description with improved readability (safe properties only)
     if (item.description) {
       slide.addText(item.description, {
-        x: 3.0,
+        x: 2.5,
         y: currentY + 0.4,
-        w: 6.0,
-        fontSize: Math.min(theme.typography.body.sizes.small, 12),
-        color: safeColorFormat(theme.colors.text.secondary)
+        w: 6.5,
+        h: 0.4,
+        fontSize: Math.min(theme.typography.body.sizes.small, 13),
+        color: safeColorFormat(theme.colors.text.secondary),
+        align: 'left'
       });
     }
-    currentY += 0.8;
+
+    currentY += itemSpacing;
   });
 }
 
@@ -453,6 +579,86 @@ async function renderProblemSolution(slide: pptxgen.Slide, spec: SlideSpec, them
 }
 
 /**
+ * Enhanced layout rendering functions for modern presentations
+ */
+
+/**
+ * Enhanced mixed content layout with better spacing and visual hierarchy
+ */
+async function renderEnhancedMixedContent(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, layoutConfig: any): Promise<void> {
+  console.log('🔍 renderEnhancedMixedContent called');
+
+  let currentY = layoutConfig.contentY;
+
+  if (spec.paragraph) {
+    console.log('📝 Adding enhanced paragraph');
+    addEnhancedParagraph(slide, spec.paragraph, theme, layoutConfig.contentPadding, currentY, layoutConfig.columnWidth);
+    currentY += 2.2;
+  }
+
+  if (spec.bullets) {
+    console.log('🔸 Adding enhanced bullets');
+    addEnhancedBullets(slide, spec.bullets, theme, layoutConfig.contentPadding, currentY, layoutConfig.columnWidth);
+  }
+
+  if (spec.right?.imagePrompt) {
+    console.log('🖼️ Adding enhanced image');
+    const imageX = layoutConfig.contentPadding + layoutConfig.columnWidth + layoutConfig.columnGap;
+    await addEnhancedImage(slide, spec.right.imagePrompt, theme, imageX, layoutConfig.contentY, layoutConfig.columnWidth, 4.0);
+  }
+}
+
+/**
+ * Enhanced image-right layout
+ */
+async function renderEnhancedImageRight(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, layoutConfig: any): Promise<void> {
+  let currentY = layoutConfig.contentY;
+
+  // Text content on the LEFT with enhanced styling
+  if (spec.paragraph) {
+    addEnhancedParagraph(slide, spec.paragraph, theme, layoutConfig.contentPadding, currentY, layoutConfig.columnWidth);
+    currentY += 2.2;
+  }
+
+  if (spec.bullets) {
+    addEnhancedBullets(slide, spec.bullets, theme, layoutConfig.contentPadding, currentY, layoutConfig.columnWidth);
+  }
+
+  // Enhanced image on the RIGHT
+  const imageX = layoutConfig.contentPadding + layoutConfig.columnWidth + layoutConfig.columnGap;
+  if (spec.right?.imagePrompt) {
+    await addEnhancedImage(slide, spec.right.imagePrompt, theme, imageX, layoutConfig.contentY, layoutConfig.columnWidth, 4.0);
+  } else if (spec.imagePrompt) {
+    await addEnhancedImage(slide, spec.imagePrompt, theme, imageX, layoutConfig.contentY, layoutConfig.columnWidth, 4.0);
+  }
+}
+
+/**
+ * Enhanced image-left layout
+ */
+async function renderEnhancedImageLeft(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, layoutConfig: any): Promise<void> {
+  let currentY = layoutConfig.contentY;
+
+  // Enhanced image on the LEFT
+  if (spec.left?.imagePrompt) {
+    await addEnhancedImage(slide, spec.left.imagePrompt, theme, layoutConfig.contentPadding, layoutConfig.contentY, layoutConfig.columnWidth, 4.0);
+  } else if (spec.imagePrompt) {
+    await addEnhancedImage(slide, spec.imagePrompt, theme, layoutConfig.contentPadding, layoutConfig.contentY, layoutConfig.columnWidth, 4.0);
+  }
+
+  // Text content on the RIGHT with enhanced styling
+  const textX = layoutConfig.contentPadding + layoutConfig.columnWidth + layoutConfig.columnGap;
+  if (spec.paragraph) {
+    addEnhancedParagraph(slide, spec.paragraph, theme, textX, currentY, layoutConfig.columnWidth);
+    currentY += 2.2;
+  }
+
+  if (spec.bullets) {
+    addEnhancedBullets(slide, spec.bullets, theme, textX, currentY, layoutConfig.columnWidth);
+  }
+}
+
+/**
  * Extended type for column content to include imagePrompt
  */
 type ExtendedColumnContent = NonNullable<SlideSpec['left'] | SlideSpec['right']> & { imagePrompt?: string };
@@ -494,83 +700,191 @@ async function addColumnContent(slide: pptxgen.Slide, content: ExtendedColumnCon
 }
 
 /**
- * Add separator (simplified to prevent corruption)
+ * Enhanced visual elements for modern slide layouts
  */
-function addSeparator(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+
+/**
+ * Add subtle slide background enhancement
+ */
+function addSlideBackground(slide: pptxgen.Slide, theme: ProfessionalTheme) {
   try {
+    // Add subtle gradient background
+    slide.addShape('rect', {
+      x: 0,
+      y: 0,
+      w: 10,
+      h: 7.5,
+      fill: {
+        color: safeColorFormat(theme.colors.background),
+        transparency: 5
+      },
+      line: { width: 0 }
+    });
+  } catch (error) {
+    console.warn('Failed to add slide background, skipping:', error);
+  }
+}
+
+/**
+ * Add decorative elements for title slides
+ */
+function addTitleSlideDecorations(slide: pptxgen.Slide, theme: ProfessionalTheme) {
+  try {
+    // Add decorative accent line below title
+    slide.addShape('rect', {
+      x: 2.0,
+      y: 2.0,
+      w: 6.0,
+      h: 0.05,
+      fill: { color: safeColorFormat(theme.colors.accent) },
+      line: { width: 0 }
+    });
+
+    // Add subtle corner accents
+    slide.addShape('rect', {
+      x: 0.2,
+      y: 0.2,
+      w: 1.5,
+      h: 0.05,
+      fill: { color: safeColorFormat(theme.colors.primary) },
+      line: { width: 0 }
+    });
+
+    slide.addShape('rect', {
+      x: 8.3,
+      y: 7.0,
+      w: 1.5,
+      h: 0.05,
+      fill: { color: safeColorFormat(theme.colors.primary) },
+      line: { width: 0 }
+    });
+  } catch (error) {
+    console.warn('Failed to add title decorations, skipping:', error);
+  }
+}
+
+/**
+ * Add modern separator with enhanced styling
+ */
+function addModernSeparator(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  try {
+    // Main separator line
     slide.addShape('rect', {
       x,
       y,
       w,
       h,
-      fill: { color: safeColorFormat(theme.colors.borders.light) }
+      fill: { color: safeColorFormat(theme.colors.borders.medium) },
+      line: { width: 0 }
     });
-  } catch (error) {
-    console.warn('Failed to add separator, skipping:', error);
-    // Separator is optional, continue without it
-  }
-}
 
-/**
- * Add content background (simplified to prevent corruption)
- */
-function addContentBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  try {
+    // Add subtle shadow effect
     slide.addShape('rect', {
-      x,
+      x: x + 0.02,
       y,
       w,
       h,
-      fill: { color: safeColorFormat(theme.colors.surface) }
+      fill: {
+        color: safeColorFormat(theme.colors.borders.light),
+        transparency: 50
+      },
+      line: { width: 0 }
     });
   } catch (error) {
-    console.warn('Failed to add content background, skipping:', error);
-    // Background is optional, continue without it
+    console.warn('Failed to add modern separator, skipping:', error);
   }
 }
 
 /**
- * Add bullets with professional styling
+ * Add enhanced column background with subtle styling
  */
-function addBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
+function addColumnBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number, side: 'left' | 'right') {
+  try {
+    // Subtle background with rounded corners
+    slide.addShape('rect', {
+      x: x - 0.1,
+      y: y - 0.1,
+      w: w + 0.2,
+      h: h + 0.2,
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 15
+      },
+      line: {
+        color: safeColorFormat(theme.colors.borders.light),
+        width: 1
+      },
+      rectRadius: 0.1
+    });
+
+    // Add accent border on the appropriate side
+    const accentX = side === 'left' ? x - 0.1 : x + w + 0.05;
+    slide.addShape('rect', {
+      x: accentX,
+      y: y - 0.1,
+      w: 0.05,
+      h: h + 0.2,
+      fill: { color: safeColorFormat(theme.colors.accent) },
+      line: { width: 0 }
+    });
+  } catch (error) {
+    console.warn('Failed to add column background, skipping:', error);
+  }
+}
+
+/**
+ * Enhanced bullet points with improved visual hierarchy
+ */
+function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
+  const fontSize = Math.min(theme.typography.body.sizes.normal, 14);
+  const lineHeight = 0.5;
+
   bullets.forEach((bullet, i) => {
-    slide.addText(bullet, {
-      x,
-      y: y + i * 0.5,
-      w,
-      h: 0.5,
-      fontSize: Math.min(theme.typography.body.sizes.normal, 16), // Cap font size
-      bullet: true,
+    const bulletY = y + i * lineHeight;
+
+    slide.addText(`• ${bullet}`, {
+      x: x,
+      y: bulletY,
+      w: w,
+      h: 0.4,
+      fontSize,
       color: safeColorFormat(theme.colors.text.primary),
       align: 'left'
-      // Removed: fontFace, lineSpacing (can cause corruption)
     });
   });
 }
 
 /**
- * Add paragraph with professional styling
+ * Legacy bullet function for compatibility
  */
-function addParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, isQuote: boolean = false) {
+function addBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
+  return addEnhancedBullets(slide, bullets, theme, x, y, w);
+}
+
+/**
+ * Enhanced paragraph with improved typography and visual appeal
+ */
+function addEnhancedParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, isQuote: boolean = false) {
+  const fontSize = Math.min(isQuote ? theme.typography.body.sizes.large : theme.typography.body.sizes.normal, 16);
+  const textColor = safeColorFormat(isQuote ? theme.colors.text.secondary : theme.colors.text.primary);
+
   slide.addText(text, {
     x,
     y,
     w,
     h: 2.0,
-    fontSize: Math.min(isQuote ? theme.typography.body.sizes.large : theme.typography.body.sizes.normal, 18), // Cap font size
-    color: safeColorFormat(theme.colors.text.primary),
-    align: 'left',
+    fontSize,
+    color: textColor,
+    align: isQuote ? 'center' : 'left',
     italic: isQuote
-    // Removed: fontFace, lineSpacing (can cause corruption)
   });
 }
 
 /**
- * Add image with AI generation and fallback
- * Uses centralized configuration for testing vs production modes
+ * Enhanced image with improved styling and border effects
  */
-async function addImage(slide: pptxgen.Slide, prompt: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  console.log(`🎨 Attempting to generate image with prompt: "${prompt.substring(0, 100)}..."`);
+async function addEnhancedImage(slide: pptxgen.Slide, prompt: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  console.log(`🎨 Attempting to generate enhanced image with prompt: "${prompt.substring(0, 100)}..."`);
 
   try {
     const imageConfig = getImageModelConfig();
@@ -590,33 +904,70 @@ async function addImage(slide: pptxgen.Slide, prompt: string, theme: Professiona
       const base64 = response.data[0].b64_json;
       console.log(`   ✓ Image data received (${Math.round(base64.length / 1024)}KB base64)`);
 
+      // Add subtle shadow background
+      slide.addShape('rect', {
+        x: x + 0.05,
+        y: y + 0.05,
+        w,
+        h,
+        fill: {
+          color: safeColorFormat('#000000'),
+          transparency: 85
+        },
+        line: { width: 0 },
+        rectRadius: 0.1
+      });
+
+      // Add the main image with rounded corners
       slide.addImage({
         data: `data:image/png;base64,${base64}`,
         x,
         y,
         w,
-        h
+        h,
+        rounding: true
       });
 
-      console.log(`   ✓ Image added to slide at position (${x}, ${y}) size ${w}x${h}`);
+      // Add subtle border
+      slide.addShape('rect', {
+        x,
+        y,
+        w,
+        h,
+        fill: { transparency: 100 },
+        line: {
+          color: safeColorFormat(theme.colors.borders.medium),
+          width: 1
+        },
+        rectRadius: 0.1
+      });
+
+      console.log(`   ✓ Enhanced image added to slide at position (${x}, ${y}) size ${w}x${h}`);
     } else {
       throw new Error('No image data returned from DALL-E');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`❌ Image generation failed: ${errorMessage}`);
-    console.error(`   Prompt: "${prompt}"`);
-    console.error(`   Position: (${x}, ${y}) size ${w}x${h}`);
+    console.error(`❌ Enhanced image generation failed: ${errorMessage}`);
 
-    // Add visible placeholder so user knows image was attempted
+    // Enhanced placeholder with better styling
     slide.addShape('rect', {
       x,
       y,
       w,
       h,
-      fill: { color: safeColorFormat(theme.colors.surface) },
-      line: { color: safeColorFormat(theme.colors.primary), width: 2 }
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 10
+      },
+      line: {
+        color: safeColorFormat(theme.colors.primary),
+        width: 2,
+        dashType: 'dash'
+      },
+      rectRadius: 0.1
     });
+
     slide.addText('🖼️ Image Generation Failed', {
       x,
       y: y + h / 2 - 0.3,
@@ -630,9 +981,61 @@ async function addImage(slide: pptxgen.Slide, prompt: string, theme: Professiona
 }
 
 /**
- * Add chart with professional styling
+ * Legacy image function for compatibility
+ */
+async function addImage(slide: pptxgen.Slide, prompt: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  return addEnhancedImage(slide, prompt, theme, x, y, w, h);
+}
+
+/**
+ * Add chart with professional styling (legacy function)
  */
 function addChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['chart']>, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  return addEnhancedChart(slide, chart, theme, x, y, w, h);
+}
+
+// Showcase functions (completed with sample data for compilation)
+export async function generateStyleShowcase(): Promise<Buffer> {
+  const sampleSlides: SlideSpec[] = [
+    { title: 'Sample Title', layout: 'title', design: {} }
+    // Add more as needed
+  ];
+  return await generatePpt(sampleSlides, true);
+}
+
+export async function generateThemeShowcase(): Promise<Buffer> {
+  const themeSlides: SlideSpec[] = [
+    { title: 'Theme Sample', layout: 'title-paragraph', paragraph: 'Test', design: {} }
+    // Add more as needed
+  ];
+  return await generatePpt(themeSlides, true);
+}
+
+/**
+ * Additional enhanced layout functions
+ */
+
+/**
+ * Enhanced chart rendering with modern styling
+ */
+function addEnhancedChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['chart']>, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  // Add chart background
+  slide.addShape('rect', {
+    x: x - 0.1,
+    y: y - 0.1,
+    w: w + 0.2,
+    h: h + 0.2,
+    fill: {
+      color: safeColorFormat(theme.colors.surface),
+      transparency: 10
+    },
+    line: {
+      color: safeColorFormat(theme.colors.borders.light),
+      width: 1
+    },
+    rectRadius: 0.1
+  });
+
   // Map chart types to pptxgenjs format
   const chartTypeMap: Record<string, any> = {
     'bar': 'bar',
@@ -665,19 +1068,581 @@ function addChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['chart']>, 
   });
 }
 
-// Showcase functions (completed with sample data for compilation)
-export async function generateStyleShowcase(): Promise<Buffer> {
-  const sampleSlides: SlideSpec[] = [
-    { title: 'Sample Title', layout: 'title', design: {} }
-    // Add more as needed
-  ];
-  return await generatePpt(sampleSlides, true);
+/**
+ * Enhanced timeline rendering
+ */
+function renderEnhancedTimeline(slide: pptxgen.Slide, timeline: NonNullable<SlideSpec['timeline']>, theme: ProfessionalTheme, contentY: number): void {
+  const timelineY = contentY + 0.5;
+  const itemWidth = 8.0 / timeline.length;
+
+  // Draw timeline base line
+  slide.addShape('rect', {
+    x: 1.0,
+    y: timelineY + 1.0,
+    w: 8.0,
+    h: 0.05,
+    fill: { color: safeColorFormat(theme.colors.borders.medium) },
+    line: { width: 0 }
+  });
+
+  timeline.forEach((item, i) => {
+    const itemX = 1.0 + i * itemWidth;
+
+    // Timeline point
+    slide.addShape('ellipse', {
+      x: itemX + itemWidth / 2 - 0.1,
+      y: timelineY + 0.9,
+      w: 0.2,
+      h: 0.2,
+      fill: { color: safeColorFormat(item.milestone ? theme.colors.accent : theme.colors.primary) },
+      line: { width: 0 }
+    });
+
+    // Date
+    if (item.date) {
+      slide.addText(item.date, {
+        x: itemX,
+        y: timelineY + 1.3,
+        w: itemWidth,
+        fontSize: Math.min(theme.typography.body.sizes.small, 12),
+        color: safeColorFormat(theme.colors.text.secondary),
+        align: 'center'
+      });
+    }
+
+    // Title
+    if (item.title) {
+      slide.addText(item.title, {
+        x: itemX,
+        y: timelineY + 0.2,
+        w: itemWidth,
+        fontSize: Math.min(theme.typography.body.sizes.normal, 14),
+        color: safeColorFormat(theme.colors.text.primary),
+        align: 'center',
+        bold: true
+      });
+    }
+  });
 }
 
-export async function generateThemeShowcase(): Promise<Buffer> {
-  const themeSlides: SlideSpec[] = [
-    { title: 'Theme Sample', layout: 'title-paragraph', paragraph: 'Test', design: {} }
-    // Add more as needed
-  ];
-  return await generatePpt(themeSlides, true);
+/**
+ * Enhanced process flow rendering
+ */
+function renderEnhancedProcessFlow(slide: pptxgen.Slide, steps: NonNullable<SlideSpec['processSteps']>, theme: ProfessionalTheme, contentY: number): void {
+  const stepWidth = 8.0 / steps.length;
+  const stepY = contentY + 1.0;
+
+  steps.forEach((step, i) => {
+    const stepX = 1.0 + i * stepWidth;
+
+    // Step background
+    slide.addShape('rect', {
+      x: stepX + 0.1,
+      y: stepY,
+      w: stepWidth - 0.2,
+      h: 2.0,
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 20
+      },
+      line: {
+        color: safeColorFormat(theme.colors.primary),
+        width: 2
+      },
+      rectRadius: 0.1
+    });
+
+    // Step number
+    slide.addShape('ellipse', {
+      x: stepX + stepWidth / 2 - 0.2,
+      y: stepY + 0.1,
+      w: 0.4,
+      h: 0.4,
+      fill: { color: safeColorFormat(theme.colors.primary) },
+      line: { width: 0 }
+    });
+
+    slide.addText(step.step.toString(), {
+      x: stepX + stepWidth / 2 - 0.2,
+      y: stepY + 0.1,
+      w: 0.4,
+      h: 0.4,
+      fontSize: 16,
+      color: safeColorFormat(theme.colors.text.inverse),
+      align: 'center',
+      valign: 'middle',
+      bold: true
+    });
+
+    // Step title
+    slide.addText(step.title, {
+      x: stepX + 0.15,
+      y: stepY + 0.6,
+      w: stepWidth - 0.3,
+      fontSize: Math.min(theme.typography.body.sizes.normal, 14),
+      color: safeColorFormat(theme.colors.text.primary),
+      align: 'center',
+      bold: true
+    });
+
+    // Arrow to next step
+    if (i < steps.length - 1) {
+      slide.addShape('triangle', {
+        x: stepX + stepWidth - 0.1,
+        y: stepY + 0.9,
+        w: 0.2,
+        h: 0.2,
+        fill: { color: safeColorFormat(theme.colors.accent) },
+        line: { width: 0 },
+        flipH: false
+      });
+    }
+  });
+}
+
+/**
+ * Enhanced comparison table rendering
+ */
+function renderEnhancedComparisonTable(slide: pptxgen.Slide, table: NonNullable<SlideSpec['comparisonTable']>, theme: ProfessionalTheme, contentY: number): void {
+  const tableX = 1.0;
+  const tableY = contentY + 0.5;
+  const tableW = 8.0;
+  const colWidth = tableW / table.headers.length;
+  const rowHeight = 0.6;
+
+  // Table background
+  slide.addShape('rect', {
+    x: tableX - 0.1,
+    y: tableY - 0.1,
+    w: tableW + 0.2,
+    h: (table.rows.length + 1) * rowHeight + 0.2,
+    fill: {
+      color: safeColorFormat(theme.colors.surface),
+      transparency: 10
+    },
+    line: {
+      color: safeColorFormat(theme.colors.borders.light),
+      width: 1
+    },
+    rectRadius: 0.1
+  });
+
+  // Headers
+  table.headers.forEach((header, i) => {
+    const colX = tableX + i * colWidth;
+
+    // Header background
+    slide.addShape('rect', {
+      x: colX,
+      y: tableY,
+      w: colWidth,
+      h: rowHeight,
+      fill: { color: safeColorFormat(theme.colors.primary) },
+      line: {
+        color: safeColorFormat(theme.colors.borders.medium),
+        width: 1
+      }
+    });
+
+    // Header text
+    slide.addText(header, {
+      x: colX + 0.1,
+      y: tableY,
+      w: colWidth - 0.2,
+      h: rowHeight,
+      fontSize: Math.min(theme.typography.body.sizes.normal, 14),
+      color: safeColorFormat(theme.colors.text.inverse),
+      align: 'center',
+      valign: 'middle',
+      bold: true
+    });
+  });
+
+  // Rows
+  table.rows.forEach((row, rowIndex) => {
+    const rowY = tableY + (rowIndex + 1) * rowHeight;
+
+    row.forEach((cell, colIndex) => {
+      const colX = tableX + colIndex * colWidth;
+
+      // Cell background (alternating colors)
+      slide.addShape('rect', {
+        x: colX,
+        y: rowY,
+        w: colWidth,
+        h: rowHeight,
+        fill: {
+          color: safeColorFormat(rowIndex % 2 === 0 ? theme.colors.background : theme.colors.surface),
+          transparency: 5
+        },
+        line: {
+          color: safeColorFormat(theme.colors.borders.light),
+          width: 1
+        }
+      });
+
+      // Cell text
+      slide.addText(cell, {
+        x: colX + 0.1,
+        y: rowY,
+        w: colWidth - 0.2,
+        h: rowHeight,
+        fontSize: Math.min(theme.typography.body.sizes.small, 12),
+        color: safeColorFormat(theme.colors.text.primary),
+        align: 'center',
+        valign: 'middle'
+      });
+    });
+  });
+}
+
+/**
+ * Enhanced before-after layout
+ */
+async function renderEnhancedBeforeAfter(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, layoutConfig: any): Promise<void> {
+  // Add "Before" and "After" labels
+  slide.addText('BEFORE', {
+    x: layoutConfig.contentPadding,
+    y: layoutConfig.contentY - 0.4,
+    w: layoutConfig.columnWidth,
+    h: 0.3,
+    fontSize: Math.min(theme.typography.headings.sizes.h4, 16),
+    color: safeColorFormat(theme.colors.primary),
+    align: 'center',
+    bold: true
+  });
+
+  const rightX = layoutConfig.contentPadding + layoutConfig.columnWidth + layoutConfig.columnGap;
+  slide.addText('AFTER', {
+    x: rightX,
+    y: layoutConfig.contentY - 0.4,
+    w: layoutConfig.columnWidth,
+    h: 0.3,
+    fontSize: Math.min(theme.typography.headings.sizes.h4, 16),
+    color: safeColorFormat(theme.colors.accent),
+    align: 'center',
+    bold: true
+  });
+
+  // Add content
+  if (spec.left) await addEnhancedColumnContent(slide, spec.left as ExtendedColumnContent, theme, layoutConfig.contentPadding, layoutConfig.contentY, layoutConfig.columnWidth);
+  if (spec.right) await addEnhancedColumnContent(slide, spec.right as ExtendedColumnContent, theme, rightX, layoutConfig.contentY, layoutConfig.columnWidth, true);
+}
+
+/**
+ * Enhanced problem-solution layout
+ */
+async function renderEnhancedProblemSolution(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, layoutConfig: any): Promise<void> {
+  // Add "Problem" and "Solution" labels
+  slide.addText('PROBLEM', {
+    x: layoutConfig.contentPadding,
+    y: layoutConfig.contentY - 0.4,
+    w: layoutConfig.columnWidth,
+    h: 0.3,
+    fontSize: Math.min(theme.typography.headings.sizes.h4, 16),
+    color: safeColorFormat(theme.colors.semantic.error),
+    align: 'center',
+    bold: true
+  });
+
+  const rightX = layoutConfig.contentPadding + layoutConfig.columnWidth + layoutConfig.columnGap;
+  slide.addText('SOLUTION', {
+    x: rightX,
+    y: layoutConfig.contentY - 0.4,
+    w: layoutConfig.columnWidth,
+    h: 0.3,
+    fontSize: Math.min(theme.typography.headings.sizes.h4, 16),
+    color: safeColorFormat(theme.colors.semantic.success),
+    align: 'center',
+    bold: true
+  });
+
+  // Add content
+  if (spec.left) await addEnhancedColumnContent(slide, spec.left as ExtendedColumnContent, theme, layoutConfig.contentPadding, layoutConfig.contentY, layoutConfig.columnWidth);
+  if (spec.right) await addEnhancedColumnContent(slide, spec.right as ExtendedColumnContent, theme, rightX, layoutConfig.contentY, layoutConfig.columnWidth, true);
+}
+
+/**
+ * Enhanced column content with improved styling
+ */
+async function addEnhancedColumnContent(slide: pptxgen.Slide, content: ExtendedColumnContent, theme: ProfessionalTheme, x: number, y: number, w: number, isRight: boolean = false) {
+  let currentY = y;
+
+  if (content.heading) {
+    slide.addText(content.heading, {
+      x,
+      y: currentY,
+      w,
+      h: 0.5,
+      fontSize: Math.min(theme.typography.headings.sizes.h3, 20),
+      bold: true,
+      color: safeColorFormat(theme.colors.primary),
+      align: 'left'
+    });
+    currentY += 0.7;
+  }
+
+  if (content.paragraph) {
+    addEnhancedParagraph(slide, content.paragraph, theme, x, currentY, w);
+    currentY += 2.0;
+  }
+
+  if (content.bullets) {
+    addEnhancedBullets(slide, content.bullets, theme, x, currentY, w);
+    currentY += content.bullets.length * 0.6;
+  }
+
+  if (content.imagePrompt) {
+    await addEnhancedImage(slide, content.imagePrompt, theme, x, currentY, w, 2.5);
+  }
+}
+
+/**
+ * Enhanced paragraph function for compatibility
+ */
+function addParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, isQuote: boolean = false) {
+  return addEnhancedParagraph(slide, text, theme, x, y, w, isQuote);
+}
+
+/**
+ * Advanced Visual Elements and Decorative Components
+ */
+
+/**
+ * Add professional icon placeholder (since we can't use actual icon fonts in PowerPoint)
+ */
+function addIconPlaceholder(slide: pptxgen.Slide, iconName: string, theme: ProfessionalTheme, x: number, y: number, size: number = 0.3) {
+  try {
+    // Create a circular background for the icon
+    slide.addShape('ellipse', {
+      x,
+      y,
+      w: size,
+      h: size,
+      fill: { color: safeColorFormat(theme.colors.primary) },
+      line: { width: 0 }
+    });
+
+    // Add icon text representation
+    const iconMap: Record<string, string> = {
+      'check': '✓',
+      'star': '★',
+      'heart': '♥',
+      'arrow': '→',
+      'warning': '⚠',
+      'info': 'ℹ',
+      'user': '👤',
+      'chart': '📊',
+      'calendar': '📅',
+      'email': '✉',
+      'phone': '📞',
+      'location': '📍',
+      'globe': '🌐',
+      'gear': '⚙',
+      'lightbulb': '💡'
+    };
+
+    const iconSymbol = iconMap[iconName.toLowerCase()] || '●';
+
+    slide.addText(iconSymbol, {
+      x,
+      y,
+      w: size,
+      h: size,
+      fontSize: Math.round(size * 40), // Scale font size with icon size
+      color: safeColorFormat(theme.colors.text.inverse),
+      align: 'center',
+      valign: 'middle'
+    });
+  } catch (error) {
+    console.warn('Failed to add icon placeholder, skipping:', error);
+  }
+}
+
+/**
+ * Add professional callout box
+ */
+function addCalloutBox(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, type: 'info' | 'warning' | 'success' | 'error' = 'info') {
+  try {
+    const colorMap = {
+      info: theme.colors.semantic.info,
+      warning: theme.colors.semantic.warning,
+      success: theme.colors.semantic.success,
+      error: theme.colors.semantic.error
+    };
+
+    const bgColor = colorMap[type];
+
+    // Main callout background
+    slide.addShape('rect', {
+      x,
+      y,
+      w,
+      h: 1.0,
+      fill: {
+        color: safeColorFormat(bgColor),
+        transparency: 85
+      },
+      line: {
+        color: safeColorFormat(bgColor),
+        width: 2
+      },
+      rectRadius: 0.1
+    });
+
+    // Left accent bar
+    slide.addShape('rect', {
+      x,
+      y,
+      w: 0.05,
+      h: 1.0,
+      fill: { color: safeColorFormat(bgColor) },
+      line: { width: 0 }
+    });
+
+    // Callout text
+    slide.addText(text, {
+      x: x + 0.2,
+      y: y + 0.1,
+      w: w - 0.3,
+      h: 0.8,
+      fontSize: Math.min(theme.typography.body.sizes.normal, 14),
+      color: safeColorFormat(theme.colors.text.primary),
+      align: 'left',
+      valign: 'middle'
+    });
+  } catch (error) {
+    console.warn('Failed to add callout box, skipping:', error);
+  }
+}
+
+/**
+ * Add progress bar visualization
+ */
+function addProgressBar(slide: pptxgen.Slide, label: string, percentage: number, theme: ProfessionalTheme, x: number, y: number, w: number) {
+  try {
+    // Label
+    slide.addText(label, {
+      x,
+      y,
+      w,
+      h: 0.3,
+      fontSize: Math.min(theme.typography.body.sizes.small, 12),
+      color: safeColorFormat(theme.colors.text.primary),
+      align: 'left'
+    });
+
+    // Progress bar background
+    slide.addShape('rect', {
+      x,
+      y: y + 0.35,
+      w,
+      h: 0.2,
+      fill: { color: safeColorFormat(theme.colors.borders.light) },
+      line: { width: 0 },
+      rectRadius: 0.1
+    });
+
+    // Progress bar fill
+    const fillWidth = (w * percentage) / 100;
+    slide.addShape('rect', {
+      x,
+      y: y + 0.35,
+      w: fillWidth,
+      h: 0.2,
+      fill: { color: safeColorFormat(theme.colors.primary) },
+      line: { width: 0 },
+      rectRadius: 0.1
+    });
+
+    // Percentage text
+    slide.addText(`${percentage}%`, {
+      x: x + w + 0.1,
+      y: y + 0.25,
+      w: 0.5,
+      h: 0.4,
+      fontSize: Math.min(theme.typography.body.sizes.small, 12),
+      color: safeColorFormat(theme.colors.text.secondary),
+      align: 'left',
+      valign: 'middle'
+    });
+  } catch (error) {
+    console.warn('Failed to add progress bar, skipping:', error);
+  }
+}
+
+/**
+ * Add metric card with enhanced styling
+ */
+function addMetricCard(slide: pptxgen.Slide, label: string, value: string, unit: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
+  try {
+    // Card background with gradient effect
+    slide.addShape('rect', {
+      x,
+      y,
+      w,
+      h,
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 10
+      },
+      line: {
+        color: safeColorFormat(theme.colors.borders.medium),
+        width: 1
+      },
+      rectRadius: 0.15
+    });
+
+    // Accent top border
+    slide.addShape('rect', {
+      x,
+      y,
+      w,
+      h: 0.05,
+      fill: { color: safeColorFormat(theme.colors.accent) },
+      line: { width: 0 },
+      rectRadius: 0.15
+    });
+
+    // Value (large text)
+    slide.addText(value, {
+      x: x + 0.1,
+      y: y + 0.2,
+      w: w - 0.2,
+      h: h * 0.4,
+      fontSize: Math.min(theme.typography.headings.sizes.h2, 28),
+      color: safeColorFormat(theme.colors.primary),
+      align: 'center',
+      valign: 'middle',
+      bold: true
+    });
+
+    // Unit (small text)
+    if (unit) {
+      slide.addText(unit, {
+        x: x + 0.1,
+        y: y + h * 0.5,
+        w: w - 0.2,
+        h: h * 0.2,
+        fontSize: Math.min(theme.typography.body.sizes.small, 12),
+        color: safeColorFormat(theme.colors.text.secondary),
+        align: 'center',
+        valign: 'middle'
+      });
+    }
+
+    // Label (bottom)
+    slide.addText(label, {
+      x: x + 0.1,
+      y: y + h * 0.7,
+      w: w - 0.2,
+      h: h * 0.25,
+      fontSize: Math.min(theme.typography.body.sizes.normal, 14),
+      color: safeColorFormat(theme.colors.text.primary),
+      align: 'center',
+      valign: 'middle'
+    });
+  } catch (error) {
+    console.warn('Failed to add metric card, skipping:', error);
+  }
 }

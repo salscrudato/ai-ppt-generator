@@ -185,10 +185,22 @@ const MODERN_FONT_STACKS = {
   systemSans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   modernSans: '"Inter var", "SF Pro Display", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   readableSans: '"Inter var", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  workSans: '"Work Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ibmPlexSans: '"IBM Plex Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  dmSans: '"DM Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   modernSerif: '"Charter", "Bitstream Charter", "Sitka Text", Cambria, serif',
   modernMono: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
   variableSans: '"Inter var", system-ui, sans-serif', // New: Variable font for better control
-  elegantSerif: '"Playfair Display", serif' // New: For premium, elegant headings
+  elegantSerif: '"Playfair Display", serif', // New: For premium, elegant headings
+
+  // Enhanced 2024 font stacks for better visual hierarchy
+  luxurySerif: '"Playfair Display", "Crimson Text", Georgia, "Times New Roman", Times, serif',
+  creativeSans: '"Poppins", "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  condensedSans: '"Segoe UI Semibold", "Arial Narrow", "Helvetica Neue Condensed", Arial, sans-serif',
+  techSans: '"JetBrains Sans", "Source Sans Pro", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
+  displayFont: '"Segoe UI Black", "Arial Black", "Helvetica Neue", Arial, sans-serif',
+  corporateSerif: '"Minion Pro", "Adobe Garamond Pro", Georgia, "Times New Roman", Times, serif',
+  startupSans: '"Inter", "SF Pro Display", "Segoe UI", system-ui, sans-serif'
 } as const;
 
 /**
@@ -340,92 +352,276 @@ function createTheme(
  * Expanded with 2024 trends: soft pastels, earth tones, and vibrant accents for modern presentations.
  */
 export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
-  // Existing themes (abbreviated for brevity)
-  createTheme('corporate-blue', 'Corporate Professional', 'corporate', { primary: '#1E40AF', secondary: '#3B82F6', accent: '#F59E0B' }),
-  createTheme('creative-purple', 'Creative Studio', 'creative', { primary: '#7C3AED', secondary: '#A855F7', accent: '#EC4899' }),
-  // ... (include all original themes here)
+  // Core Professional Themes
+  createTheme('corporate-blue', 'Corporate Professional', 'corporate', {
+    primary: '#1E40AF', secondary: '#3B82F6', accent: '#F59E0B',
+    background: '#FFFFFF', surface: '#F8FAFC'
+  }),
+  createTheme('creative-purple', 'Creative Studio', 'creative', {
+    primary: '#7C3AED', secondary: '#A855F7', accent: '#EC4899',
+    background: '#FEFBFF', surface: '#F3F0FF'
+  }),
+  createTheme('executive-dark', 'Executive Dark', 'corporate', {
+    primary: '#1F2937', secondary: '#374151', accent: '#F59E0B',
+    background: '#111827', surface: '#1F2937',
+    textPrimary: '#F9FAFB', textSecondary: '#D1D5DB', textMuted: '#9CA3AF'
+  }),
+  createTheme('finance-green', 'Financial Growth', 'finance', {
+    primary: '#059669', secondary: '#10B981', accent: '#F59E0B',
+    background: '#ECFDF5', surface: '#D1FAE5'
+  }),
+  createTheme('tech-gradient', 'Technology Forward', 'technology', {
+    primary: '#3B82F6', secondary: '#8B5CF6', accent: '#06B6D4',
+    background: '#F8FAFC', surface: '#EFF6FF'
+  }),
 
-  // New 2024-Inspired Themes
+  // 2024 Modern Themes
   createTheme(
-    'peach-fuzz',
-    'Warm Harmony (2024 Pantone)',
+    'peach-fuzz-2024',
+    'Warm Harmony (Pantone 2024)',
     'vibrant',
     {
       primary: '#FFBE98', // Peach Fuzz inspired
       secondary: '#FFDAB9',
-      accent: '#FF7F50',
-      background: '#FFF5EE',
-      surface: '#FFE4E1',
+      accent: '#FF6B35',
+      background: '#FFF8F5',
+      surface: '#FFE8E0',
       textPrimary: '#4A3520',
       textSecondary: '#6B4E31',
       textMuted: '#A07D5C'
     },
-    { scale: 'large' }
+    { scale: 'large', headingFont: MODERN_FONT_STACKS.modernSans }
   ),
   createTheme(
-    'earth-tones',
-    'Natural Earth (2024 Trend)',
+    'earth-luxe',
+    'Luxe Earth Tones',
     'natural',
     {
-      primary: '#8B4513', // Earthy brown
-      secondary: '#556B2F',
-      accent: '#D2691E',
-      background: '#FAF0E6',
-      surface: '#F5F5DC',
-      textPrimary: '#2F4F4F',
-      textSecondary: '#696969',
-      textMuted: '#808080'
+      primary: '#8B4513', // Rich brown
+      secondary: '#A0522D',
+      accent: '#DAA520',
+      background: '#FDF6E3',
+      surface: '#F5E6D3',
+      textPrimary: '#2F1B14',
+      textSecondary: '#5D4037',
+      textMuted: '#8D6E63'
     },
-    { headingFont: MODERN_FONT_STACKS.elegantSerif }
+    { headingFont: MODERN_FONT_STACKS.elegantSerif, scale: 'normal' }
   ),
   createTheme(
-    'pastel-blues',
-    'Serene Pastels (2024 Adobe)',
+    'ocean-breeze',
+    'Ocean Breeze (2024)',
     'modern',
     {
-      primary: '#A7C7E7',
-      secondary: '#B0E0E6',
-      accent: '#ADD8E6',
-      background: '#F0F8FF',
-      surface: '#E0FFFF',
-      textPrimary: '#4169E1',
-      textSecondary: '#4682B4',
-      textMuted: '#6495ED'
+      primary: '#0EA5E9',
+      secondary: '#38BDF8',
+      accent: '#F0F9FF',
+      background: '#F0F9FF',
+      surface: '#E0F2FE',
+      textPrimary: '#0C4A6E',
+      textSecondary: '#0369A1',
+      textMuted: '#0284C7'
     },
-    { scale: 'compact' }
+    { scale: 'normal' }
   ),
   createTheme(
-    'vibrant-eco',
-    'Eco Vibrant (2024 Trend)',
+    'sunset-gradient',
+    'Sunset Professional',
     'vibrant',
     {
-      primary: '#228B22',
-      secondary: '#32CD32',
-      accent: '#FFD700',
-      background: '#F0FFF0',
-      surface: '#FAFAD2',
-      textPrimary: '#006400',
-      textSecondary: '#556B2F',
-      textMuted: '#808000'
+      primary: '#F97316',
+      secondary: '#FB923C',
+      accent: '#FED7AA',
+      background: '#FFF7ED',
+      surface: '#FFEDD5',
+      textPrimary: '#9A3412',
+      textSecondary: '#C2410C',
+      textMuted: '#EA580C'
     }
   ),
   createTheme(
-    'minimal-mono',
-    'Minimal Monochrome',
+    'forest-modern',
+    'Modern Forest',
+    'natural',
+    {
+      primary: '#166534',
+      secondary: '#22C55E',
+      accent: '#84CC16',
+      background: '#F0FDF4',
+      surface: '#DCFCE7',
+      textPrimary: '#14532D',
+      textSecondary: '#166534',
+      textMuted: '#15803D'
+    }
+  ),
+
+  // Sophisticated Professional Themes
+  createTheme(
+    'platinum-elegance',
+    'Platinum Elegance',
+    'corporate',
+    {
+      primary: '#64748B',
+      secondary: '#94A3B8',
+      accent: '#F1F5F9',
+      background: '#FFFFFF',
+      surface: '#F8FAFC',
+      textPrimary: '#0F172A',
+      textSecondary: '#334155',
+      textMuted: '#64748B'
+    },
+    { headingFont: MODERN_FONT_STACKS.elegantSerif, scale: 'large' }
+  ),
+  createTheme(
+    'royal-purple',
+    'Royal Authority',
+    'corporate',
+    {
+      primary: '#581C87',
+      secondary: '#7C3AED',
+      accent: '#C4B5FD',
+      background: '#FEFBFF',
+      surface: '#F3F0FF',
+      textPrimary: '#3C1361',
+      textSecondary: '#581C87',
+      textMuted: '#7C2D92'
+    }
+  ),
+  createTheme(
+    'crimson-power',
+    'Crimson Authority',
+    'corporate',
+    {
+      primary: '#DC2626',
+      secondary: '#EF4444',
+      accent: '#FCA5A5',
+      background: '#FEF2F2',
+      surface: '#FEE2E2',
+      textPrimary: '#7F1D1D',
+      textSecondary: '#991B1B',
+      textMuted: '#B91C1C'
+    }
+  ),
+
+  // Creative & Startup Themes
+  createTheme(
+    'neon-cyber',
+    'Cyber Innovation',
+    'startup',
+    {
+      primary: '#8B5CF6',
+      secondary: '#A78BFA',
+      accent: '#06FFA5',
+      background: '#0F0F23',
+      surface: '#1E1B4B',
+      textPrimary: '#F8FAFC',
+      textSecondary: '#E2E8F0',
+      textMuted: '#CBD5E1'
+    }
+  ),
+  // Modern sans families
+  createTheme(
+    'work-sans-modern',
+    'Work Sans Modern',
+    'modern',
+    { primary: '#111827', secondary: '#4B5563', accent: '#10B981', background: '#FFFFFF', surface: '#F9FAFB' },
+    { headingFont: MODERN_FONT_STACKS.workSans, bodyFont: MODERN_FONT_STACKS.workSans, scale: 'normal' }
+  ),
+  createTheme(
+    'ibm-plex-clean',
+    'IBM Plex Clean',
+    'technology',
+    { primary: '#111827', secondary: '#4338CA', accent: '#14B8A6', background: '#FFFFFF', surface: '#F8FAFC' },
+    { headingFont: MODERN_FONT_STACKS.ibmPlexSans, bodyFont: MODERN_FONT_STACKS.ibmPlexSans, scale: 'normal' }
+  ),
+  createTheme(
+    'dm-sans-elegant',
+    'DM Sans Elegant',
+    'modern',
+    { primary: '#0F172A', secondary: '#475569', accent: '#F59E0B', background: '#FFFFFF', surface: '#F8FAFC' },
+    { headingFont: MODERN_FONT_STACKS.dmSans, bodyFont: MODERN_FONT_STACKS.dmSans, scale: 'large' }
+  ),
+  createTheme(
+    'aurora-gradient',
+    'Aurora Professional',
+    'creative',
+    {
+      primary: '#EC4899',
+      secondary: '#F472B6',
+      accent: '#A855F7',
+      background: '#FDF2F8',
+      surface: '#FCE7F3',
+      textPrimary: '#831843',
+      textSecondary: '#BE185D',
+      textMuted: '#DB2777'
+    }
+  ),
+
+  // Healthcare & Academic Themes
+  createTheme(
+    'medical-trust',
+    'Medical Professional',
+    'healthcare',
+    {
+      primary: '#0369A1',
+      secondary: '#0284C7',
+      accent: '#7DD3FC',
+      background: '#F0F9FF',
+      surface: '#E0F2FE',
+      textPrimary: '#0C4A6E',
+      textSecondary: '#075985',
+      textMuted: '#0284C7'
+    }
+  ),
+  createTheme(
+    'academic-sage',
+    'Academic Wisdom',
+    'academic',
+    {
+      primary: '#374151',
+      secondary: '#6B7280',
+      accent: '#D1D5DB',
+      background: '#F9FAFB',
+      surface: '#F3F4F6',
+      textPrimary: '#111827',
+      textSecondary: '#1F2937',
+      textMuted: '#4B5563'
+    },
+    { headingFont: MODERN_FONT_STACKS.elegantSerif }
+  ),
+
+  // Minimalist & Modern
+  createTheme(
+    'minimal-zen',
+    'Zen Minimalism',
     'modern',
     {
-      primary: '#333333',
-      secondary: '#666666',
-      accent: '#999999',
+      primary: '#000000',
+      secondary: '#404040',
+      accent: '#808080',
       background: '#FFFFFF',
-      surface: '#F5F5F5',
+      surface: '#FAFAFA',
       textPrimary: '#000000',
-      textSecondary: '#4D4D4D',
-      textMuted: '#808080'
+      textSecondary: '#333333',
+      textMuted: '#666666'
     },
     { headingFont: MODERN_FONT_STACKS.variableSans, scale: 'compact' }
+  ),
+  createTheme(
+    'soft-pastels',
+    'Soft Professional',
+    'modern',
+    {
+      primary: '#A7C7E7',
+      secondary: '#B8E6B8',
+      accent: '#FFB6C1',
+      background: '#F8F9FA',
+      surface: '#F1F3F4',
+      textPrimary: '#2C3E50',
+      textSecondary: '#34495E',
+      textMuted: '#7F8C8D'
+    }
   )
-  // Add more as needed for 20+ total
 ];
 
 /**

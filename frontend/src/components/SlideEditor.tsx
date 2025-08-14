@@ -809,16 +809,285 @@ export default function SlideEditor({
           </div>
         );
 
+      case 'timeline':
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-2">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm">
+                <HiInformationCircle className="w-4 h-4" />
+                Timeline Layout: Chronological events and milestones
+              </div>
+            </div>
+
+            {/* Main paragraph if exists */}
+            {localSpec.paragraph !== undefined && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-700">Overview</h4>
+                </div>
+                <textarea
+                  value={localSpec.paragraph || ''}
+                  onChange={(e) => updateSpec({ paragraph: e.target.value })}
+                  placeholder="Enter timeline overview..."
+                  rows={3}
+                  className="input resize-none"
+                />
+              </div>
+            )}
+
+            {/* Timeline Items */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-700">Timeline Events</h4>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {(localSpec.timeline || []).length} events
+                </span>
+              </div>
+
+              {(localSpec.timeline || []).map((item, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-500">Event {index + 1}</span>
+                    <button
+                      onClick={() => {
+                        const timeline = [...(localSpec.timeline || [])];
+                        timeline.splice(index, 1);
+                        updateSpec({ timeline });
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700"
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      value={item.date || ''}
+                      onChange={(e) => {
+                        const timeline = [...(localSpec.timeline || [])];
+                        timeline[index] = { ...timeline[index], date: e.target.value };
+                        updateSpec({ timeline });
+                      }}
+                      placeholder="Date/Time"
+                      className="input text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={item.title || ''}
+                      onChange={(e) => {
+                        const timeline = [...(localSpec.timeline || [])];
+                        timeline[index] = { ...timeline[index], title: e.target.value };
+                        updateSpec({ timeline });
+                      }}
+                      placeholder="Event title"
+                      className="input text-sm"
+                    />
+                  </div>
+
+                  <textarea
+                    value={item.description || ''}
+                    onChange={(e) => {
+                      const timeline = [...(localSpec.timeline || [])];
+                      timeline[index] = { ...timeline[index], description: e.target.value };
+                      updateSpec({ timeline });
+                    }}
+                    placeholder="Event description..."
+                    rows={2}
+                    className="input resize-none text-sm"
+                  />
+
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.milestone || false}
+                      onChange={(e) => {
+                        const timeline = [...(localSpec.timeline || [])];
+                        timeline[index] = { ...timeline[index], milestone: e.target.checked };
+                        updateSpec({ timeline });
+                      }}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">Major milestone</span>
+                  </label>
+                </div>
+              ))}
+
+              <button
+                onClick={() => {
+                  const timeline = [...(localSpec.timeline || []), { date: '', title: '', description: '', milestone: false }];
+                  updateSpec({ timeline });
+                }}
+                className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-300 hover:text-primary-600 transition-colors text-sm"
+                type="button"
+              >
+                + Add Timeline Event
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'process-flow':
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-2">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm">
+                <HiInformationCircle className="w-4 h-4" />
+                Process Flow Layout: Step-by-step procedures and workflows
+              </div>
+            </div>
+
+            {/* Main paragraph if exists */}
+            {localSpec.paragraph !== undefined && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-700">Process Overview</h4>
+                </div>
+                <textarea
+                  value={localSpec.paragraph || ''}
+                  onChange={(e) => updateSpec({ paragraph: e.target.value })}
+                  placeholder="Enter process overview..."
+                  rows={3}
+                  className="input resize-none"
+                />
+              </div>
+            )}
+
+            {/* Process Steps */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-700">Process Steps</h4>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {(localSpec.processSteps || []).length} steps
+                </span>
+              </div>
+
+              {(localSpec.processSteps || []).map((step, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-500">Step {index + 1}</span>
+                    <button
+                      onClick={() => {
+                        const processSteps = [...(localSpec.processSteps || [])];
+                        processSteps.splice(index, 1);
+                        updateSpec({ processSteps });
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700"
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={step.title || ''}
+                    onChange={(e) => {
+                      const processSteps = [...(localSpec.processSteps || [])];
+                      processSteps[index] = { ...processSteps[index], title: e.target.value };
+                      updateSpec({ processSteps });
+                    }}
+                    placeholder="Step title"
+                    className="input text-sm"
+                  />
+
+                  <textarea
+                    value={step.description || ''}
+                    onChange={(e) => {
+                      const processSteps = [...(localSpec.processSteps || [])];
+                      processSteps[index] = { ...processSteps[index], description: e.target.value };
+                      updateSpec({ processSteps });
+                    }}
+                    placeholder="Step description..."
+                    rows={2}
+                    className="input resize-none text-sm"
+                  />
+                </div>
+              ))}
+
+              <button
+                onClick={() => {
+                  const processSteps = [...(localSpec.processSteps || []), { title: '', description: '' }];
+                  updateSpec({ processSteps });
+                }}
+                className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-300 hover:text-primary-600 transition-colors text-sm"
+                type="button"
+              >
+                + Add Process Step
+              </button>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center py-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-700 rounded-full text-sm mb-4">
               <HiInformationCircle className="w-4 h-4" />
-              Unknown layout: {localSpec.layout}
+              Layout: {localSpec.layout}
             </div>
-            <p className="text-gray-600 text-sm">
-              This layout type is not yet supported in the editor. You can still generate the PowerPoint file.
+            <p className="text-gray-600 text-sm mb-4">
+              This layout is supported but uses a simplified editor. You can edit the basic content below.
             </p>
+
+            {/* Generic content editor for unsupported layouts */}
+            <div className="space-y-4 text-left">
+              {localSpec.paragraph !== undefined && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Content</label>
+                  <textarea
+                    value={localSpec.paragraph || ''}
+                    onChange={(e) => updateSpec({ paragraph: e.target.value })}
+                    placeholder="Enter slide content..."
+                    rows={4}
+                    className="input resize-none"
+                  />
+                </div>
+              )}
+
+              {localSpec.bullets !== undefined && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Bullet Points</label>
+                  {(localSpec.bullets || []).map((bullet, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={bullet}
+                        onChange={(e) => {
+                          const bullets = [...(localSpec.bullets || [])];
+                          bullets[index] = e.target.value;
+                          updateSpec({ bullets });
+                        }}
+                        placeholder={`Bullet point ${index + 1}`}
+                        className="input flex-1 text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          const bullets = [...(localSpec.bullets || [])];
+                          bullets.splice(index, 1);
+                          updateSpec({ bullets });
+                        }}
+                        className="text-red-600 hover:text-red-700 px-2"
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const bullets = [...(localSpec.bullets || []), ''];
+                      updateSpec({ bullets });
+                    }}
+                    className="text-sm text-primary-600 hover:text-primary-700"
+                    type="button"
+                  >
+                    + Add Bullet Point
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
     }
@@ -1140,13 +1409,86 @@ export default function SlideEditor({
                     </div>
                   )}
 
-                  {/* Fallback for unknown layouts */}
-                  {!['title', 'title-bullets', 'title-paragraph', 'two-column', 'problem-solution', 'comparison-table', 'mixed-content', 'quote', 'chart'].includes(localSpec.layout) && (
+                  {localSpec.layout === 'timeline' && (
+                    <div className="space-y-2 h-full overflow-y-auto">
+                      {localSpec.paragraph && (
+                        <p className="text-xs leading-relaxed line-clamp-2 bg-blue-50 p-2 rounded mb-2">
+                          {localSpec.paragraph}
+                        </p>
+                      )}
+                      {(localSpec.timeline || []).slice(0, 4).map((item, index) => (
+                        <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-blue-700">{item.date}</span>
+                              {item.milestone && (
+                                <span className="w-1 h-1 bg-yellow-500 rounded-full" />
+                              )}
+                            </div>
+                            <p className="text-xs font-medium truncate">{item.title}</p>
+                            {item.description && (
+                              <p className="text-xs text-gray-600 line-clamp-1">{item.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {(localSpec.timeline || []).length > 4 && (
+                        <div className="text-xs text-gray-500 italic text-center">
+                          +{(localSpec.timeline || []).length - 4} more events...
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {localSpec.layout === 'process-flow' && (
+                    <div className="space-y-2 h-full overflow-y-auto">
+                      {localSpec.paragraph && (
+                        <p className="text-xs leading-relaxed line-clamp-2 bg-blue-50 p-2 rounded mb-2">
+                          {localSpec.paragraph}
+                        </p>
+                      )}
+                      {(localSpec.processSteps || []).slice(0, 4).map((step, index) => (
+                        <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
+                          <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{step.title}</p>
+                            {step.description && (
+                              <p className="text-xs text-gray-600 line-clamp-2">{step.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {(localSpec.processSteps || []).length > 4 && (
+                        <div className="text-xs text-gray-500 italic text-center">
+                          +{(localSpec.processSteps || []).length - 4} more steps...
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fallback for other layouts */}
+                  {!['title', 'title-bullets', 'title-paragraph', 'two-column', 'problem-solution', 'comparison-table', 'mixed-content', 'quote', 'chart', 'timeline', 'process-flow'].includes(localSpec.layout) && (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center text-gray-500">
                         <HiDocumentText className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-xs font-medium">{localSpec.layout} layout</p>
                         <p className="text-xs opacity-75">Content will be displayed in final presentation</p>
+                        {localSpec.paragraph && (
+                          <p className="text-xs mt-2 line-clamp-2 bg-gray-50 p-2 rounded">{localSpec.paragraph}</p>
+                        )}
+                        {localSpec.bullets && localSpec.bullets.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {localSpec.bullets.slice(0, 3).map((bullet, index) => (
+                              <div key={index} className="flex items-start gap-1 text-xs">
+                                <div className="w-1 h-1 bg-gray-400 rounded-full mt-1.5 flex-shrink-0" />
+                                <span className="truncate">{bullet}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

@@ -6,6 +6,17 @@
  */
 
 /**
+ * Progress tracking for multi-step AI generation
+ */
+export interface GenerationProgress {
+  step: 'content' | 'layout' | 'image' | 'refinement' | 'complete';
+  stepNumber: number;
+  totalSteps: number;
+  message: string;
+  estimatedTimeRemaining?: number;
+}
+
+/**
  * Represents a single slide specification with all its content and styling options
  */
 export interface SlideSpec {
@@ -52,6 +63,12 @@ export interface SlideSpec {
     title: string;
     description?: string;
     milestone?: boolean;
+  }>;
+
+  /** Process steps configuration for workflow and procedure layouts */
+  processSteps?: Array<{
+    title: string;
+    description?: string;
   }>;
 
   /** Chart configuration for data visualization slides */

@@ -34,7 +34,7 @@
  * @author AI PowerPoint Generator Team
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AppState, GenerationParams, SlideSpec } from './types';
 import PromptInput from './components/PromptInput';
@@ -42,7 +42,8 @@ import SlidePreview from './components/SlidePreview';
 import SlideEditor from './components/SlideEditor';
 import StepIndicator from './components/StepIndicator';
 import { HiPresentationChartLine } from 'react-icons/hi2';
-import { API_ENDPOINTS } from './config';
+import { API_ENDPOINTS, verifyApiConnection } from './config';
+import { api } from './utils/apiClient';
 import './App.css';
 
 /**
@@ -65,6 +66,19 @@ export default function App() {
     },
     loading: false
   });
+
+  // Verify API connection on component mount for debugging
+  useEffect(() => {
+    const checkApiConnection = async () => {
+      console.log('🔍 Verifying API connection on app startup...');
+      const isConnected = await verifyApiConnection();
+      if (!isConnected) {
+        console.warn('⚠️ API connection verification failed. Check network and configuration.');
+      }
+    };
+
+    checkApiConnection();
+  }, []);
 
   /**
    * Update application state with partial updates
@@ -94,18 +108,14 @@ export default function App() {
         ...params
       };
 
-      const response = await fetch(API_ENDPOINTS.draft, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
-      });
+      // Use the enhanced API client with debugging
+      const result = await api.generateDraft(requestData);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate slide draft');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate slide draft');
       }
 
-      const draft = await response.json();
+      const draft = result.data;
       updateState({
         draft,
         editedSpec: { ...draft }, // Create editable copy
@@ -113,8 +123,25 @@ export default function App() {
         loading: false
       });
     } catch (error) {
+      console.error('Draft generation failed:', error);
+
+      // Enhanced error handling with specific error types
+      let errorMessage = 'Failed to generate slide draft. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('validation')) {
+          errorMessage = 'Please check your input parameters and try again.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please try again with a shorter prompt.';
+        } else if (error.message.includes('rate limit')) {
+          errorMessage = 'Too many requests. Please wait a moment and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       updateState({
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: errorMessage,
         loading: false
       });
     }
@@ -136,6 +163,8 @@ export default function App() {
       // Check if the original generation request included images
       const shouldIncludeImages = state.params.withImage || false;
 
+      // For PowerPoint generation, we need to handle blob responses
+      // Keep using fetch directly for now since our API client expects JSON
       const response = await fetch(API_ENDPOINTS.generate, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -160,8 +189,25 @@ export default function App() {
 
       updateState({ loading: false });
     } catch (error) {
+      console.error('PowerPoint generation failed:', error);
+
+      // Enhanced error handling for PowerPoint generation
+      let errorMessage = 'Failed to generate PowerPoint. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('validation')) {
+          errorMessage = 'Slide specification is invalid. Please edit and try again.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'PowerPoint generation timed out. Please try again.';
+        } else if (error.message.includes('size')) {
+          errorMessage = 'Generated file is too large. Please simplify content.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       updateState({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         loading: false
       });
     }

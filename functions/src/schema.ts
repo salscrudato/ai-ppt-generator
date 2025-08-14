@@ -574,3 +574,172 @@ export function generateContentImprovements(spec: SlideSpec, qualityAssessment: 
     enhancementSuggestions
   };
 }
+
+/**
+ * Enhanced Schemas for New Slide Generation System
+ *
+ * Comprehensive validation schemas for the new layout engine and slide generators.
+ * Ensures type safety and data integrity across all slide types.
+ */
+
+// Enhanced slide type definitions
+export const SlideTypeSchema = z.enum([
+  'title',
+  'bullets',
+  'twoColumn',
+  'metrics',
+  'section',
+  'quote',
+  'image',
+  'timeline',
+  'table',
+  'comparison'
+]);
+
+export type SlideType = z.infer<typeof SlideTypeSchema>;
+
+// Column content schemas for two-column layouts
+export const ColumnContentSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('text'),
+    content: VALIDATION_PATTERNS.longText,
+    bullets: z.array(VALIDATION_PATTERNS.shortText).max(6).optional()
+  }),
+  z.object({
+    type: z.literal('image'),
+    src: z.string().url(),
+    alt: VALIDATION_PATTERNS.shortText,
+    caption: VALIDATION_PATTERNS.shortText.optional()
+  }),
+  z.object({
+    type: z.literal('mixed'),
+    text: VALIDATION_PATTERNS.longText,
+    image: z.object({
+      src: z.string().url(),
+      alt: VALIDATION_PATTERNS.shortText
+    }).optional(),
+    bullets: z.array(VALIDATION_PATTERNS.shortText).max(4).optional()
+  })
+]);
+
+// Metric data schema
+export const MetricDataSchema = z.object({
+  value: z.union([z.string(), z.number()]),
+  label: VALIDATION_PATTERNS.shortText,
+  description: VALIDATION_PATTERNS.shortText.optional(),
+  trend: z.object({
+    direction: z.enum(['up', 'down', 'flat']),
+    percentage: z.number().optional(),
+    period: z.string().optional()
+  }).optional(),
+  target: z.union([z.string(), z.number()]).optional(),
+  color: z.enum(['primary', 'success', 'warning', 'error', 'info']).optional()
+});
+
+// Individual slide configuration schemas
+export const TitleSlideConfigSchema = z.object({
+  type: z.literal('title'),
+  title: VALIDATION_PATTERNS.title,
+  subtitle: VALIDATION_PATTERNS.shortText.optional(),
+  author: z.string().max(100).optional(),
+  date: z.string().max(50).optional(),
+  organization: z.string().max(100).optional(),
+  backgroundImage: z.string().url().optional(),
+  backgroundColor: VALIDATION_PATTERNS.colorHex.optional()
+});
+
+export const BulletSlideConfigSchema = z.object({
+  type: z.literal('bullets'),
+  title: VALIDATION_PATTERNS.title,
+  subtitle: VALIDATION_PATTERNS.shortText.optional(),
+  bullets: z.array(VALIDATION_PATTERNS.shortText)
+    .min(3, 'At least 3 bullet points required for effective content')
+    .max(6, 'Maximum 6 bullet points for optimal readability'),
+  bulletStyle: z.enum(['disc', 'circle', 'square', 'dash', 'arrow', 'number']).optional(),
+  maxBullets: z.number().min(3).max(8).optional(),
+  maxWordsPerBullet: z.number().min(8).max(20).optional()
+});
+
+export const TwoColumnSlideConfigSchema = z.object({
+  type: z.literal('twoColumn'),
+  title: VALIDATION_PATTERNS.title,
+  subtitle: VALIDATION_PATTERNS.shortText.optional(),
+  leftColumn: ColumnContentSchema,
+  rightColumn: ColumnContentSchema,
+  columnRatio: z.tuple([z.number().positive(), z.number().positive()]).optional(),
+  verticalAlign: z.enum(['top', 'middle', 'bottom']).optional()
+});
+
+export const MetricsSlideConfigSchema = z.object({
+  type: z.literal('metrics'),
+  title: VALIDATION_PATTERNS.title,
+  subtitle: VALIDATION_PATTERNS.shortText.optional(),
+  metrics: z.array(MetricDataSchema)
+    .min(1, 'At least 1 metric required')
+    .max(12, 'Maximum 12 metrics for readability'),
+  layout: z.enum(['grid', 'row', 'column', 'featured']).optional(),
+  maxPerRow: z.number().min(1).max(6).optional(),
+  showTrends: z.boolean().optional(),
+  showTargets: z.boolean().optional()
+});
+
+// Union of all slide configurations
+export const SlideConfigSchema = z.discriminatedUnion('type', [
+  TitleSlideConfigSchema,
+  BulletSlideConfigSchema,
+  TwoColumnSlideConfigSchema,
+  MetricsSlideConfigSchema
+]);
+
+export type SlideConfig = z.infer<typeof SlideConfigSchema>;
+export type TitleSlideConfig = z.infer<typeof TitleSlideConfigSchema>;
+export type BulletSlideConfig = z.infer<typeof BulletSlideConfigSchema>;
+export type TwoColumnSlideConfig = z.infer<typeof TwoColumnSlideConfigSchema>;
+export type MetricsSlideConfig = z.infer<typeof MetricsSlideConfigSchema>;
+export type ColumnContent = z.infer<typeof ColumnContentSchema>;
+export type MetricData = z.infer<typeof MetricDataSchema>;
+
+// Enhanced presentation schema
+export const EnhancedPresentationSchema = z.object({
+  slides: z.array(SlideConfigSchema).min(1, 'At least one slide required'),
+  theme: z.enum(['neutral', 'executive', 'colorPop']).default('neutral'),
+  metadata: z.object({
+    title: VALIDATION_PATTERNS.title,
+    description: VALIDATION_PATTERNS.longText.optional(),
+    audience: z.enum(['general', 'executives', 'technical', 'sales']).default('general'),
+    duration: z.number().positive().optional(),
+    tags: z.array(z.string()).optional(),
+    version: z.string().optional()
+  }),
+  options: z.object({
+    async: z.boolean().default(false),
+    includeNotes: z.boolean().default(true),
+    generateImages: z.boolean().default(false),
+    optimizeForPrint: z.boolean().default(false),
+    accessibilityMode: z.boolean().default(true)
+  }).optional()
+});
+
+export type EnhancedPresentation = z.infer<typeof EnhancedPresentationSchema>;
+
+// Response schemas
+export const SlideGenerationResponseSchema = z.object({
+  fileUrl: z.string().url(),
+  deckSummary: z.object({
+    slides: z.number().positive(),
+    theme: z.string(),
+    warnings: z.array(z.string()),
+    errors: z.array(z.string()).optional()
+  }),
+  cost: z.object({
+    llmTokens: z.number().nonnegative(),
+    usd: z.number().nonnegative()
+  }).optional(),
+  metadata: z.object({
+    generationTime: z.number().positive(),
+    qualityScore: z.number().min(0).max(100),
+    accessibilityScore: z.number().min(0).max(100)
+  }).optional()
+});
+
+export type SlideGenerationResponse = z.infer<typeof SlideGenerationResponseSchema>;

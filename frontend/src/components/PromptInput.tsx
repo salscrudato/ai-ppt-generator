@@ -12,7 +12,7 @@ import {
   HiRectangleStack
 } from 'react-icons/hi2';
 import clsx from 'clsx';
-
+import ThemeGallery from './ThemeGallery';
 
 interface PromptInputProps {
   params: GenerationParams;
@@ -34,7 +34,7 @@ export default function PromptInput({
   const [charCount, setCharCount] = useState(params.prompt.length);
 
   const updateParam = <K extends keyof GenerationParams>(
-    key: K, 
+    key: K,
     value: GenerationParams[K]
   ) => {
     const updated = { ...localParams, [key]: value };
@@ -258,6 +258,19 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             )}
           </div>
         </motion.div>
+        {/* Theme Gallery */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="mt-6"
+        >
+          <ThemeGallery
+            selectedId={localParams.design?.theme}
+            onSelect={(themeId) => updateParam('design', { ...(localParams.design || {}), theme: themeId })}
+          />
+        </motion.div>
+
 
 
 

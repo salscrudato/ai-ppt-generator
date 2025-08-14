@@ -15,7 +15,10 @@
     "serve": "npm run build && firebase emulators:start --only functions",
     "serve:debug": "npm run build && firebase emulators:start --only functions --inspect-functions",
     "shell": "npm run build && firebase functions:shell",
-    "start": "npm run shell",
+    "start": "npm run dev",
+    "dev": "npm run build && firebase emulators:start --only functions",
+    "dev:watch": "concurrently \"npm run build:watch\" \"firebase emulators:start --only functions\"",
+    "dev:debug": "npm run build && firebase emulators:start --only functions --inspect-functions",
     "deploy": "npm run build && firebase deploy --only functions",
     "deploy:prod": "npm run build && firebase deploy --only functions --project production",
     "logs": "firebase functions:log",
@@ -27,23 +30,31 @@
     "test:integration": "jest test/integration.test.js",
     "test:ci": "jest --ci --coverage --watchAll=false",
     "test:emulator": "npm run build && firebase emulators:exec --only functions 'npm run test:integration'",
-    "clean": "rm -rf lib"
+    "clean": "rm -rf lib",
+    "clean:ports": "pkill -f 'firebase emulators' || true && lsof -ti:5003 | xargs kill -9 || true",
+    "dev:clean": "npm run clean:ports && npm run dev"
   },
   "dependencies": {
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
+    "@types/uuid": "^10.0.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.0.1",
+    "helmet": "^8.1.0",
     "openai": "^5.12.2",
     "pptxgenjs": "^4.0.1",
+    "uuid": "^11.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^24.2.1",
     "@types/supertest": "^6.0.2",
+    "concurrently": "^8.2.2",
     "firebase-functions-test": "^3.1.0",
     "jest": "^29.7.0",
     "supertest": "^6.3.4",
@@ -57,7 +68,8 @@
       "<rootDir>/test"
     ],
     "testMatch": [
-      "**/*.test.js"
+      "**/*.test.js",
+      "**/*.test.ts"
     ],
     "transform": {
       "^.+\\.ts$": "ts-jest"

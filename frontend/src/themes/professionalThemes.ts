@@ -1,11 +1,14 @@
-// Professional Theme System - Enhanced Visual Design
+/**
+ * Enhanced Professional Theme System for Frontend
+ * Synchronized with backend theme system for consistent styling
+ */
 export interface ProfessionalTheme {
   id: string;
   name: string;
-  category: 'corporate' | 'creative' | 'academic' | 'startup' | 'healthcare' | 'finance';
+  category: 'corporate' | 'creative' | 'academic' | 'startup' | 'healthcare' | 'finance' | 'consulting' | 'technology' | 'modern' | 'vibrant' | 'natural';
   description: string;
-  
-  // Color System
+
+  // Enhanced Color System
   colors: {
     primary: string;
     secondary: string;
@@ -16,6 +19,7 @@ export interface ProfessionalTheme {
       primary: string;
       secondary: string;
       inverse: string;
+      muted: string;
     };
     semantic: {
       success: string;
@@ -23,9 +27,14 @@ export interface ProfessionalTheme {
       error: string;
       info: string;
     };
+    borders: {
+      light: string;
+      medium: string;
+      strong: string;
+    };
   };
-  
-  // Typography System
+
+  // Enhanced Typography System
   typography: {
     headings: {
       fontFamily: string;
@@ -35,6 +44,7 @@ export interface ProfessionalTheme {
         h1: number;       // 36px - Main titles
         h2: number;       // 28px - Section headers
         h3: number;       // 22px - Subsection headers
+        h4: number;       // 18px - Small headings
       };
     };
     body: {
@@ -44,26 +54,34 @@ export interface ProfessionalTheme {
         large: number;    // 18px - Emphasis
         normal: number;   // 16px - Body text
         small: number;    // 14px - Captions
+        tiny: number;     // 12px - Very small
       };
     };
   };
-  
-  // Visual Effects
+
+  // Enhanced Visual Effects
   effects: {
     borderRadius: number;
     shadows: {
       subtle: string;
       medium: string;
       strong: string;
+      colored: string;
+      glow: string;
+      elevated: string;
     };
     gradients: {
       primary: string;
+      secondary: string;
       accent: string;
       background: string;
+      mesh: string;
+      subtle: string;
+      vibrant: string;
     };
   };
-  
-  // Spacing System
+
+  // Enhanced Spacing System
   spacing: {
     xs: number;    // 4px
     sm: number;    // 8px
@@ -71,66 +89,86 @@ export interface ProfessionalTheme {
     lg: number;    // 24px
     xl: number;    // 32px
     xxl: number;   // 48px
+    xxxl: number;  // 64px
   };
 }
 
-// Professional Theme Library
+/**
+ * Enhanced Professional Theme Library
+ * Synchronized with backend themes for consistent user experience
+ */
 export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
+  // Core Professional Themes
   {
     id: 'corporate-blue',
     name: 'Corporate Professional',
     category: 'corporate',
     description: 'Clean, trustworthy design perfect for business presentations',
     colors: {
-      primary: '#1E40AF',      // Deep blue
-      secondary: '#3B82F6',     // Medium blue
-      accent: '#F59E0B',        // Amber accent
-      background: '#FFFFFF',    // Pure white
-      surface: '#F8FAFC',       // Light gray surface
+      primary: '#1E40AF',
+      secondary: '#3B82F6',
+      accent: '#F59E0B',
+      background: '#FFFFFF',
+      surface: '#F8FAFC',
       text: {
-        primary: '#1F2937',     // Dark gray
-        secondary: '#6B7280',   // Medium gray
-        inverse: '#FFFFFF'      // White text
+        primary: '#1F2937',
+        secondary: '#6B7280',
+        inverse: '#FFFFFF',
+        muted: '#9CA3AF'
       },
       semantic: {
-        success: '#10B981',     // Emerald
-        warning: '#F59E0B',     // Amber
-        error: '#EF4444',       // Red
-        info: '#3B82F6'         // Blue
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#3B82F6'
+      },
+      borders: {
+        light: '#F3F4F6',
+        medium: '#E5E7EB',
+        strong: '#D1D5D7'
       }
     },
     typography: {
       headings: {
-        fontFamily: 'Inter',
+        fontFamily: 'Inter, system-ui, sans-serif',
         weights: [600, 700, 800],
         sizes: {
           display: 48,
           h1: 36,
           h2: 28,
-          h3: 22
+          h3: 22,
+          h4: 18
         }
       },
       body: {
-        fontFamily: 'Inter',
+        fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600],
         sizes: {
           large: 18,
           normal: 16,
-          small: 14
+          small: 14,
+          tiny: 12
         }
       }
     },
     effects: {
       borderRadius: 8,
       shadows: {
-        subtle: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
-        medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-        strong: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)'
+        subtle: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+        medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        strong: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+        colored: '0 4px 6px rgba(30, 64, 175, 0.2)',
+        glow: '0 0 8px rgba(245, 158, 11, 0.3)',
+        elevated: '0 12px 24px rgba(0, 0, 0, 0.08)'
       },
       gradients: {
         primary: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
+        secondary: 'linear-gradient(135deg, #3B82F6 0%, #F59E0B 100%)',
         accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
-        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)'
+        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        mesh: 'radial-gradient(at 0% 0%, rgba(30, 64, 175, 0.1), transparent 50%)',
+        subtle: 'linear-gradient(180deg, #F8FAFC, #FFFFFF)',
+        vibrant: 'linear-gradient(45deg, #F59E0B, #1E40AF)'
       }
     },
     spacing: {
@@ -139,199 +177,83 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       md: 16,
       lg: 24,
       xl: 32,
-      xxl: 48
+      xxl: 48,
+      xxxl: 64
     }
   },
 
+  // 2024 Modern Themes
   {
-    id: 'creative-purple',
-    name: 'Creative Studio',
-    category: 'creative',
-    description: 'Bold, innovative design for creative and design presentations',
+    id: 'peach-fuzz-2024',
+    name: 'Warm Harmony (Pantone 2024)',
+    category: 'vibrant',
+    description: 'Warm, inviting design inspired by Pantone Color of the Year 2024',
     colors: {
-      primary: '#7C3AED',       // Purple
-      secondary: '#A855F7',     // Light purple
-      accent: '#EC4899',        // Pink accent
-      background: '#FEFEFE',    // Off-white
-      surface: '#F3F4F6',       // Light surface
+      primary: '#FFBE98',
+      secondary: '#FFDAB9',
+      accent: '#FF6B35',
+      background: '#FFF8F5',
+      surface: '#FFE8E0',
       text: {
-        primary: '#111827',     // Near black
-        secondary: '#4B5563',   // Gray
-        inverse: '#FFFFFF'
+        primary: '#4A3520',
+        secondary: '#6B4E31',
+        inverse: '#FFFFFF',
+        muted: '#A07D5C'
       },
       semantic: {
-        success: '#059669',
-        warning: '#D97706',
-        error: '#DC2626',
-        info: '#7C3AED'
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#FFBE98'
+      },
+      borders: {
+        light: '#FFE8E0',
+        medium: '#FFDAB9',
+        strong: '#FFBE98'
       }
     },
+
     typography: {
       headings: {
-        fontFamily: 'Poppins',
+        fontFamily: 'Poppins, system-ui, sans-serif',
         weights: [600, 700, 800],
         sizes: {
           display: 52,
           h1: 40,
           h2: 32,
-          h3: 24
+          h3: 24,
+          h4: 20
         }
       },
       body: {
-        fontFamily: 'Inter',
+        fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600],
         sizes: {
           large: 20,
-          normal: 18,
-          small: 16
+          normal: 16,
+          small: 14,
+          tiny: 12
         }
       }
     },
     effects: {
       borderRadius: 12,
       shadows: {
-        subtle: '0 2px 4px 0 rgba(124, 58, 237, 0.1)',
-        medium: '0 8px 16px 0 rgba(124, 58, 237, 0.15)',
-        strong: '0 16px 32px 0 rgba(124, 58, 237, 0.2)'
+        subtle: '0 1px 3px rgba(255, 190, 152, 0.1)',
+        medium: '0 4px 6px rgba(255, 190, 152, 0.15)',
+        strong: '0 10px 15px rgba(255, 190, 152, 0.2)',
+        colored: '0 4px 6px rgba(255, 190, 152, 0.3)',
+        glow: '0 0 8px rgba(255, 107, 53, 0.3)',
+        elevated: '0 12px 24px rgba(255, 190, 152, 0.1)'
       },
       gradients: {
-        primary: 'linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)',
-        accent: 'linear-gradient(135deg, #EC4899 0%, #F472B6 100%)',
-        background: 'linear-gradient(135deg, #FEFEFE 0%, #F9FAFB 100%)'
-      }
-    },
-    spacing: {
-      xs: 6,
-      sm: 12,
-      md: 20,
-      lg: 32,
-      xl: 40,
-      xxl: 56
-    }
-  },
-
-  {
-    id: 'startup-green',
-    name: 'Startup Growth',
-    category: 'startup',
-    description: 'Fresh, energetic design perfect for startups and growth companies',
-    colors: {
-      primary: '#059669',       // Emerald
-      secondary: '#10B981',     // Light emerald
-      accent: '#F59E0B',        // Amber
-      background: '#FFFFFF',
-      surface: '#F0FDF4',       // Light green tint
-      text: {
-        primary: '#064E3B',     // Dark green
-        secondary: '#047857',   // Medium green
-        inverse: '#FFFFFF'
-      },
-      semantic: {
-        success: '#10B981',
-        warning: '#F59E0B',
-        error: '#EF4444',
-        info: '#059669'
-      }
-    },
-    typography: {
-      headings: {
-        fontFamily: 'Inter',
-        weights: [500, 600, 700],
-        sizes: {
-          display: 50,
-          h1: 38,
-          h2: 30,
-          h3: 24
-        }
-      },
-      body: {
-        fontFamily: 'Inter',
-        weights: [400, 500, 600],
-        sizes: {
-          large: 19,
-          normal: 17,
-          small: 15
-        }
-      }
-    },
-    effects: {
-      borderRadius: 10,
-      shadows: {
-        subtle: '0 1px 3px 0 rgba(5, 150, 105, 0.1)',
-        medium: '0 6px 16px 0 rgba(5, 150, 105, 0.15)',
-        strong: '0 12px 24px 0 rgba(5, 150, 105, 0.2)'
-      },
-      gradients: {
-        primary: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-        accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
-        background: 'linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 100%)'
-      }
-    },
-    spacing: {
-      xs: 5,
-      sm: 10,
-      md: 18,
-      lg: 28,
-      xl: 36,
-      xxl: 52
-    }
-  },
-
-  {
-    id: 'finance-navy',
-    name: 'Financial Trust',
-    category: 'finance',
-    description: 'Sophisticated, trustworthy design for financial and consulting presentations',
-    colors: {
-      primary: '#1E3A8A',       // Navy blue
-      secondary: '#3730A3',     // Indigo
-      accent: '#DC2626',        // Red accent
-      background: '#FFFFFF',
-      surface: '#F1F5F9',       // Slate surface
-      text: {
-        primary: '#0F172A',     // Slate 900
-        secondary: '#475569',   // Slate 600
-        inverse: '#FFFFFF'
-      },
-      semantic: {
-        success: '#16A34A',
-        warning: '#CA8A04',
-        error: '#DC2626',
-        info: '#1E3A8A'
-      }
-    },
-    typography: {
-      headings: {
-        fontFamily: 'Inter',
-        weights: [600, 700, 800],
-        sizes: {
-          display: 46,
-          h1: 34,
-          h2: 26,
-          h3: 20
-        }
-      },
-      body: {
-        fontFamily: 'Inter',
-        weights: [400, 500, 600],
-        sizes: {
-          large: 17,
-          normal: 15,
-          small: 13
-        }
-      }
-    },
-    effects: {
-      borderRadius: 6,
-      shadows: {
-        subtle: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        strong: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-      },
-      gradients: {
-        primary: 'linear-gradient(135deg, #1E3A8A 0%, #3730A3 100%)',
-        accent: 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)',
-        background: 'linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)'
+        primary: 'linear-gradient(135deg, #FFBE98 0%, #FFDAB9 100%)',
+        secondary: 'linear-gradient(135deg, #FFDAB9 0%, #FF6B35 100%)',
+        accent: 'linear-gradient(135deg, #FF6B35 0%, #FFBE98 100%)',
+        background: 'linear-gradient(135deg, #FFF8F5 0%, #FFE8E0 100%)',
+        mesh: 'radial-gradient(at 0% 0%, rgba(255, 190, 152, 0.1), transparent 50%)',
+        subtle: 'linear-gradient(180deg, #FFE8E0, #FFF8F5)',
+        vibrant: 'linear-gradient(45deg, #FF6B35, #FFBE98)'
       }
     },
     spacing: {
@@ -340,65 +262,81 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       md: 16,
       lg: 24,
       xl: 32,
-      xxl: 48
+      xxl: 48,
+      xxxl: 64
     }
   },
 
   {
-    id: 'healthcare-teal',
-    name: 'Healthcare Care',
-    category: 'healthcare',
-    description: 'Calming, professional design for healthcare and wellness presentations',
+    id: 'ocean-breeze',
+    name: 'Ocean Breeze (2024)',
+    category: 'modern',
+    description: 'Fresh, calming design inspired by ocean waves and modern aesthetics',
     colors: {
-      primary: '#0D9488',       // Teal
-      secondary: '#14B8A6',     // Light teal
-      accent: '#F59E0B',        // Amber
-      background: '#FFFFFF',
-      surface: '#F0FDFA',       // Teal tint
+      primary: '#0EA5E9',
+      secondary: '#38BDF8',
+      accent: '#F0F9FF',
+      background: '#F0F9FF',
+      surface: '#E0F2FE',
       text: {
-        primary: '#134E4A',     // Dark teal
-        secondary: '#0F766E',   // Medium teal
-        inverse: '#FFFFFF'
+        primary: '#0C4A6E',
+        secondary: '#0369A1',
+        inverse: '#FFFFFF',
+        muted: '#0284C7'
       },
       semantic: {
         success: '#10B981',
         warning: '#F59E0B',
         error: '#EF4444',
-        info: '#0D9488'
+        info: '#0EA5E9'
+      },
+      borders: {
+        light: '#E0F2FE',
+        medium: '#BAE6FD',
+        strong: '#7DD3FC'
       }
     },
     typography: {
       headings: {
-        fontFamily: 'Inter',
-        weights: [500, 600, 700],
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [600, 700, 800],
         sizes: {
-          display: 44,
-          h1: 32,
-          h2: 26,
-          h3: 20
+          display: 48,
+          h1: 36,
+          h2: 28,
+          h3: 22,
+          h4: 18
         }
       },
       body: {
-        fontFamily: 'Inter',
+        fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600],
         sizes: {
           large: 18,
           normal: 16,
-          small: 14
+          small: 14,
+          tiny: 12
         }
       }
     },
     effects: {
       borderRadius: 8,
       shadows: {
-        subtle: '0 1px 3px 0 rgba(13, 148, 136, 0.1)',
-        medium: '0 4px 12px 0 rgba(13, 148, 136, 0.15)',
-        strong: '0 8px 25px 0 rgba(13, 148, 136, 0.2)'
+        subtle: '0 1px 3px rgba(14, 165, 233, 0.1)',
+        medium: '0 4px 6px rgba(14, 165, 233, 0.15)',
+        strong: '0 10px 15px rgba(14, 165, 233, 0.2)',
+        colored: '0 4px 6px rgba(14, 165, 233, 0.3)',
+        glow: '0 0 8px rgba(56, 189, 248, 0.3)',
+        elevated: '0 12px 24px rgba(14, 165, 233, 0.1)'
       },
       gradients: {
-        primary: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
-        accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
-        background: 'linear-gradient(135deg, #FFFFFF 0%, #F0FDFA 100%)'
+        primary: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
+        secondary: 'linear-gradient(135deg, #38BDF8 0%, #F0F9FF 100%)',
+        accent: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)',
+        background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)',
+        mesh: 'radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.1), transparent 50%)',
+        subtle: 'linear-gradient(180deg, #E0F2FE, #F0F9FF)',
+        vibrant: 'linear-gradient(45deg, #0EA5E9, #38BDF8)'
       }
     },
     spacing: {
@@ -407,65 +345,81 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       md: 16,
       lg: 24,
       xl: 32,
-      xxl: 48
+      xxl: 48,
+      xxxl: 64
     }
   },
 
   {
-    id: 'academic-indigo',
-    name: 'Academic Excellence',
-    category: 'academic',
-    description: 'Scholarly, refined design for educational and research presentations',
+    id: 'platinum-elegance',
+    name: 'Platinum Elegance',
+    category: 'corporate',
+    description: 'Sophisticated, premium design for executive presentations',
     colors: {
-      primary: '#4338CA',       // Indigo
-      secondary: '#6366F1',     // Light indigo
-      accent: '#DC2626',        // Red accent
+      primary: '#64748B',
+      secondary: '#94A3B8',
+      accent: '#F1F5F9',
       background: '#FFFFFF',
-      surface: '#F8FAFC',       // Slate surface
+      surface: '#F8FAFC',
       text: {
-        primary: '#1E293B',     // Slate 800
-        secondary: '#475569',   // Slate 600
-        inverse: '#FFFFFF'
+        primary: '#0F172A',
+        secondary: '#334155',
+        inverse: '#FFFFFF',
+        muted: '#64748B'
       },
       semantic: {
-        success: '#059669',
-        warning: '#D97706',
-        error: '#DC2626',
-        info: '#4338CA'
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#64748B'
+      },
+      borders: {
+        light: '#F1F5F9',
+        medium: '#E2E8F0',
+        strong: '#CBD5E1'
       }
     },
     typography: {
       headings: {
-        fontFamily: 'Inter',
+        fontFamily: 'Georgia, serif',
         weights: [600, 700, 800],
         sizes: {
-          display: 42,
-          h1: 30,
-          h2: 24,
-          h3: 18
+          display: 52,
+          h1: 40,
+          h2: 32,
+          h3: 24,
+          h4: 20
         }
       },
       body: {
-        fontFamily: 'Inter',
+        fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600],
         sizes: {
-          large: 17,
-          normal: 15,
-          small: 13
+          large: 20,
+          normal: 18,
+          small: 16,
+          tiny: 14
         }
       }
     },
     effects: {
-      borderRadius: 6,
+      borderRadius: 12,
       shadows: {
-        subtle: '0 1px 2px 0 rgba(67, 56, 202, 0.1)',
-        medium: '0 4px 6px -1px rgba(67, 56, 202, 0.1)',
-        strong: '0 10px 15px -3px rgba(67, 56, 202, 0.1)'
+        subtle: '0 1px 3px rgba(100, 116, 139, 0.1)',
+        medium: '0 4px 6px rgba(100, 116, 139, 0.15)',
+        strong: '0 10px 15px rgba(100, 116, 139, 0.2)',
+        colored: '0 4px 6px rgba(100, 116, 139, 0.3)',
+        glow: '0 0 8px rgba(148, 163, 184, 0.3)',
+        elevated: '0 12px 24px rgba(100, 116, 139, 0.1)'
       },
       gradients: {
-        primary: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
-        accent: 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)',
-        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)'
+        primary: 'linear-gradient(135deg, #64748B 0%, #94A3B8 100%)',
+        secondary: 'linear-gradient(135deg, #94A3B8 0%, #F1F5F9 100%)',
+        accent: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
+        background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+        mesh: 'radial-gradient(at 0% 0%, rgba(100, 116, 139, 0.1), transparent 50%)',
+        subtle: 'linear-gradient(180deg, #F8FAFC, #FFFFFF)',
+        vibrant: 'linear-gradient(45deg, #64748B, #94A3B8)'
       }
     },
     spacing: {
@@ -474,20 +428,214 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       md: 16,
       lg: 24,
       xl: 32,
-      xxl: 48
+      xxl: 48,
+      xxxl: 64
+    }
+  },
+
+  {
+    id: 'royal-purple',
+    name: 'Royal Authority',
+    category: 'corporate',
+    description: 'Regal, authoritative design for high-impact presentations',
+    colors: {
+      primary: '#581C87',
+      secondary: '#7C3AED',
+      accent: '#C4B5FD',
+      background: '#FEFBFF',
+      surface: '#F3F0FF',
+      text: {
+        primary: '#3C1361',
+        secondary: '#581C87',
+        inverse: '#FFFFFF',
+        muted: '#7C2D92'
+      },
+      semantic: {
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#581C87'
+      },
+      borders: {
+        light: '#F3F0FF',
+        medium: '#E9D5FF',
+        strong: '#C4B5FD'
+      }
+    },
+    typography: {
+      headings: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [600, 700, 800],
+        sizes: {
+          display: 48,
+          h1: 36,
+          h2: 28,
+          h3: 22,
+          h4: 18
+        }
+      },
+      body: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [400, 500, 600],
+        sizes: {
+          large: 18,
+          normal: 16,
+          small: 14,
+          tiny: 12
+        }
+      }
+    },
+    effects: {
+      borderRadius: 8,
+      shadows: {
+        subtle: '0 1px 3px rgba(88, 28, 135, 0.1)',
+        medium: '0 4px 6px rgba(88, 28, 135, 0.15)',
+        strong: '0 10px 15px rgba(88, 28, 135, 0.2)',
+        colored: '0 4px 6px rgba(88, 28, 135, 0.3)',
+        glow: '0 0 8px rgba(124, 58, 237, 0.3)',
+        elevated: '0 12px 24px rgba(88, 28, 135, 0.1)'
+      },
+      gradients: {
+        primary: 'linear-gradient(135deg, #581C87 0%, #7C3AED 100%)',
+        secondary: 'linear-gradient(135deg, #7C3AED 0%, #C4B5FD 100%)',
+        accent: 'linear-gradient(135deg, #C4B5FD 0%, #F3F0FF 100%)',
+        background: 'linear-gradient(135deg, #FEFBFF 0%, #F3F0FF 100%)',
+        mesh: 'radial-gradient(at 0% 0%, rgba(88, 28, 135, 0.1), transparent 50%)',
+        subtle: 'linear-gradient(180deg, #F3F0FF, #FEFBFF)',
+        vibrant: 'linear-gradient(45deg, #581C87, #7C3AED)'
+      }
+    },
+    spacing: {
+      xs: 4,
+      sm: 8,
+      md: 16,
+      lg: 24,
+      xl: 32,
+      xxl: 48,
+      xxxl: 64
+    }
+  },
+
+  {
+    id: 'forest-modern',
+    name: 'Modern Forest',
+    category: 'natural',
+    description: 'Fresh, sustainable design with natural green tones',
+    colors: {
+      primary: '#166534',
+      secondary: '#22C55E',
+      accent: '#84CC16',
+      background: '#F0FDF4',
+      surface: '#DCFCE7',
+      text: {
+        primary: '#14532D',
+        secondary: '#166534',
+        inverse: '#FFFFFF',
+        muted: '#15803D'
+      },
+      semantic: {
+        success: '#22C55E',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#166534'
+      },
+      borders: {
+        light: '#DCFCE7',
+        medium: '#BBF7D0',
+        strong: '#86EFAC'
+      }
+    },
+    typography: {
+      headings: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [600, 700, 800],
+        sizes: {
+          display: 48,
+          h1: 36,
+          h2: 28,
+          h3: 22,
+          h4: 18
+        }
+      },
+      body: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [400, 500, 600],
+        sizes: {
+          large: 18,
+          normal: 16,
+          small: 14,
+          tiny: 12
+        }
+      }
+    },
+    effects: {
+      borderRadius: 8,
+      shadows: {
+        subtle: '0 1px 3px rgba(22, 101, 52, 0.1)',
+        medium: '0 4px 6px rgba(22, 101, 52, 0.15)',
+        strong: '0 10px 15px rgba(22, 101, 52, 0.2)',
+        colored: '0 4px 6px rgba(22, 101, 52, 0.3)',
+        glow: '0 0 8px rgba(34, 197, 94, 0.3)',
+        elevated: '0 12px 24px rgba(22, 101, 52, 0.1)'
+      },
+      gradients: {
+        primary: 'linear-gradient(135deg, #166534 0%, #22C55E 100%)',
+        secondary: 'linear-gradient(135deg, #22C55E 0%, #84CC16 100%)',
+        accent: 'linear-gradient(135deg, #84CC16 0%, #A3E635 100%)',
+        background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
+        mesh: 'radial-gradient(at 0% 0%, rgba(22, 101, 52, 0.1), transparent 50%)',
+        subtle: 'linear-gradient(180deg, #DCFCE7, #F0FDF4)',
+        vibrant: 'linear-gradient(45deg, #166534, #22C55E)'
+      }
+    },
+    spacing: {
+      xs: 4,
+      sm: 8,
+      md: 16,
+      lg: 24,
+      xl: 32,
+      xxl: 48,
+      xxxl: 64
     }
   }
 ];
 
-// Theme utility functions
+/**
+ * Enhanced Theme Utility Functions
+ */
+
+/**
+ * Get theme by ID with fallback to default
+ */
 export function getThemeById(id: string): ProfessionalTheme | undefined {
   return PROFESSIONAL_THEMES.find(theme => theme.id === id);
 }
 
+/**
+ * Get default theme (corporate-blue)
+ */
+export function getDefaultTheme(): ProfessionalTheme {
+  return PROFESSIONAL_THEMES[0];
+}
+
+/**
+ * Get themes by category
+ */
 export function getThemesByCategory(category: ProfessionalTheme['category']): ProfessionalTheme[] {
   return PROFESSIONAL_THEMES.filter(theme => theme.category === category);
 }
 
+/**
+ * Get all available theme categories
+ */
+export function getThemeCategories(): ProfessionalTheme['category'][] {
+  const categories = new Set(PROFESSIONAL_THEMES.map(theme => theme.category));
+  return Array.from(categories);
+}
+
+/**
+ * Generate CSS custom properties for a theme
+ */
 export function generateThemeCSS(theme: ProfessionalTheme): string {
   return `
     :root {
@@ -499,15 +647,16 @@ export function generateThemeCSS(theme: ProfessionalTheme): string {
       --theme-text-primary: ${theme.colors.text.primary};
       --theme-text-secondary: ${theme.colors.text.secondary};
       --theme-text-inverse: ${theme.colors.text.inverse};
-      
+      --theme-text-muted: ${theme.colors.text.muted};
+
       --theme-font-heading: ${theme.typography.headings.fontFamily};
       --theme-font-body: ${theme.typography.body.fontFamily};
-      
+
       --theme-radius: ${theme.effects.borderRadius}px;
       --theme-shadow-subtle: ${theme.effects.shadows.subtle};
       --theme-shadow-medium: ${theme.effects.shadows.medium};
       --theme-shadow-strong: ${theme.effects.shadows.strong};
-      
+
       --theme-spacing-xs: ${theme.spacing.xs}px;
       --theme-spacing-sm: ${theme.spacing.sm}px;
       --theme-spacing-md: ${theme.spacing.md}px;
@@ -516,4 +665,20 @@ export function generateThemeCSS(theme: ProfessionalTheme): string {
       --theme-spacing-xxl: ${theme.spacing.xxl}px;
     }
   `;
+}
+
+/**
+ * Check if a theme is suitable for a specific presentation type
+ */
+export function isThemeSuitableFor(theme: ProfessionalTheme, presentationType: string): boolean {
+  const suitabilityMap: Record<string, ProfessionalTheme['category'][]> = {
+    business: ['corporate', 'finance', 'consulting'],
+    creative: ['creative', 'startup', 'modern'],
+    academic: ['academic', 'healthcare'],
+    technical: ['technology', 'modern'],
+    marketing: ['vibrant', 'creative', 'modern']
+  };
+
+  const suitableCategories = suitabilityMap[presentationType] || [];
+  return suitableCategories.includes(theme.category);
 }

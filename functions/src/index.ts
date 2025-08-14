@@ -40,26 +40,68 @@ import { defineSecret } from "firebase-functions/params";
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import compression from "compression";
 
 // Import enhanced core modules with error types
 import { generateSlideSpec, AIGenerationError, ValidationError, TimeoutError } from "./llm";
 import { generatePpt } from "./pptGenerator";
 import { safeValidateGenerationParams, safeValidateSlideSpec, validateContentQuality, generateContentImprovements, type SlideSpec } from "./schema";
-import { selectThemeForContent } from "./professionalThemes";
+import { PROFESSIONAL_THEMES, selectThemeForContent } from "./professionalThemes";
+import { debugLogger, DebugCategory } from "./utils/debugLogger";
+// Layout planning imports
+import { buildSlide, type SlideConfig, type SlideType } from './slides';
+import { getTheme as getCoreTheme } from './core/theme/themes';
 
-// Configuration constants (enhanced for better performance)
+// Production-ready configuration constants
 const CONFIG = {
   maxInstances: 20,
   requestSizeLimit: '20mb',
   timeout: 540,
-  memory: "2GiB",
+  memory: "2GiB" as const,
   rateLimit: {
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
-    // Disable rate limiting for Firebase Functions environment
-    skip: () => true
+    message: {
+      error: 'Too many requests from this IP, please try again later.',
+      retryAfter: '15 minutes'
+    },
+    // Skip rate limiting in Firebase Functions environment
+    skip: (req: any) => {
+      // Skip if in development or if running in Firebase Functions
+      return process.env.NODE_ENV === 'development' ||
+             process.env.FUNCTIONS_EMULATOR === 'true' ||
+             !req.ip;
+    },
+    // Custom key generator for Firebase Functions
+    keyGenerator: (req: any) => {
+      return req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+    }
+  },
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://your-domain.com', 'https://ai-ppt-gen.web.app']
+      : true,
+    credentials: true,
+    optionsSuccessStatus: 200
+  },
+  security: {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https://api.openai.com"]
+      }
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
   }
 } as const;
 
@@ -130,32 +172,48 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 // Configure Firebase Functions for optimal performance
 setGlobalOptions({ maxInstances: CONFIG.maxInstances });
 
-// Create Express application with optimized middleware
+// Create Express application with production-ready middleware
 const app = express();
 
-// Enhanced CORS configuration for production security
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://your-domain.com', 'https://your-domain.firebaseapp.com']
-    : true,
-  credentials: true,
-  optionsSuccessStatus: 200
-};
+// Compression middleware for better performance
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req: any, res: any) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
-app.use(cors(corsOptions));
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: CONFIG.security.contentSecurityPolicy,
+  hsts: CONFIG.security.hsts,
+  crossOriginEmbedderPolicy: false // Allow embedding for iframe usage
+}));
 
-// Security headers middleware
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
-  next();
-});
+// Enhanced CORS configuration
+app.use(cors(CONFIG.cors));
 
-app.use(express.json({ limit: CONFIG.requestSizeLimit }));
-app.use(rateLimit(CONFIG.rateLimit));
+// Rate limiting (disabled in Firebase Functions environment due to IP detection issues)
+if (process.env.NODE_ENV === 'production' && !process.env.FUNCTIONS_EMULATOR) {
+  app.use(rateLimit(CONFIG.rateLimit));
+}
+
+// Body parsing with size limits
+app.use(express.json({
+  limit: CONFIG.requestSizeLimit,
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+
+app.use(express.urlencoded({
+  extended: true,
+  limit: CONFIG.requestSizeLimit
+}));
 
 // Environment setup middleware
 app.use((_req, _res, next) => {
@@ -206,6 +264,58 @@ app.post('/themes', (req, res) => {
 });
 
 /**
+ * Theme presets endpoint: return full theme catalog with metadata
+ */
+app.get('/theme-presets', (_req, res) => {
+  const themes = PROFESSIONAL_THEMES.map(t => ({
+    id: t.id,
+    name: t.name,
+    category: t.category,
+    // backend theme type has no description; send empty string for compatibility
+    description: '',
+    colors: t.colors,
+    typography: t.typography,
+    effects: t.effects,
+    spacing: t.spacing
+  }));
+  return res.json({ themes, count: themes.length });
+});
+
+/**
+ * Render plan endpoint: returns a UI-friendly JSON plan per slide
+ * Accepts: { slides: SlideConfig[], theme?: 'neutral'|'executive'|'colorPop' }
+ */
+app.post('/render-plan', (req, res) => {
+  try {
+    const { slides, theme } = req.body || {};
+    if (!Array.isArray(slides) || slides.length === 0) {
+      return res.status(400).json({ error: 'slides array required' });
+    }
+
+    const coreTheme = getCoreTheme(theme || 'neutral');
+
+    const plans = slides.map((slide: SlideConfig, index: number) => {
+      try {
+        const result = buildSlide(slide.type as SlideType, slide, coreTheme);
+        return {
+          index,
+          type: slide.type,
+          title: (slide as any).title,
+          layout: result.layout,
+          metadata: result.metadata
+        };
+      } catch (e) {
+        return { index, error: e instanceof Error ? e.message : String(e) };
+      }
+    });
+
+    return res.json({ plans });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to build render plan' });
+  }
+});
+
+/**
  * Metrics endpoint (secured)
  */
 app.get('/metrics', (req, res) => {
@@ -219,10 +329,31 @@ app.get('/metrics', (req, res) => {
  * Slide draft generation endpoint with AI image generation support
  */
 app.post('/draft', async (req, res) => {
+  // Create request context for comprehensive debugging
+  const requestId = debugLogger.createRequestContext('/draft', {
+    userAgent: req.get('User-Agent'),
+    contentLength: req.get('Content-Length'),
+    ip: req.ip
+  });
+
   const performanceMetric = startPerformanceTracking('/draft', req);
+  const perfId = debugLogger.startPerformanceTracking('draft-generation', requestId);
 
   try {
     const requestData = req.body;
+
+    // Handle both 'topic' and 'prompt' fields for backward compatibility
+    if (requestData.topic && !requestData.prompt) {
+      requestData.prompt = requestData.topic;
+    }
+
+    debugLogger.info('Draft generation request received', DebugCategory.API, requestId, {
+      promptLength: requestData.prompt?.length || 0,
+      audience: requestData.audience,
+      tone: requestData.tone,
+      contentLength: requestData.contentLength,
+      withImage: requestData.withImage
+    });
 
     logger.info('Draft generation request', {
       requestId: performanceMetric.requestId,
@@ -237,6 +368,14 @@ app.post('/draft', async (req, res) => {
 
     const validationResult = safeValidateGenerationParams(requestData);
     if (!validationResult.success) {
+      debugLogger.warn('Invalid generation parameters', DebugCategory.VALIDATION, requestId, {
+        errors: validationResult.errors,
+        receivedData: { ...requestData, prompt: '[REDACTED]' }
+      });
+
+      debugLogger.endPerformanceTracking(perfId, { validationFailed: true });
+      debugLogger.endRequestContext(requestId, false, { errorType: 'VALIDATION_ERROR' });
+
       logger.warn('Invalid request parameters', {
         errors: validationResult.errors,
         requestBody: { ...requestData, prompt: '[REDACTED]' }
@@ -253,12 +392,35 @@ app.post('/draft', async (req, res) => {
     // Use validated parameters directly
     const enhancedParams = validationResult.data!;
 
+    debugLogger.debug('Starting AI slide generation', DebugCategory.AI_MODEL, requestId, {
+      validatedParams: enhancedParams
+    });
+
     const draft = await generateSlideSpec(enhancedParams);
+
+    debugLogger.info('Draft generation successful', DebugCategory.API, requestId, {
+      title: draft.title,
+      layout: draft.layout,
+      contentLength: JSON.stringify(draft).length
+    });
+
+    debugLogger.endPerformanceTracking(perfId, { slideGenerated: true });
+    debugLogger.endRequestContext(requestId, true, { slideCount: 1, aiSteps: 4 });
 
     endPerformanceTracking(performanceMetric, true, undefined, { slideCount: 1, aiSteps: 4 });
     return res.json(draft);
   } catch (error) {
     const errorType = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
+
+    debugLogger.error(`Draft generation failed: ${error instanceof Error ? error.message : String(error)}`, requestId, {
+      errorType,
+      stack: error instanceof Error ? error.stack : undefined,
+      errorDetails: error
+    });
+
+    debugLogger.endPerformanceTracking(perfId, { error: errorType });
+    debugLogger.endRequestContext(requestId, false, { errorType });
+
     logger.error('Draft generation failed', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined

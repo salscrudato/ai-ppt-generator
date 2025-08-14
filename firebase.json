@@ -31,5 +31,15 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "emulators": {
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 5003
+    },
+    "hosting": {
+      "host": "127.0.0.1",
+      "port": 5000
+    }
   }
 }

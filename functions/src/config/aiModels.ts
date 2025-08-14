@@ -15,7 +15,7 @@ const isTestingMode = process.env.AI_TESTING_MODE === 'true' || !isProduction;
 export const TEXT_MODEL_CONFIG = {
   // Testing Mode: Low-cost models for development
   testing: {
-    model: 'gpt-3.5-turbo' as const,
+    model: 'gpt-4o-mini' as const,
     fallbackModel: 'gpt-3.5-turbo' as const,
     temperature: 0.7,
     maxTokens: 1500,
@@ -23,20 +23,20 @@ export const TEXT_MODEL_CONFIG = {
     retryDelay: 500,
     timeoutMs: 20000,
     maxBackoffDelay: 5000,
-    costPerToken: 0.0015 // Approximate cost per 1K tokens (USD)
+    costPerToken: 0.00015 // GPT-4o Mini: $0.15 per 1M input tokens
   },
-  
+
   // Production Mode: High-quality models for best results
   production: {
-    model: 'gpt-4o' as const,
-    fallbackModel: 'gpt-4' as const,
+    model: 'gpt-4o-mini' as const,
+    fallbackModel: 'gpt-4o' as const,
     temperature: 0.7,
     maxTokens: 2000,
     maxRetries: 3,
     retryDelay: 1000,
     timeoutMs: 30000,
     maxBackoffDelay: 10000,
-    costPerToken: 0.03 // Approximate cost per 1K tokens (USD)
+    costPerToken: 0.00015 // GPT-4o Mini: $0.15 per 1M input tokens, $0.60 per 1M output tokens
   }
 };
 

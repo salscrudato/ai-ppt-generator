@@ -48,6 +48,66 @@ export class TimeoutError extends Error {
   }
 }
 
+/**
+ * Sanitize AI response to fix common formatting issues
+ * This helps handle cases where AI returns objects instead of strings for bullets
+ */
+function sanitizeAIResponse(data: any): any {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  const sanitized = { ...data };
+
+  // Fix bullets array - convert objects to strings if needed
+  if (sanitized.bullets && Array.isArray(sanitized.bullets)) {
+    sanitized.bullets = sanitized.bullets.map((bullet: any) => {
+      if (typeof bullet === 'string') {
+        return bullet;
+      } else if (typeof bullet === 'object' && bullet !== null) {
+        // If it's an object, try to extract text content
+        if (bullet.text) return bullet.text;
+        if (bullet.content) return bullet.content;
+        if (bullet.point) return bullet.point;
+        if (bullet.item) return bullet.item;
+        // If it has a single string property, use that
+        const values = Object.values(bullet).filter(v => typeof v === 'string');
+        if (values.length === 1) return values[0];
+        // Otherwise, stringify the object
+        return JSON.stringify(bullet);
+      }
+      // Convert other types to string
+      return String(bullet);
+    });
+  }
+
+  // Fix nested bullets in left/right columns
+  if (sanitized.left?.bullets && Array.isArray(sanitized.left.bullets)) {
+    sanitized.left.bullets = sanitized.left.bullets.map((bullet: any) =>
+      typeof bullet === 'string' ? bullet : String(bullet)
+    );
+  }
+
+  if (sanitized.right?.bullets && Array.isArray(sanitized.right.bullets)) {
+    sanitized.right.bullets = sanitized.right.bullets.map((bullet: any) =>
+      typeof bullet === 'string' ? bullet : String(bullet)
+    );
+  }
+
+  // Fix timeline items
+  if (sanitized.timeline && Array.isArray(sanitized.timeline)) {
+    sanitized.timeline = sanitized.timeline.map((item: any) => ({
+      ...item,
+      date: typeof item.date === 'string' ? item.date : String(item.date || ''),
+      title: typeof item.title === 'string' ? item.title : String(item.title || ''),
+      description: typeof item.description === 'string' ? item.description : String(item.description || ''),
+      milestone: Boolean(item.milestone)
+    }));
+  }
+
+  return sanitized;
+}
+
 // Define the OpenAI API key secret parameter
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -170,9 +230,19 @@ async function aiCallWithRetry(prompt: string, stepName: string, previousSpec?: 
   } catch (fallbackError) {
     console.error(`${stepName} fallback failed:`, fallbackError);
 
-    // If all else fails, try to create a basic fallback spec
+    // Enhanced fallback mechanism for different steps
     if (stepName === 'Content Generation') {
+      console.log('Creating enhanced fallback spec for content generation...');
       return createFallbackSpec(prompt, previousSpec);
+    } else if (stepName === 'Layout Refinement' && previousSpec) {
+      console.log('Using previous spec with basic layout fallback...');
+      return {
+        ...previousSpec,
+        layout: previousSpec.layout || 'title-bullets'
+      } as SlideSpec;
+    } else if (stepName === 'Image Prompt Generation' && previousSpec) {
+      console.log('Continuing without image prompt...');
+      return previousSpec as SlideSpec;
     }
 
     throw new AIGenerationError(
@@ -229,8 +299,11 @@ async function makeAICall(
       throw new Error(`Invalid JSON response: ${parseError}`);
     }
 
+    // Sanitize the parsed data to fix common AI model issues
+    const sanitized = sanitizeAIResponse(parsed);
+
     // Use safe validation to get detailed error information
-    const validationResult = safeValidateSlideSpec(parsed);
+    const validationResult = safeValidateSlideSpec(sanitized);
     if (!validationResult.success) {
       throw new ValidationError(
         'Slide specification validation failed',
@@ -253,16 +326,57 @@ async function makeAICall(
  * Create a basic fallback specification when AI generation fails
  */
 function createFallbackSpec(prompt: string, previousSpec?: Partial<SlideSpec>): SlideSpec {
-  console.log('Creating fallback specification...');
+  console.log('Creating enhanced fallback specification...');
 
-  // Extract a basic title from the prompt
-  const title = prompt.length > 80 ? prompt.substring(0, 77) + '...' : prompt;
+  // Create a more intelligent title from the prompt
+  const title = createFallbackTitle(prompt);
+
+  // Generate basic content based on prompt keywords
+  const content = createFallbackContent(prompt);
 
   return {
-    title: title || 'Presentation Slide',
-    layout: 'title-paragraph',
-    paragraph: previousSpec?.paragraph || 'Content generation temporarily unavailable. Please try again.',
-    notes: 'This slide was generated using fallback content due to AI service issues.',
-    sources: []
+    title: title,
+    layout: 'title-bullets',
+    bullets: content.bullets,
+    paragraph: content.paragraph,
+    notes: 'This slide was generated using fallback content. For optimal results, please try regenerating when AI services are fully available.',
+    sources: ['Fallback content generation']
   };
+}
+
+/**
+ * Create an intelligent fallback title from the prompt
+ */
+function createFallbackTitle(prompt: string): string {
+  // Clean and capitalize the prompt
+  let title = prompt.trim();
+
+  // If too long, try to extract key phrases
+  if (title.length > 60) {
+    // Look for key business terms and metrics
+    const keyTerms = title.match(/\b(?:revenue|growth|performance|results|analysis|strategy|improvement|increase|decrease|\d+%|\$[\d,]+)\b/gi);
+    if (keyTerms && keyTerms.length > 0) {
+      title = keyTerms.slice(0, 3).join(' ') + ' Overview';
+    } else {
+      title = title.substring(0, 57) + '...';
+    }
+  }
+
+  // Ensure proper capitalization
+  return title.charAt(0).toUpperCase() + title.slice(1);
+}
+
+/**
+ * Create basic fallback content based on prompt analysis
+ */
+function createFallbackContent(prompt: string): { bullets: string[], paragraph: string } {
+  const bullets = [
+    'Content generation is temporarily unavailable',
+    'Please try regenerating this slide for optimal results',
+    'AI services are working to restore full functionality'
+  ];
+
+  const paragraph = `This slide is about: ${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}. Full content generation will be available once AI services are restored.`;
+
+  return { bullets, paragraph };
 }
