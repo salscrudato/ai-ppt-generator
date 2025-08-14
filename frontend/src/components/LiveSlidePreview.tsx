@@ -104,12 +104,21 @@ export default function LiveSlidePreview({
     []
   );
 
-  // Effect to trigger preview generation when params change
+  // Effect to trigger preview generation when content params change (not theme)
   useEffect(() => {
     if (isVisible && params.prompt) {
       generatePreviewDraft(params);
     }
-  }, [params, isVisible, generatePreviewDraft]);
+  }, [
+    params.prompt,
+    params.audience,
+    params.tone,
+    params.contentLength,
+    params.layout,
+    params.withImage,
+    isVisible,
+    generatePreviewDraft
+  ]);
 
   // Handle direct content editing in preview
   const handleContentEdit = (field: keyof SlideSpec, value: any) => {
