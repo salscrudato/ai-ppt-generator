@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import type { GenerationParams } from '../types';
+import type { GenerationParams, SlideSpec } from '../types';
 import {
   HiPencilSquare,
   HiArrowPath,
@@ -9,10 +9,13 @@ import {
   HiUsers,
   HiChatBubbleLeftRight,
   HiPhoto,
-  HiRectangleStack
+  HiRectangleStack,
+  HiEye,
+  HiEyeSlash
 } from 'react-icons/hi2';
 import clsx from 'clsx';
 import ThemeGallery from './ThemeGallery';
+import LiveSlidePreview from './LiveSlidePreview';
 
 interface PromptInputProps {
   params: GenerationParams;
@@ -30,8 +33,9 @@ export default function PromptInput({
   onGenerate
 }: PromptInputProps) {
   const [localParams, setLocalParams] = useState(params);
-
   const [charCount, setCharCount] = useState(params.prompt.length);
+  const [showLivePreview, setShowLivePreview] = useState(true);
+  const [enablePreviewEditing, setEnablePreviewEditing] = useState(false);
 
   const updateParam = <K extends keyof GenerationParams>(
     key: K,
@@ -46,21 +50,56 @@ export default function PromptInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Only proceed if this is an explicit form submission
     if (localParams.prompt.trim()) {
       onGenerate(localParams);
     }
   };
 
+  const handleGenerateClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (localParams.prompt.trim()) {
+      onGenerate(localParams);
+    }
+  };
+
+  const handlePreviewContentEdit = (updatedSpec: Partial<SlideSpec>) => {
+    // When content is edited in preview, we could update the params
+    // For now, we'll just log it - in a full implementation, you might want to
+    // sync this back to the form or store it separately
+    console.log('Preview content edited:', updatedSpec);
+  };
+
+  // Prevent accidental form submission from select elements
+  const handleSelectKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  // Handle textarea key events - only prevent form submission on Ctrl+Enter
+  const handleTextareaKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Optionally trigger generation on Ctrl+Enter
+      if (localParams.prompt.trim()) {
+        handleGenerateClick(e as any);
+      }
+    }
+  };
+
   return (
-    <div className="p-10 space-y-10">
+    <div className="min-h-screen">
       {/* Enhanced Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center"
+        className="text-center p-6 bg-white border-b border-gray-200"
       >
-        <div className="inline-flex items-center gap-4 mb-6">
+        <div className="inline-flex items-center gap-4 mb-4">
           <motion.div
             className="p-3 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl border border-indigo-200"
             whileHover={{ scale: 1.05, rotate: 5 }}
@@ -73,9 +112,52 @@ export default function PromptInput({
         <p className="text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed">
           Tell us what you want to present, and we'll help you create a professional slide with AI assistance.
         </p>
+
+        {/* Live Preview Controls */}
+        <div className="flex items-center justify-center gap-3 mt-4">
+          <button
+            type="button"
+            onClick={() => setShowLivePreview(!showLivePreview)}
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+              showLivePreview
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            )}
+          >
+            {showLivePreview ? <HiEye className="w-4 h-4" /> : <HiEyeSlash className="w-4 h-4" />}
+            {showLivePreview ? 'Hide Live Preview' : 'Show Live Preview'}
+          </button>
+
+          {showLivePreview && (
+            <button
+              type="button"
+              onClick={() => setEnablePreviewEditing(!enablePreviewEditing)}
+              className={clsx(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                enablePreviewEditing
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              <HiPencilSquare className="w-4 h-4" />
+              {enablePreviewEditing ? 'Editing Enabled' : 'Enable Editing'}
+            </button>
+          )}
+        </div>
       </motion.div>
 
-      <form onSubmit={handleSubmit} className="space-y-10">
+      {/* Two-Column Layout */}
+      <div className={clsx(
+        'flex flex-col lg:flex-row min-h-[calc(100vh-200px)]',
+        showLivePreview ? 'lg:grid lg:grid-cols-2' : ''
+      )}>
+        {/* Left Column - Input Form */}
+        <div className={clsx(
+          'flex-1 p-6 lg:p-10 overflow-y-auto',
+          showLivePreview ? 'lg:border-r lg:border-gray-200' : 'max-w-4xl mx-auto'
+        )}>
+          <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto lg:max-w-none">
         {/* Enhanced Main Prompt */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -95,6 +177,7 @@ export default function PromptInput({
                 setCharCount(newValue.length);
                 updateParam('prompt', newValue);
               }}
+              onKeyDown={handleTextareaKeyDown}
               placeholder="Describe your presentation topic here...
 
 • Include specific data and metrics
@@ -153,6 +236,7 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               id="audience"
               value={localParams.audience || 'general'}
               onChange={(e) => updateParam('audience', e.target.value as any)}
+              onKeyDown={handleSelectKeyDown}
               className="input"
             >
               <option value="general">General Audience</option>
@@ -174,6 +258,7 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               id="tone"
               value={localParams.tone || 'professional'}
               onChange={(e) => updateParam('tone', e.target.value as any)}
+              onKeyDown={handleSelectKeyDown}
               className="input"
             >
               <option value="professional">Professional</option>
@@ -202,6 +287,7 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               id="layout"
               value={localParams.layout || ''}
               onChange={(e) => updateParam('layout', e.target.value as any)}
+              onKeyDown={handleSelectKeyDown}
               className="input"
             >
               <option value="">Auto-select (Recommended)</option>
@@ -258,16 +344,19 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             )}
           </div>
         </motion.div>
-        {/* Theme Gallery */}
+        {/* Enhanced Theme Gallery */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.35 }}
-          className="mt-6"
+          className="mt-8"
         >
           <ThemeGallery
             selectedId={localParams.design?.theme}
             onSelect={(themeId) => updateParam('design', { ...(localParams.design || {}), theme: themeId })}
+            title="Choose Your Theme"
+            showCategories={true}
+            compact={false}
           />
         </motion.div>
 
@@ -300,7 +389,8 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           className="flex justify-center pt-8"
         >
           <motion.button
-            type="submit"
+            type="button"
+            onClick={handleGenerateClick}
             disabled={loading || !localParams.prompt.trim()}
             className={clsx(
               'btn-primary px-12 py-5 text-xl font-bold rounded-3xl shadow-xl',
@@ -324,7 +414,28 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             )}
           </motion.button>
         </motion.div>
-      </form>
+          </form>
+        </div>
+
+        {/* Right Column - Live Preview */}
+        {showLivePreview && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="flex-1 bg-gray-50 lg:min-h-[calc(100vh-200px)]"
+          >
+            <LiveSlidePreview
+              params={localParams}
+              isVisible={showLivePreview}
+              editable={enablePreviewEditing}
+              onContentEdit={handlePreviewContentEdit}
+              theme={localParams.design?.theme || 'corporate-blue'}
+            />
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }

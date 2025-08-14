@@ -22,6 +22,18 @@
 import pptxgen from 'pptxgenjs';
 import type { SlideSpec } from './schema';
 import { getThemeById, selectThemeForContent, customizeTheme, type ProfessionalTheme } from './professionalThemes';
+import { ModernTheme, getModernTheme, MODERN_THEMES } from './core/theme/modernThemes';
+import {
+  createModernHeroSlide,
+  createModernContentSlide,
+  createModernMetricsSlide,
+  createAdvancedHeroSlide,
+  createFeatureShowcaseSlide,
+  createTestimonialSlide,
+  createDataVisualizationSlide
+} from './slides/modernSlideGenerators';
+import { VISUAL_EFFECT_PRESETS, createModernCardBackground, createAccentElement, applyVisualEffects } from './core/theme/visualEffects';
+import { getTypographyPairing, createModernTextOptions, TEXT_STYLE_PRESETS } from './core/theme/modernTypography';
 import { validateSlideStyle, type StyleValidationResult } from './styleValidator';
 import OpenAI from 'openai';
 import { defineSecret } from 'firebase-functions/params';
@@ -59,6 +71,63 @@ function safeColorFormat(color: string): string {
 }
 
 /**
+ * Determine if modern theme should be used based on design preferences
+ */
+function shouldUseModernTheme(spec: SlideSpec): boolean {
+  // Check for modern theme indicators in design object
+  if (spec.design?.modern === true) return true;
+  if (spec.design?.theme && MODERN_THEMES.some(t => t.id === spec.design?.theme)) return true;
+  if (spec.design?.style === 'modern') return true;
+
+  // Check for modern layout types
+  const modernLayouts = ['hero', 'metrics-dashboard', 'feature-showcase', 'testimonial-card'];
+  if (modernLayouts.includes(spec.layout)) return true;
+
+  return false;
+}
+
+/**
+ * Type guard to check if theme is modern
+ */
+function isModernTheme(theme: ProfessionalTheme | ModernTheme): theme is ModernTheme {
+  return 'gradients' in theme;
+}
+
+/**
+ * Get appropriate theme (modern or traditional) based on specifications
+ */
+function getAppropriateTheme(spec: SlideSpec): ProfessionalTheme | ModernTheme {
+  if (shouldUseModernTheme(spec)) {
+    const modernThemeId = spec.design?.theme;
+    if (modernThemeId) {
+      const modernTheme = getModernTheme(modernThemeId);
+      if (modernTheme) return modernTheme;
+    }
+    // Default to first modern theme
+    return MODERN_THEMES[0];
+  }
+
+  // Use traditional theme system
+  let theme = getThemeById(spec.design?.theme || '') ||
+              selectThemeForContent({
+                presentationType: spec.layout,
+                tone: 'professional'
+              });
+
+  // Apply custom brand colors if provided
+  if (spec.design?.brand) {
+    theme = customizeTheme(theme, {
+      primary: spec.design.brand.primary,
+      secondary: spec.design.brand.secondary,
+      accent: spec.design.brand.accent,
+      fontFamily: spec.design.brand.fontFamily
+    });
+  }
+
+  return theme;
+}
+
+/**
  * Generate a PowerPoint file buffer from slide specifications
  * Enhanced with style validation and quality assurance
  *
@@ -85,32 +154,25 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_WIDE';
 
+  // 16:9 slide format constants
+  const SLIDE_WIDTH = 10.0;    // Standard 16:9 slide width
+  const SLIDE_HEIGHT = 5.625;  // Standard 16:9 slide height
+  const contentPadding = 0.75; // Enhanced padding for 16:9 format
+  const maxContentWidth = 8.5; // Optimized content width for 16:9
+
   // Style validation results for quality assurance
   const validationResults: StyleValidationResult[] = [];
 
   for (let i = 0; i < specs.length; i++) {
     const spec = specs[i];
 
-    // Enhanced theme selection with dynamic selection and customization
-    let theme = getThemeById(spec.design?.theme || '') ||
-                selectThemeForContent({
-                  presentationType: spec.layout,
-                  tone: 'professional'
-                });
+    // Enhanced theme selection with modern theme support
+    const theme = getAppropriateTheme(spec);
+    const useModernTheme = isModernTheme(theme);
 
-    // Apply custom brand colors if provided
-    if (spec.design?.brand) {
-      theme = customizeTheme(theme, {
-        primary: spec.design.brand.primary,
-        secondary: spec.design.brand.secondary,
-        accent: spec.design.brand.accent,
-        fontFamily: spec.design.brand.fontFamily
-      });
-    }
-
-    // Validate slide style quality if enabled
-    if (validateStyles) {
-      const styleValidation = validateSlideStyle(spec, theme);
+    // Validate slide style quality if enabled (only for traditional themes)
+    if (validateStyles && !useModernTheme) {
+      const styleValidation = validateSlideStyle(spec, theme as ProfessionalTheme);
       validationResults.push(styleValidation);
 
       // Log style issues for debugging
@@ -125,48 +187,133 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
 
     const slide = pres.addSlide();
 
+    // Use modern slide generation for modern themes
+    if (useModernTheme && isModernTheme(theme)) {
+      const modernTheme = theme;
+
+      // Handle modern slide layouts
+      if (spec.layout === 'title' || spec.layout === 'hero') {
+        createModernHeroSlide(slide, {
+          title: spec.title,
+          subtitle: spec.paragraph,
+          author: spec.design?.author,
+          date: spec.design?.date,
+          backgroundStyle: spec.design?.backgroundStyle as any || 'minimal'
+        }, modernTheme);
+
+        // Skip traditional rendering for modern hero slides
+        continue;
+      } else if (spec.layout === 'gradient-hero') {
+        createAdvancedHeroSlide(slide, {
+          title: spec.title,
+          subtitle: spec.paragraph,
+          callToAction: 'Learn More',
+          backgroundStyle: 'gradient'
+        }, modernTheme);
+
+        continue;
+      } else if (spec.layout === 'feature-showcase') {
+        // Convert bullets to features format
+        const features = spec.bullets?.map((bullet, index) => ({
+          icon: '⭐', // Default icon
+          title: `Feature ${index + 1}`,
+          description: bullet,
+          color: modernTheme.palette.accent
+        })) || [];
+
+        createFeatureShowcaseSlide(slide, {
+          title: spec.title,
+          features,
+          layout: 'grid'
+        }, modernTheme);
+
+        continue;
+      } else if (spec.layout === 'testimonial-card') {
+        createTestimonialSlide(slide, {
+          title: spec.title,
+          quote: spec.paragraph || 'This is an amazing product that has transformed our business.',
+          author: spec.design?.author || 'John Doe',
+          role: 'CEO',
+          company: 'Example Corp'
+        }, modernTheme);
+
+        continue;
+      } else if (spec.layout === 'metrics-dashboard' && spec.bullets) {
+        // Convert bullets to metrics format for modern metrics slide
+        const metrics = spec.bullets.map((bullet, index) => ({
+          value: `${index + 1}`,
+          label: bullet,
+          trend: 'neutral' as const
+        }));
+
+        createModernMetricsSlide(slide, {
+          title: spec.title,
+          metrics,
+          layout: 'grid'
+        }, modernTheme);
+
+        continue;
+      } else if (spec.bullets || spec.paragraph) {
+        // Modern content slide
+        const content = spec.bullets || (spec.paragraph ? [spec.paragraph] : []);
+        createModernContentSlide(slide, {
+          title: spec.title,
+          content,
+          layout: spec.design?.contentLayout as any || 'bullets',
+          accentColor: modernTheme.palette.accent
+        }, modernTheme);
+
+        continue;
+      }
+    }
+
+    // Traditional slide rendering for non-modern themes
+    const traditionalTheme = theme as ProfessionalTheme;
+
     // Apply safe background color (avoid complex gradients)
-    const bgColor = safeColorFormat(theme.colors.background);
+    const bgColor = safeColorFormat(traditionalTheme.colors.background);
     if (bgColor !== 'FFFFFF') { // Only set if not default white
       slide.background = { color: bgColor };
     }
 
     // Optionally add a subtle background enhancement layer
-    addSlideBackground(slide, theme);
+    addSlideBackground(slide, traditionalTheme);
 
     // Simple, reliable title positioning
-    const titleFontSize = Math.min(theme.typography.headings.sizes.h1, 32);
-    const titleColor = safeColorFormat(theme.colors.primary);
+    const titleFontSize = Math.min(traditionalTheme.typography.headings.sizes.h1, 32);
+    const titleColor = safeColorFormat(traditionalTheme.colors.primary);
 
     slide.addText(spec.title, {
-      x: 0.5,
-      y: 0.5,
-      w: 9.0,
+      x: contentPadding,
+      y: 0.4,
+      w: maxContentWidth,
       h: 1.0,
       fontSize: titleFontSize,
       bold: true,
       color: titleColor,
       align: 'center',
-      valign: 'middle'
+      valign: 'middle',
+      fontFace: 'Arial', // Force basic font for compatibility
+      wrap: true // Enable text wrapping
     });
 
     // Add tasteful decorations for title slides
     if (spec.layout === 'title') {
-      addTitleSlideDecorations(slide, theme);
+      addTitleSlideDecorations(slide, traditionalTheme);
     }
 
     // Enhanced dynamic layout handling with comprehensive support
-    await renderSlideLayout(slide, spec, theme);
+    await renderSlideLayout(slide, spec, traditionalTheme, contentPadding, maxContentWidth);
 
     // Footer: page number
     const pageNumber = `${i + 1}/${specs.length}`;
     slide.addText(pageNumber, {
-      x: 9.0,
-      y: 7.0,
+      x: SLIDE_WIDTH - 1.5,
+      y: SLIDE_HEIGHT - 0.4,
       w: 1.0,
       h: 0.3,
-      fontSize: Math.min(theme.typography.body.sizes.tiny, 10),
-      color: safeColorFormat(theme.colors.text.secondary),
+      fontSize: Math.min(traditionalTheme.typography.body.sizes.tiny, 10),
+      color: safeColorFormat(traditionalTheme.colors.text.secondary),
       align: 'right',
       valign: 'middle'
     });
@@ -185,7 +332,7 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
  * Comprehensive slide layout renderer supporting all layout types
  * Enhanced with improved spacing, professional positioning, and modern visual elements
  */
-async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme): Promise<void> {
+async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentPadding: number, maxContentWidth: number): Promise<void> {
   console.log('🎯 renderSlideLayout called with:', {
     title: spec.title,
     layout: spec.layout,
@@ -195,12 +342,10 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
     hasLeftImage: !!spec.left?.imagePrompt
   });
 
-  // Simplified, reliable layout constants to prevent text overlap
-  const contentY = 1.8; // Safe starting Y position below title
-  const contentPadding = 0.5; // Standard padding
-  const maxContentWidth = 9.0; // Full content width
-  const columnWidth = 4.5; // Standard column width
-  const columnGap = 0.5; // Standard gap between columns
+  // Optimized 16:9 layout constants for professional spacing
+  const contentY = 1.6;        // Optimized starting Y position below title
+  const columnWidth = 4.0;     // Optimized column width for 16:9
+  const columnGap = 0.5;       // Standard gap between columns
 
   switch (spec.layout) {
     case 'title':
@@ -836,20 +981,27 @@ function addColumnBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: 
  * Enhanced bullet points with improved visual hierarchy
  */
 function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
-  const fontSize = Math.min(theme.typography.body.sizes.normal, 14);
-  const lineHeight = 0.5;
+  const fontSize = Math.min(theme.typography.body.sizes.normal, 16); // Increased for better readability
+  const lineHeight = 0.6; // Increased spacing for 16:9 format
+  const maxHeight = 3.5; // Maximum content height for 16:9 format
 
   bullets.forEach((bullet, i) => {
     const bulletY = y + i * lineHeight;
+
+    // Ensure bullets don't exceed slide boundaries
+    if (bulletY + 0.5 > 5.625) return;
 
     slide.addText(`• ${bullet}`, {
       x: x,
       y: bulletY,
       w: w,
-      h: 0.4,
+      h: 0.5, // Increased height for better text rendering
       fontSize,
       color: safeColorFormat(theme.colors.text.primary),
-      align: 'left'
+      align: 'left',
+      valign: 'top',
+      fontFace: 'Arial', // Force basic font for compatibility
+      wrap: true // Enable text wrapping
     });
   });
 }
@@ -865,18 +1017,23 @@ function addBullets(slide: pptxgen.Slide, bullets: string[], theme: Professional
  * Enhanced paragraph with improved typography and visual appeal
  */
 function addEnhancedParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, isQuote: boolean = false) {
-  const fontSize = Math.min(isQuote ? theme.typography.body.sizes.large : theme.typography.body.sizes.normal, 16);
+  const fontSize = Math.min(isQuote ? theme.typography.body.sizes.large : theme.typography.body.sizes.normal, 18); // Increased for better readability
   const textColor = safeColorFormat(isQuote ? theme.colors.text.secondary : theme.colors.text.primary);
+  const maxHeight = 3.5; // Maximum content height for 16:9 format
 
   slide.addText(text, {
     x,
     y,
     w,
-    h: 2.0,
+    h: maxHeight, // Use available height in 16:9 format
     fontSize,
     color: textColor,
     align: isQuote ? 'center' : 'left',
-    italic: isQuote
+    valign: 'top',
+    italic: isQuote,
+    lineSpacing: 120, // Improved line spacing for readability
+    fontFace: 'Arial', // Force basic font for compatibility
+    wrap: true // Enable text wrapping
   });
 }
 

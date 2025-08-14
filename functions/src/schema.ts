@@ -55,7 +55,10 @@ export const SLIDE_LAYOUTS = [
   'title', 'title-bullets', 'title-paragraph', 'two-column', 'mixed-content',
   'image-right', 'image-left', 'image-full', 'quote', 'chart', 'comparison-table',
   'timeline', 'process-flow', 'before-after', 'problem-solution', 'data-visualization',
-  'testimonial', 'team-intro', 'contact-info', 'thank-you', 'agenda', 'section-divider'
+  'testimonial', 'team-intro', 'contact-info', 'thank-you', 'agenda', 'section-divider',
+  // Modern layout types
+  'hero', 'metrics-dashboard', 'feature-showcase', 'testimonial-card', 'modern-bullets',
+  'gradient-hero', 'card-grid', 'split-content', 'accent-quote'
 ] as const;
 
 export type SlideLayout = typeof SLIDE_LAYOUTS[number];
@@ -188,7 +191,17 @@ export const SlideSpecSchema = z.object({
       accent: VALIDATION_PATTERNS.colorHex.optional(),
       fontFamily: VALIDATION_PATTERNS.fontFamily.optional(),
       logo: VALIDATION_PATTERNS.url.optional()
-    }).optional()
+    }).optional(),
+
+    /** Modern theme features */
+    modern: z.boolean().optional(),
+    style: z.enum(['professional', 'creative', 'minimal', 'bold', 'modern']).optional(),
+    backgroundStyle: z.enum(['gradient', 'minimal', 'accent']).optional(),
+    contentLayout: z.enum(['bullets', 'cards', 'timeline']).optional(),
+
+    /** Author and presentation metadata */
+    author: z.string().optional(),
+    date: z.string().optional()
   }).optional(),
 
   /** Speaker notes for presentation delivery and context */

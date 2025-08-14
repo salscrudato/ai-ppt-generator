@@ -40,7 +40,7 @@ The AI PowerPoint Generator is a cutting-edge web application that leverages Ope
 ## 📁 Project Structure
 
 ```
-ai-ppt-gen/
+ai-ppt-generator/
 ├── 📂 functions/                    # Firebase Cloud Functions Backend
 │   ├── 📂 src/                     # TypeScript source code
 │   │   ├── 📄 index.ts             # Main API endpoints and Express app
@@ -50,12 +50,16 @@ ai-ppt-gen/
 │   │   ├── 📄 prompts.ts           # AI prompt templates and engineering
 │   │   ├── 📄 professionalThemes.ts # Theme system and styling
 │   │   ├── 📄 styleValidator.ts    # Style validation and quality checks
-│   │   └── 📂 config/              # Configuration files
-│   │       └── 📄 aiModels.ts      # AI model configuration and cost tracking
+│   │   ├── 📂 config/              # Configuration files
+│   │   ├── 📂 core/                # Core business logic
+│   │   ├── 📂 slides/              # Slide generation modules
+│   │   └── 📂 utils/               # Utility functions
 │   ├── 📂 test/                    # Jest test suite
 │   │   ├── 📄 unit.test.js         # Unit tests for core functionality
 │   │   ├── 📄 integration.test.js  # API integration tests
 │   │   └── 📄 setup.js             # Test configuration and mocks
+│   ├── 📂 scripts/                 # Build and utility scripts
+│   ├── 📂 templates/               # PowerPoint templates
 │   ├── 📄 package.json             # Backend dependencies and scripts
 │   └── 📄 tsconfig.json            # TypeScript configuration
 ├── 📂 frontend/                     # React Frontend Application
@@ -65,16 +69,10 @@ ai-ppt-gen/
 │   │   ├── 📄 types.ts             # TypeScript type definitions
 │   │   ├── 📄 config.ts            # API configuration and endpoints
 │   │   ├── 📂 components/          # Reusable React components
-│   │   │   ├── 📄 Button.tsx       # Optimized button component
-│   │   │   ├── 📄 LoadingSpinner.tsx # Loading states and animations
-│   │   │   ├── 📄 PromptInput.tsx  # User input form component
-│   │   │   ├── 📄 SlidePreview.tsx # AI-generated content preview
-│   │   │   ├── 📄 SlideEditor.tsx  # Content editing interface
-│   │   │   └── 📄 StepIndicator.tsx # Workflow progress indicator
 │   │   ├── 📂 layouts/             # Presentation layout definitions
-│   │   │   └── 📄 presentationLayouts.ts # Layout types and utilities
-│   │   └── 📂 themes/              # Frontend theme system
-│   │       └── 📄 professionalThemes.ts # Theme definitions
+│   │   ├── 📂 themes/              # Frontend theme system
+│   │   └── 📂 utils/               # Frontend utility functions
+│   ├── 📂 public/                  # Static assets
 │   ├── 📄 package.json             # Frontend dependencies and scripts
 │   ├── 📄 vite.config.ts           # Vite build configuration
 │   ├── 📄 tailwind.config.js       # Tailwind CSS configuration
@@ -82,10 +80,12 @@ ai-ppt-gen/
 ├── 📄 firebase.json                # Firebase project configuration
 ├── 📄 firestore.rules              # Firestore security rules
 ├── 📄 firestore.indexes.json       # Firestore database indexes
-├── 📄 package.json                 # Root project configuration
+├── 📄 package.json                 # Root project configuration and scripts
 ├── 📄 test-app.js                  # Comprehensive test runner
 ├── 📄 setup-local-dev.sh           # Development environment setup
 ├── 📄 start-dev.sh                 # Development server launcher
+├── 📄 CHANGELOG.md                 # Version history and changes
+├── 📄 CONTRIBUTING.md              # Development and contribution guide
 └── 📄 README.md                    # This documentation file
 ```
 
@@ -360,41 +360,42 @@ cd frontend && npm run test:watch
 - ✅ **Performance**: Response times and memory usage optimization
 - ✅ **Error Handling**: Graceful failure and recovery scenarios
 
-## 🤖 AI Optimization & Prompt Engineering
+## 🤖 AI Agent Development Guide
 
-### **🎯 AI-Optimized Codebase Design**
-This codebase is specifically optimized for AI agent collaboration and iteration:
+### **🎯 Optimized for AI Collaboration**
+This codebase is specifically designed for AI agent development and iteration:
 
-#### **Code Organization for AI Consumption**
-- **Comprehensive Comments**: Every function, component, and module includes detailed AI-readable documentation
-- **Type Safety**: Full TypeScript implementation with explicit type definitions
-- **Modular Architecture**: Clear separation of concerns with single-responsibility modules
-- **Consistent Patterns**: Standardized code patterns and naming conventions throughout
-- **Error Context**: Detailed error messages with actionable debugging information
+#### **Core Architecture Principles**
+- **Clean Structure**: Logical file organization with clear separation of concerns
+- **Type Safety**: Full TypeScript implementation with explicit interfaces
+- **Comprehensive Documentation**: Every module includes detailed AI-readable comments
+- **Modular Design**: Single-responsibility modules for easy understanding and modification
+- **Consistent Patterns**: Standardized naming conventions and code patterns throughout
 
-#### **AI Prompt Management System**
-All AI prompts are centralized in `functions/src/prompts.ts` for easy modification:
+#### **Key Files for AI Agents**
+- **`functions/src/index.ts`**: Main API endpoints and request handling
+- **`functions/src/llm.ts`**: OpenAI integration and AI processing logic
+- **`functions/src/pptGenerator.ts`**: PowerPoint file generation engine
+- **`functions/src/prompts.ts`**: AI prompt templates and engineering
+- **`functions/src/schema.ts`**: Zod validation schemas and type definitions
+- **`functions/src/professionalThemes.ts`**: Theme system and styling
+- **`frontend/src/App.tsx`**: Main React application component
+- **`frontend/src/types.ts`**: Shared TypeScript type definitions
 
-**Key Components:**
-- **SYSTEM_PROMPT**: Defines AI role and output format specifications
-- **AUDIENCE_GUIDANCE**: Content adaptation strategies for different audiences
-- **TONE_SPECIFICATIONS**: Style guidelines and voice adaptation rules
-- **CONTENT_LENGTH_SPECS**: Detail level and content depth specifications
+#### **AI Prompt Management**
+All AI prompts are centralized in `functions/src/prompts.ts`:
+- **SYSTEM_PROMPT**: Defines AI role and output format
+- **AUDIENCE_GUIDANCE**: Content adaptation for different audiences
+- **TONE_SPECIFICATIONS**: Style and voice guidelines
+- **CONTENT_LENGTH_SPECS**: Detail level specifications
 - **LAYOUT_SELECTION**: Smart layout recommendation logic
 
-**Prompt Optimization Workflow:**
-1. Edit prompts in `functions/src/prompts.ts`
-2. Test changes with comprehensive test suite
-3. Hot-reload automatically applies changes
-4. Monitor performance metrics and quality scores
-5. Iterate based on AI output quality assessment
-
-#### **AI Agent Integration Points**
-- **Schema Validation**: Zod schemas provide clear data structure contracts
-- **API Documentation**: OpenAPI-style documentation for all endpoints
-- **Type Definitions**: Comprehensive TypeScript interfaces for all data structures
-- **Error Handling**: Structured error responses with context and suggestions
-- **Performance Monitoring**: Built-in metrics for AI response quality and speed
+#### **Development Workflow for AI Agents**
+1. **Understand Structure**: Review this README and explore the codebase
+2. **Run Tests**: Use `npm run test` to validate current functionality
+3. **Make Changes**: Edit relevant files with proper TypeScript types
+4. **Test Changes**: Run tests and use `npm run dev` for live testing
+5. **Validate**: Ensure all tests pass and functionality works as expected
 
 ## 🚀 Production Deployment
 

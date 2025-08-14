@@ -36,12 +36,14 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AppState, GenerationParams, SlideSpec } from './types';
+import type { AppState, GenerationParams, SlideSpec, Presentation } from './types';
+import { generateSlideId, createNewPresentation } from './types';
 import PromptInput from './components/PromptInput';
 import SlidePreview from './components/SlidePreview';
 import SlideEditor from './components/SlideEditor';
+import PresentationManager from './components/PresentationManager';
 import StepIndicator from './components/StepIndicator';
-import { HiPresentationChartLine } from 'react-icons/hi2';
+import { HiPresentationChartLine, HiRectangleStack, HiDocumentText } from 'react-icons/hi2';
 import { API_ENDPOINTS, verifyApiConnection } from './config';
 import { api } from './utils/apiClient';
 import './App.css';
@@ -57,6 +59,7 @@ export default function App() {
   // Initialize application state with optimized default values
   const [state, setState] = useState<AppState>({
     step: 'input',
+    mode: 'single', // Start in single slide mode
     params: {
       prompt: '',
       audience: 'general',
@@ -116,9 +119,15 @@ export default function App() {
       }
 
       const draft = result.data;
+      // Add unique ID if not present
+      const draftWithId = {
+        ...draft,
+        id: draft.id || generateSlideId()
+      };
+
       updateState({
-        draft,
-        editedSpec: { ...draft }, // Create editable copy
+        draft: draftWithId,
+        editedSpec: { ...draftWithId }, // Create editable copy
         step: 'preview',
         loading: false
       });
@@ -214,6 +223,85 @@ export default function App() {
   };
 
   /**
+   * Switch to presentation mode and create a new presentation
+   */
+  const switchToPresentationMode = () => {
+    const presentation = createNewPresentation('My Presentation');
+
+    // If we have a current draft, add it as the first slide
+    if (state.draft) {
+      presentation.slides = [{
+        ...state.draft,
+        id: state.draft.id || generateSlideId()
+      }];
+    }
+
+    updateState({
+      mode: 'presentation',
+      step: 'presentation',
+      presentation,
+      selectedSlideId: presentation.slides[0]?.id
+    });
+  };
+
+  /**
+   * Switch back to single slide mode
+   */
+  const switchToSingleMode = () => {
+    updateState({
+      mode: 'single',
+      step: 'input',
+      presentation: undefined,
+      selectedSlideId: undefined
+    });
+  };
+
+  /**
+   * Generate PowerPoint from presentation
+   */
+  const generatePresentation = async (presentation: Presentation) => {
+    updateState({ loading: true, error: undefined });
+
+    try {
+      // Send array of slides to backend (backend expects 'spec' field)
+      const response = await fetch(API_ENDPOINTS.generate, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spec: presentation.slides, // Send array of slides
+          themeId: presentation.settings.theme || 'corporate-blue',
+          withValidation: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate presentation');
+      }
+
+      // Handle file download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${presentation.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      updateState({ loading: false });
+
+    } catch (error) {
+      console.error('Presentation generation failed:', error);
+      updateState({
+        error: error instanceof Error ? error.message : 'Failed to generate presentation',
+        loading: false
+      });
+    }
+  };
+
+  /**
    * Renders the appropriate component based on current workflow step
    */
   const renderCurrentStep = () => {
@@ -250,6 +338,18 @@ export default function App() {
             onSpecChange={(editedSpec) => updateState({ editedSpec })}
             onGenerate={() => generateSlide(state.editedSpec!)}
             onBack={() => updateState({ step: 'preview' })}
+          />
+        );
+
+      case 'presentation':
+        return (
+          <PresentationManager
+            presentation={state.presentation!}
+            onPresentationUpdate={(presentation) => updateState({ presentation })}
+            onBackToSingle={switchToSingleMode}
+            onGenerate={generatePresentation}
+            loading={state.loading}
+            error={state.error}
           />
         );
 
@@ -311,22 +411,59 @@ export default function App() {
           Transform your ideas into professional presentations with AI-powered design and content generation
         </motion.p>
 
+        {/* Mode Switcher */}
+        {state.step !== 'presentation' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="mt-8 flex justify-center"
+          >
+            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-white/40">
+              <button
+                onClick={() => state.mode !== 'single' && switchToSingleMode()}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 text-sm font-medium ${
+                  state.mode === 'single'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <HiDocumentText className="w-4 h-4" />
+                Single Slide
+              </button>
+              <button
+                onClick={switchToPresentationMode}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 text-sm font-medium ${
+                  state.mode === 'presentation'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <HiRectangleStack className="w-4 h-4" />
+                Presentation
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Floating Elements */}
         <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-xl animate-bounce-subtle"></div>
         <div className="absolute top-32 right-16 w-16 h-16 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-xl animate-bounce-subtle" style={{ animationDelay: '2s' }}></div>
       </motion.header>
 
-      {/* Enhanced Step Indicator */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.6 }}
-        className="relative z-10 mb-12 px-4"
-      >
-        <div className="glass-strong rounded-3xl p-8 max-w-5xl mx-auto border border-white/40 shadow-xl">
-          <StepIndicator currentStep={state.step} />
-        </div>
-      </motion.div>
+      {/* Enhanced Step Indicator - Hide in presentation mode */}
+      {state.mode === 'single' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="relative z-10 mb-12 px-4"
+        >
+          <div className="glass-strong rounded-3xl p-8 max-w-5xl mx-auto border border-white/40 shadow-xl">
+            <StepIndicator currentStep={state.step} />
+          </div>
+        </motion.div>
+      )}
 
       {/* Enhanced Main Content */}
       <motion.main

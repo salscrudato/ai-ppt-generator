@@ -20,6 +20,9 @@ export interface GenerationProgress {
  * Represents a single slide specification with all its content and styling options
  */
 export interface SlideSpec {
+  /** Unique identifier for the slide */
+  id: string;
+
   /** The main title of the slide (1-120 characters) */
   title: string;
 
@@ -143,24 +146,134 @@ export interface GenerationParams {
 }
 
 /**
+ * Represents a complete presentation with multiple slides
+ */
+export interface Presentation {
+  /** Unique identifier for the presentation */
+  id: string;
+
+  /** Presentation title */
+  title: string;
+
+  /** Array of slides in order */
+  slides: SlideSpec[];
+
+  /** Presentation metadata */
+  metadata: {
+    /** Creation timestamp */
+    createdAt: Date;
+    /** Last modified timestamp */
+    updatedAt: Date;
+    /** Author information */
+    author?: string;
+    /** Presentation description */
+    description?: string;
+  };
+
+  /** Global presentation settings */
+  settings: {
+    /** Default theme for all slides */
+    theme?: string;
+    /** Global brand settings */
+    brand?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+      fontFamily?: string;
+    };
+  };
+}
+
+/**
+ * Slide drag and drop context
+ */
+export interface SlideDragContext {
+  /** The slide being dragged */
+  activeSlide: SlideSpec | null;
+  /** Index of the slide being dragged */
+  activeIndex: number | null;
+  /** Index where the slide will be dropped */
+  overIndex: number | null;
+}
+
+/**
  * Application state management interface
  */
 export interface AppState {
   /** Current step in the slide generation workflow */
-  step: 'input' | 'preview' | 'edit';
+  step: 'input' | 'preview' | 'edit' | 'presentation';
+
+  /** Current mode: single slide or multi-slide presentation */
+  mode: 'single' | 'presentation';
 
   /** User input parameters */
   params: GenerationParams;
 
-  /** AI-generated slide draft */
+  /** AI-generated slide draft (single slide mode) */
   draft?: SlideSpec;
 
-  /** User-edited slide specification */
+  /** User-edited slide specification (single slide mode) */
   editedSpec?: SlideSpec;
+
+  /** Current presentation (multi-slide mode) */
+  presentation?: Presentation;
+
+  /** Currently selected slide in presentation mode */
+  selectedSlideId?: string;
 
   /** Loading state indicator */
   loading: boolean;
 
   /** Error message if any operation fails */
   error?: string;
+}
+
+/**
+ * Utility functions for slide management
+ */
+
+/**
+ * Generate a unique ID for a slide
+ */
+export function generateSlideId(): string {
+  return `slide-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Create a new slide with default values
+ */
+export function createNewSlide(overrides: Partial<SlideSpec> = {}): SlideSpec {
+  return {
+    id: generateSlideId(),
+    title: 'New Slide',
+    layout: 'title-bullets',
+    bullets: [],
+    ...overrides
+  };
+}
+
+/**
+ * Create a new presentation with default values
+ */
+export function createNewPresentation(title: string = 'New Presentation'): Presentation {
+  return {
+    id: `presentation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    title,
+    slides: [createNewSlide({ title: 'Title Slide', layout: 'title' })],
+    metadata: {
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    settings: {}
+  };
+}
+
+/**
+ * Reorder slides in a presentation
+ */
+export function reorderSlides(slides: SlideSpec[], fromIndex: number, toIndex: number): SlideSpec[] {
+  const result = Array.from(slides);
+  const [removed] = result.splice(fromIndex, 1);
+  result.splice(toIndex, 0, removed);
+  return result;
 }

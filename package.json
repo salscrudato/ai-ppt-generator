@@ -1,5 +1,28 @@
 {
-  "devDependencies": {
-    "puppeteer": "^24.16.1"
-  }
+  "name": "ai-ppt-generator",
+  "version": "3.1.0",
+  "description": "AI-powered PowerPoint presentation generator with professional themes and layouts",
+  "private": true,
+  "scripts": {
+    "dev": "./start-dev.sh",
+    "test": "node test-app.js",
+    "test:build": "node test-app.js --build-only",
+    "test:api": "node test-app.js --api-only",
+    "clean": "rm -rf functions/lib frontend/dist node_modules/.cache",
+    "setup": "./setup-local-dev.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/salscrudato/ai-ppt-generator.git"
+  },
+  "keywords": [
+    "ai",
+    "powerpoint",
+    "presentation",
+    "generator",
+    "openai",
+    "firebase"
+  ],
+  "author": "Sal Scrudato",
+  "license": "MIT"
 }

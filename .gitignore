@@ -104,6 +104,23 @@ spec-*.json
 *-debug.js
 enhancement-plan-*.ts
 
+# Additional test and debug patterns
+functions/test-*.js
+functions/debug-*.js
+functions/demo-*.js
+functions/test-outputs/
+functions/*.pptx
+test-modern-api.pptx
+
+# AI Agent optimization patterns
+*.md.backup
+*.md.old
+*-backup.*
+*-old.*
+*-temp.*
+benchmark-*.json
+performance-*.json
+
 # Environment variables
 .env.local
 .env.development.local
