@@ -38,6 +38,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import SlideThumbnail from './SlideThumbnail';
 import type { SlideSpec, SlideDragContext } from '../types';
 
+
 interface DraggableSlideListProps {
   /** Array of slides to display */
   slides: SlideSpec[];
@@ -198,17 +199,25 @@ export default function DraggableSlideList({
 
   if (slides.length === 0) {
     return (
-      <div className={`text-center py-12 ${className}`}>
-        <div className="text-slate-400 text-lg mb-2">No slides yet</div>
-        <div className="text-slate-500 text-sm">
+      <section
+        className={`text-center py-12 ${className}`}
+        role="region"
+        aria-label="Slide list"
+      >
+        <h3 className="text-slate-400 text-lg mb-2">No slides yet</h3>
+        <p className="text-slate-500 text-sm">
           Create your first slide to get started
-        </div>
-      </div>
+        </p>
+      </section>
     );
   }
 
   return (
-    <div className={className}>
+    <section
+      className={className}
+      role="region"
+      aria-label="Slide list"
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -221,20 +230,25 @@ export default function DraggableSlideList({
           items={slides.map(slide => slide.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div
-            className="space-y-4"
+          <ol
+            className="space-y-4 list-none"
             role="listbox"
-            aria-label="Slide thumbnails - use arrow keys to navigate, space to select, and drag to reorder"
+            aria-label={`Slide thumbnails, ${slides.length} slides total. Use arrow keys to navigate, space to select, and drag to reorder`}
+            aria-multiselectable="false"
           >
             <AnimatePresence>
               {slides.map((slide, index) => (
-                <motion.div
+                <motion.li
                   key={slide.id}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.2 }}
+                  role="option"
+                  aria-selected={slide.id === selectedSlideId}
+                  aria-posinset={index + 1}
+                  aria-setsize={slides.length}
                 >
                   <SlideThumbnail
                     slide={slide}
@@ -247,10 +261,10 @@ export default function DraggableSlideList({
                     onDelete={onSlideDelete}
                     onPreview={onSlidePreview}
                   />
-                </motion.div>
+                </motion.li>
               ))}
             </AnimatePresence>
-          </div>
+          </ol>
         </SortableContext>
 
         <DragOverlay dropAnimation={dropAnimationConfig}>
@@ -274,11 +288,12 @@ export default function DraggableSlideList({
         </DragOverlay>
       </DndContext>
 
-      {/* Screen reader only instructions */}
-      <div className="sr-only" aria-live="polite">
-        Use arrow keys to navigate between slides. Press space to select a slide. 
-        Use the drag handle or keyboard shortcuts to reorder slides.
+      {/* Screen reader instructions */}
+      <div className="sr-only" aria-live="polite" id="slide-list-instructions">
+        Slide list with {slides.length} slides. Use arrow keys to navigate between slides.
+        Press space or enter to select a slide. Use drag and drop or keyboard shortcuts to reorder slides.
+        {dragContext.activeSlide && ` Currently dragging slide ${dragContext.activeIndex! + 1}: ${dragContext.activeSlide.title}`}
       </div>
-    </div>
+    </section>
   );
 }

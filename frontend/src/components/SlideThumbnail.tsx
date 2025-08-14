@@ -24,6 +24,7 @@ import {
 import clsx from 'clsx';
 import type { SlideSpec } from '../types';
 
+
 interface SlideThumbnailProps {
   /** The slide to display */
   slide: SlideSpec;

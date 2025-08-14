@@ -1,5 +1,8 @@
 /* Enhanced Custom Styles for Modern UI/UX */
 
+/* Import accessibility styles */
+@import './styles/accessibility.css';
+
 /* Smooth transitions for all interactive elements */
 * {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;

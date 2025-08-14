@@ -108,6 +108,18 @@ export interface SlideSpec {
 
   /** Source citations for credibility */
   sources?: string[];
+
+  /** Accessibility features */
+  accessibility?: {
+    /** Alt text for images */
+    imageAltText?: string;
+    /** Screen reader description of slide content */
+    description?: string;
+    /** Chart data description for screen readers */
+    chartDescription?: string;
+    /** Table summary for screen readers */
+    tableSummary?: string;
+  };
 }
 
 /**

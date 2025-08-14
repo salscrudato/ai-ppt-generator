@@ -45,6 +45,9 @@ import PresentationManager from './components/PresentationManager';
 import StepIndicator from './components/StepIndicator';
 import { LoadingOverlay } from './components/LoadingSpinner';
 import { useLoadingState, LOADING_STAGES } from './hooks/useLoadingState';
+import { AriaLiveRegion } from './utils/accessibility';
+import AccessibilityControls, { SkipLinks } from './components/AccessibilityControls';
+import { initializeAccessibilityTesting } from './utils/accessibilityTesting';
 import { HiPresentationChartLine, HiRectangleStack, HiDocumentText } from 'react-icons/hi2';
 import { API_ENDPOINTS, verifyApiConnection } from './config';
 import { api } from './utils/apiClient';
@@ -77,9 +80,11 @@ export default function App() {
     defaultTimeout: 60000, // 60 seconds for slide generation
     onComplete: () => {
       console.log('✅ Operation completed successfully');
+      AriaLiveRegion.getInstance().announceSuccess('Slide generation completed successfully');
     },
     onError: (error) => {
       console.error('❌ Operation failed:', error);
+      AriaLiveRegion.getInstance().announceError(error);
       updateState({ error, loading: false });
     }
   });
@@ -95,6 +100,7 @@ export default function App() {
     };
 
     checkApiConnection();
+    initializeAccessibilityTesting();
   }, []);
 
   /**
@@ -128,10 +134,12 @@ export default function App() {
 
       // Stage 1: Analyzing input
       loadingState.setStage('analyzing');
+      AriaLiveRegion.getInstance().announceLoadingState('Analyzing your input');
       await new Promise(resolve => setTimeout(resolve, 800));
 
       // Stage 2: Generate content
       loadingState.setStage('generating');
+      AriaLiveRegion.getInstance().announceLoadingState('Generating slide content');
       const result = await api.generateDraft(requestData);
 
       if (!result.success) {
@@ -410,8 +418,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-pink-50/20 relative overflow-hidden">
+      {/* Skip Links for Accessibility */}
+      <SkipLinks />
+
       {/* Enhanced Background Pattern */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0" aria-hidden="true">
         {/* Primary gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-indigo-50/40 to-pink-50/30"></div>
 
@@ -521,6 +532,8 @@ export default function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.8 }}
         className="relative z-10 max-w-7xl mx-auto px-4 pb-16"
+        role="main"
+        aria-label="AI PowerPoint Generator Application"
       >
         <div className="glass-strong rounded-4xl border border-white/40 shadow-2xl overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-slate-50/90 backdrop-blur-2xl"></div>
@@ -547,6 +560,9 @@ export default function App() {
         progress={loadingState.progress}
         blur={true}
       />
+
+      {/* Accessibility Controls */}
+      <AccessibilityControls />
     </div>
   );
 }
