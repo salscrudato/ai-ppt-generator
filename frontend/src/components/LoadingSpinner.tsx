@@ -1,15 +1,18 @@
 /**
- * Optimized Loading Spinner Component
+ * Enhanced Loading Components
  *
- * Simplified loading spinner with essential variants and smooth animations.
- * Focuses on performance and visual appeal while maintaining accessibility.
+ * Comprehensive loading indicators with multiple variants, animations,
+ * and accessibility support. Includes spinners, progress bars, and overlays.
  *
- * @version 3.1.0-optimized
+ * @version 4.0.0-enhanced
  * @author AI PowerPoint Generator Team
  */
 
-import { motion } from 'framer-motion';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HiSparkles } from 'react-icons/hi2';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import clsx from 'clsx';
 
 interface LoadingSpinnerProps {
   /** Spinner size */
@@ -31,6 +34,8 @@ export default function LoadingSpinner({
   message,
   className = ''
 }: LoadingSpinnerProps) {
+  const { shouldReduceMotion } = useReducedMotion();
+
   // Simplified size configurations
   const sizeClasses = {
     sm: 'w-4 h-4',
@@ -62,8 +67,8 @@ export default function LoadingSpinner({
             borderTopColor: variant === 'primary' ? '#4f46e5' : variant === 'accent' ? '#ec4899' : '#94a3b8',
             borderRightColor: variant === 'primary' ? '#4f46e5' : variant === 'accent' ? '#ec4899' : '#94a3b8',
           }}
-          animate={{ rotate: 360 }}
-          transition={{
+          animate={{ rotate: shouldReduceMotion ? 0 : 360 }}
+          transition={shouldReduceMotion ? {} : {
             duration: 1,
             repeat: Infinity,
             ease: "linear"
@@ -98,6 +103,168 @@ export default function LoadingSpinner({
           {message}
         </motion.p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Simple Spinner Component (for inline use)
+ */
+interface SimpleSpinnerProps {
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'white' | 'gray';
+  className?: string;
+}
+
+export function SimpleSpinner({ size = 'md', variant = 'primary', className = '' }: SimpleSpinnerProps) {
+  const sizeClasses = {
+    xs: 'w-3 h-3 border-[1.5px]',
+    sm: 'w-4 h-4 border-2',
+    md: 'w-6 h-6 border-2',
+    lg: 'w-8 h-8 border-4'
+  };
+
+  const variantClasses = {
+    primary: 'border-indigo-600 border-t-transparent',
+    secondary: 'border-slate-600 border-t-transparent',
+    white: 'border-white border-t-transparent',
+    gray: 'border-gray-400 border-t-transparent'
+  };
+
+  return (
+    <div
+      className={clsx(
+        'rounded-full animate-spin',
+        sizeClasses[size],
+        variantClasses[variant],
+        className
+      )}
+      role="status"
+      aria-label="Loading"
+    >
+      <span className="sr-only">Loading...</span>
+    </div>
+  );
+}
+
+/**
+ * Loading Overlay Component
+ */
+interface LoadingOverlayProps {
+  /** Whether the overlay is visible */
+  visible: boolean;
+  /** Loading message */
+  message?: string;
+  /** Progress percentage (0-100) */
+  progress?: number;
+  /** Whether to blur the background */
+  blur?: boolean;
+  /** Custom class name */
+  className?: string;
+  /** Children to render instead of default spinner */
+  children?: React.ReactNode;
+}
+
+export function LoadingOverlay({
+  visible,
+  message = 'Loading...',
+  progress,
+  blur = true,
+  className = '',
+  children
+}: LoadingOverlayProps) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={clsx(
+            'fixed inset-0 z-50 flex items-center justify-center',
+            blur ? 'backdrop-blur-sm bg-black/20' : 'bg-black/50',
+            className
+          )}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 text-center"
+          >
+            {children || (
+              <>
+                <LoadingSpinner size="lg" message={message} />
+                {typeof progress === 'number' && (
+                  <div className="mt-6">
+                    <ProgressBar progress={progress} showPercentage />
+                  </div>
+                )}
+              </>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/**
+ * Progress Bar Component
+ */
+interface ProgressBarProps {
+  progress: number;
+  variant?: 'primary' | 'secondary' | 'success' | 'warning';
+  size?: 'sm' | 'md' | 'lg';
+  showPercentage?: boolean;
+  className?: string;
+  label?: string;
+}
+
+export function ProgressBar({
+  progress,
+  variant = 'primary',
+  size = 'md',
+  showPercentage = false,
+  className = '',
+  label = 'Progress'
+}: ProgressBarProps) {
+  const sizeClasses = {
+    sm: 'h-1',
+    md: 'h-2',
+    lg: 'h-3'
+  };
+
+  const variantClasses = {
+    primary: 'bg-indigo-600',
+    secondary: 'bg-slate-600',
+    success: 'bg-green-600',
+    warning: 'bg-yellow-600'
+  };
+
+  const clampedProgress = Math.max(0, Math.min(100, progress));
+
+  return (
+    <div className={clsx('w-full', className)}>
+      {showPercentage && (
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-slate-700">{label}</span>
+          <span className="text-sm text-slate-500">{Math.round(clampedProgress)}%</span>
+        </div>
+      )}
+      <div className={clsx('w-full bg-slate-200 rounded-full overflow-hidden', sizeClasses[size])}>
+        <motion.div
+          className={clsx('h-full rounded-full', variantClasses[variant])}
+          initial={{ width: 0 }}
+          animate={{ width: `${clampedProgress}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          role="progressbar"
+          aria-valuenow={clampedProgress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${label}: ${Math.round(clampedProgress)}%`}
+        />
+      </div>
     </div>
   );
 }

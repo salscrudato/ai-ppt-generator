@@ -197,16 +197,33 @@ export default function SlideThumbnail({
     <motion.div
       ref={setNodeRef}
       style={style}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      whileHover={{ scale: 1.02 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { duration: 0.3, ease: 'easeOut' }
+      }}
+      exit={{
+        opacity: 0,
+        y: -20,
+        scale: 0.95,
+        transition: { duration: 0.2 }
+      }}
+      whileHover={{
+        scale: 1.02,
+        y: -2,
+        transition: { duration: 0.2, ease: 'easeOut' }
+      }}
+      whileTap={{ scale: 0.98 }}
+      layout
+      layoutId={`slide-${slide.id}`}
       className={clsx(
         'group relative bg-white rounded-lg border-2 transition-all duration-200 cursor-pointer',
         isSelected
           ? 'border-indigo-500 shadow-lg ring-2 ring-indigo-200'
           : 'border-slate-200 hover:border-slate-300 hover:shadow-md',
-        (isDragging || isSortableDragging) && 'opacity-50 scale-95 shadow-xl z-50'
+        (isDragging || isSortableDragging) && 'opacity-60 scale-95 shadow-xl z-50 rotate-2'
       )}
       onClick={handleClick}
       role="button"

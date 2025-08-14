@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import type { GenerationParams, SlideSpec } from '../types';
 import {
   HiPencilSquare,
-  HiArrowPath,
+
   HiExclamationTriangle,
   HiSparkles,
   HiUsers,
@@ -16,6 +16,7 @@ import {
 import clsx from 'clsx';
 import ThemeGallery from './ThemeGallery';
 import LiveSlidePreview from './LiveSlidePreview';
+import LoadingButton from './LoadingButton';
 
 interface PromptInputProps {
   params: GenerationParams;
@@ -388,31 +389,18 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           transition={{ duration: 0.5, delay: 0.6 }}
           className="flex justify-center pt-8"
         >
-          <motion.button
-            type="button"
+          <LoadingButton
             onClick={handleGenerateClick}
-            disabled={loading || !localParams.prompt.trim()}
-            className={clsx(
-              'btn-primary px-12 py-5 text-xl font-bold rounded-3xl shadow-xl',
-              'hover:shadow-glow-lg transform transition-all duration-300',
-              'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg',
-              loading && 'animate-pulse'
-            )}
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            loading={loading}
+            loadingText="Generating Draft..."
+            disabled={!localParams.prompt.trim()}
+            size="lg"
+            variant="primary"
+            icon={<HiSparkles className="w-6 h-6" />}
+            className="px-12 py-5 text-xl font-bold rounded-3xl shadow-xl hover:shadow-glow-lg"
           >
-            {loading ? (
-              <>
-                <HiArrowPath className="w-6 h-6 animate-spin" />
-                Generating Draft...
-              </>
-            ) : (
-              <>
-                <HiSparkles className="w-6 h-6" />
-                Generate Draft
-              </>
-            )}
-          </motion.button>
+            Generate Draft
+          </LoadingButton>
         </motion.div>
           </form>
         </div>

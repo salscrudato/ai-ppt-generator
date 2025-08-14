@@ -175,8 +175,15 @@ interface ThemeCardProps {
 function ThemeCard({ theme, selected, onSelect, compact = false }: ThemeCardProps) {
   return (
     <motion.button
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        scale: 1.03,
+        y: -4,
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+        transition: { duration: 0.2, ease: 'easeOut' }
+      }}
+      whileTap={{ scale: 0.97 }}
       className={clsx(
         'relative text-left rounded-xl border-2 shadow-sm transition-all duration-200 overflow-hidden group',
         selected

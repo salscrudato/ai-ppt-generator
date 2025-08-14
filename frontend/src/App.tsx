@@ -43,6 +43,8 @@ import SlidePreview from './components/SlidePreview';
 import SlideEditor from './components/SlideEditor';
 import PresentationManager from './components/PresentationManager';
 import StepIndicator from './components/StepIndicator';
+import { LoadingOverlay } from './components/LoadingSpinner';
+import { useLoadingState, LOADING_STAGES } from './hooks/useLoadingState';
 import { HiPresentationChartLine, HiRectangleStack, HiDocumentText } from 'react-icons/hi2';
 import { API_ENDPOINTS, verifyApiConnection } from './config';
 import { api } from './utils/apiClient';
@@ -68,6 +70,18 @@ export default function App() {
       // Note: Removed design.layout - our enhanced AI now intelligently selects layouts
     },
     loading: false
+  });
+
+  // Enhanced loading state management
+  const loadingState = useLoadingState({
+    defaultTimeout: 60000, // 60 seconds for slide generation
+    onComplete: () => {
+      console.log('✅ Operation completed successfully');
+    },
+    onError: (error) => {
+      console.error('❌ Operation failed:', error);
+      updateState({ error, loading: false });
+    }
   });
 
   // Verify API connection on component mount for debugging
@@ -104,6 +118,7 @@ export default function App() {
    */
   const generateDraft = async (params: GenerationParams) => {
     updateState({ loading: true, error: undefined });
+    loadingState.startLoading(LOADING_STAGES.SLIDE_GENERATION);
 
     try {
       // Prepare request data - keep layout at top level for backend compatibility
@@ -111,12 +126,21 @@ export default function App() {
         ...params
       };
 
-      // Use the enhanced API client with debugging
+      // Stage 1: Analyzing input
+      loadingState.setStage('analyzing');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Stage 2: Generate content
+      loadingState.setStage('generating');
       const result = await api.generateDraft(requestData);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to generate slide draft');
       }
+
+      // Stage 3: Format and style
+      loadingState.setStage('formatting');
+      await new Promise(resolve => setTimeout(resolve, 600));
 
       const draft = result.data;
       // Add unique ID if not present
@@ -124,6 +148,12 @@ export default function App() {
         ...draft,
         id: draft.id || generateSlideId()
       };
+
+      // Stage 4: Finalize
+      loadingState.setStage('finalizing');
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      loadingState.completeLoading('Slide ready!');
 
       updateState({
         draft: draftWithId,
@@ -149,6 +179,7 @@ export default function App() {
         }
       }
 
+      loadingState.failLoading(errorMessage);
       updateState({
         error: errorMessage,
         loading: false
@@ -257,12 +288,20 @@ export default function App() {
   };
 
   /**
-   * Generate PowerPoint from presentation
+   * Generate PowerPoint from presentation with progressive loading
    */
   const generatePresentation = async (presentation: Presentation) => {
     updateState({ loading: true, error: undefined });
+    loadingState.startLoading(LOADING_STAGES.PRESENTATION_GENERATION, 90000); // 90 seconds timeout
 
     try {
+      // Stage 1: Preparing
+      loadingState.setStage('preparing');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Stage 2: Processing slides
+      loadingState.setStage('processing');
+
       // Send array of slides to backend (backend expects 'spec' field)
       const response = await fetch(API_ENDPOINTS.generate, {
         method: 'POST',
@@ -278,8 +317,19 @@ export default function App() {
         throw new Error('Failed to generate presentation');
       }
 
-      // Handle file download
+      // Stage 3: Applying theme
+      loadingState.setStage('applying-theme');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Stage 4: Building PowerPoint
+      loadingState.setStage('building');
       const blob = await response.blob();
+
+      // Stage 5: Finalizing
+      loadingState.setStage('finalizing');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Handle file download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
@@ -489,6 +539,14 @@ export default function App() {
           </div>
         </div>
       </motion.main>
+
+      {/* Enhanced Loading Overlay */}
+      <LoadingOverlay
+        visible={loadingState.isLoading}
+        message={loadingState.message}
+        progress={loadingState.progress}
+        blur={true}
+      />
     </div>
   );
 }

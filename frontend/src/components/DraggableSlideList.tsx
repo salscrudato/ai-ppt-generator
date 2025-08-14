@@ -255,13 +255,21 @@ export default function DraggableSlideList({
 
         <DragOverlay dropAnimation={dropAnimationConfig}>
           {dragContext.activeSlide ? (
-            <div className="transform rotate-3 scale-105">
+            <motion.div
+              initial={{ scale: 1, rotate: 0 }}
+              animate={{
+                scale: 1.05,
+                rotate: 3,
+                transition: { duration: 0.2, ease: 'easeOut' }
+              }}
+              className="shadow-2xl"
+            >
               <SlideThumbnail
                 slide={dragContext.activeSlide}
                 index={dragContext.activeIndex || 0}
                 isDragging={true}
               />
-            </div>
+            </motion.div>
           ) : null}
         </DragOverlay>
       </DndContext>
