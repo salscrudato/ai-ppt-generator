@@ -253,7 +253,7 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
           fontSize: 11,
           color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
           align: 'center',
-          fontFace: theme.typography?.fontFamilies?.body || 'Arial'
+          fontFace: theme.typography?.body?.fontFamily || 'Arial'
         });
       }
 

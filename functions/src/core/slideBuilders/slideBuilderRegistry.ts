@@ -298,7 +298,7 @@ export abstract class BaseSlideBuilder implements SlideBuilder {
       w: maxContentWidth,
       h: 0.8,
       fontSize: 28,
-      fontFace: theme.typography?.fontFamilies?.heading || 'Arial',
+      fontFace: theme.typography?.headings?.fontFamily || 'Arial',
       color: theme.colors.text?.primary || theme.colors.primary,
       bold: true,
       align: 'left',
@@ -325,7 +325,7 @@ export abstract class BaseSlideBuilder implements SlideBuilder {
       {
         x, y, w, h,
         fontSize: 16,
-        fontFace: theme.typography?.fontFamilies?.body || 'Arial',
+        fontFace: theme.typography?.body?.fontFamily || 'Arial',
         color: theme.colors.text?.primary || theme.colors.primary,
         align: 'left',
         valign: 'top',
@@ -351,7 +351,7 @@ export abstract class BaseSlideBuilder implements SlideBuilder {
     slide.addText(paragraph, {
       x, y, w, h,
       fontSize: 14,
-      fontFace: theme.typography?.fontFamilies?.body || 'Arial',
+      fontFace: theme.typography?.body?.fontFamily || 'Arial',
       color: theme.colors.text?.primary || theme.colors.primary,
       align: 'left',
       valign: 'top',

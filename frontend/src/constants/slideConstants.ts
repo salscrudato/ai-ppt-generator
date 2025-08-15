@@ -125,3 +125,26 @@ export const SUPPORTED_LAYOUTS = [
 ] as const;
 
 export type SupportedLayout = typeof SUPPORTED_LAYOUTS[number];
+
+/**
+ * Animation constants for slide transitions and interactions
+ */
+export const ANIMATION_CONSTANTS = {
+  DURATION: {
+    FAST: 150,
+    NORMAL: 300,
+    SLOW: 500,
+    EXTRA_SLOW: 800
+  },
+  EASING: {
+    EASE_IN: 'cubic-bezier(0.4, 0, 1, 1)',
+    EASE_OUT: 'cubic-bezier(0, 0, 0.2, 1)',
+    EASE_IN_OUT: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    BOUNCE: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+  },
+  SPRING: {
+    STIFF: { tension: 300, friction: 30 },
+    GENTLE: { tension: 120, friction: 14 },
+    WOBBLY: { tension: 180, friction: 12 }
+  }
+} as const;

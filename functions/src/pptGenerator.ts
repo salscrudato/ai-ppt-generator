@@ -23,29 +23,19 @@ import pptxgen from 'pptxgenjs';
 import type { SlideSpec } from './schema';
 import { getThemeById, selectThemeForContent, customizeTheme, type ProfessionalTheme } from './professionalThemes';
 import { ModernTheme, getModernTheme, MODERN_THEMES } from './core/theme/modernThemes';
-import { UNIFIED_LAYOUT_CONSTANTS, LAYOUT_POSITIONS, LAYOUT_CONSTANTS, SLIDE_DIMENSIONS, TYPOGRAPHY_CONSTANTS } from './constants/layoutConstants';
+import { LAYOUT_CONSTANTS, SLIDE_DIMENSIONS, TYPOGRAPHY_CONSTANTS } from './constants/layoutConstants';
 import {
   createModernHeroSlide,
   createModernContentSlide,
   createModernMetricsSlide,
   createAdvancedHeroSlide,
   createFeatureShowcaseSlide,
-  createTestimonialSlide,
-  createDataVisualizationSlide
+  createTestimonialSlide
 } from './slides/modernSlideGenerators';
-import { VISUAL_EFFECT_PRESETS, createModernCardBackground, createAccentElement, applyVisualEffects } from './core/theme/visualEffects';
-import { getTypographyPairing, createModernTextOptions, TEXT_STYLE_PRESETS } from './core/theme/modernTypography';
-import {
-  defineSlideMasters,
-  addSlideWithMaster,
-  SLIDE_MASTER_NAMES,
-  getMasterForLayout,
-  type SlideMasterConfig
-} from './core/slideMasters';
+// Removed unused slide masters imports
 import {
   ImageProcessor,
-  createImageProcessorConfig,
-  type ImageProcessingConfig
+  createImageProcessorConfig
 } from './core/imageProcessor';
 import {
   generateContextualNotes,
@@ -1557,21 +1547,14 @@ function addModernCard(
   const accentColor = options.accentColor || theme.colors.accent || theme.colors.primary;
   const backgroundColor = options.backgroundColor || theme.colors.surface || '#FFFFFF';
 
-  // Add card background using safe rectangle
+  // Add card background using safe rectangle (shadow disabled to prevent corruption)
   slide.addShape('rect', {
     x,
     y,
     w,
     h,
     fill: { color: backgroundColor },
-    line: { color: safeColorFormat(accentColor), width: 1 },
-    shadow: {
-      type: 'outer',
-      blur: 3,
-      offset: 2,
-      angle: 45,
-      color: '00000020'
-    }
+    line: { color: safeColorFormat(accentColor), width: 1 }
   });
 
   // Add accent line at top of card
