@@ -9,7 +9,7 @@
  */
 
 import {
-  validateThemeAccessibility,
+  validateThemeAccessibility as validateAccessibility,
   getAccessibleColorRecommendations,
   type ColorAccessibilityConfig
 } from './core/theme/colorAccessibility';
@@ -358,16 +358,7 @@ function createTheme(
   };
 
   // Validate accessibility and log any issues
-  const accessibilityResult = validateThemeAccessibility(theme, {
-    targetLevel: 'AA',
-    considerColorBlindness: true,
-    adjustColors: false, // Don't auto-adjust, just validate
-    fallbackColors: {
-      text: '#1F2937',
-      background: '#FFFFFF',
-      accent: '#3B82F6'
-    }
-  });
+  const accessibilityResult = validateAccessibility(theme);
 
   if (!accessibilityResult.isAccessible) {
     console.warn(`⚠️ Theme "${name}" has accessibility issues:`, accessibilityResult.issues);

@@ -52,8 +52,63 @@ import { applyEnhancedBackground } from './core/theme/enhancedBackgrounds';
 import {
   createTextStyle,
   textStyleToPptOptions,
-  getTypographyRecommendations
+  getTypographyRecommendations,
+  createTypographyTheme,
+  createTypographyHierarchy,
+  optimizeTextForLayout,
+  type EnhancedTextStyle
 } from './core/theme/enhancedTypography';
+import {
+  createEnhancedColorPalette,
+  getContextualColor,
+  type ColorContext,
+  type EnhancedColorPalette
+} from './core/theme/advancedColorManagement';
+import {
+  createChartStyling,
+  chartStyleToPptOptions,
+  createDataDrivenChartStyle,
+  createBusinessContextChartStyle
+} from './core/theme/enhancedChartStyling';
+import {
+  createTableStyling,
+  tableStyleToPptOptions,
+  createResponsiveTableLayout,
+  createBusinessContextTableStyle,
+  createDataDensityOptimizedTable,
+  type TableLayoutOptions
+} from './core/theme/enhancedTableStyling';
+import {
+  calculateSlideLayout,
+  createLayoutConfig,
+  applyResponsiveAdjustments,
+  type LayoutResult
+} from './core/enhancedSlideLayoutEngine';
+import {
+  runEnhancedStylingTests,
+  type TestResult,
+  type TestSuiteConfig
+} from './testing/enhancedStylingTests';
+import {
+  createStandardizedMeasurements,
+  createFontMapping,
+  calculateAlignedLayout,
+  validateAlignment,
+  convertToPowerPointCoordinates,
+  type StandardizedMeasurements,
+  type LayoutAlignment
+} from './core/previewExportAlignment';
+import {
+  measurePerformance,
+  performanceMonitor,
+  processSlidesInBatches,
+  computeColorWithCache,
+  calculateLayoutWithCache,
+  getFontMetricsWithCache,
+  clearAllCaches,
+  getCacheStatistics,
+  type PerformanceMetrics
+} from './core/performanceOptimization';
 import {
   createEnhancedChart,
   createEnhancedTable,
@@ -110,6 +165,133 @@ function safeColorFormat(color: string): string {
   }
 
   return cleanColor.toUpperCase();
+}
+
+/**
+ * Determine content density for responsive layout adjustments
+ */
+function determineContentDensity(spec: SlideSpec): 'low' | 'medium' | 'high' {
+  let contentScore = 0;
+
+  // Count content elements
+  if (spec.title) contentScore += spec.title.length > 50 ? 2 : 1;
+  if (spec.paragraph) contentScore += spec.paragraph.length > 200 ? 3 : 2;
+  if (spec.bullets) contentScore += spec.bullets.length * 1.5;
+  if (spec.chart) contentScore += 2;
+  if (spec.comparisonTable) contentScore += spec.comparisonTable.rows.length * 0.5;
+  if (spec.timeline) contentScore += spec.timeline.length * 0.5;
+  if (spec.processSteps) contentScore += spec.processSteps.length * 0.5;
+  if (spec.left || spec.right) contentScore += 1;
+
+  // Classify density
+  if (contentScore <= 3) return 'low';
+  if (contentScore <= 7) return 'medium';
+  return 'high';
+}
+
+/**
+ * Determine business context from slide content for chart styling
+ */
+function determineBusinessContext(slide: any, chart: any): 'financial' | 'marketing' | 'operations' | 'executive' | 'technical' {
+  const title = slide.title?.toLowerCase() || '';
+  const chartTitle = chart.title?.toLowerCase() || '';
+
+  // Financial keywords
+  if (title.includes('revenue') || title.includes('profit') || title.includes('cost') ||
+      title.includes('budget') || title.includes('financial') || title.includes('roi') ||
+      chartTitle.includes('revenue') || chartTitle.includes('profit') || chartTitle.includes('cost')) {
+    return 'financial';
+  }
+
+  // Marketing keywords
+  if (title.includes('marketing') || title.includes('campaign') || title.includes('brand') ||
+      title.includes('customer') || title.includes('engagement') || title.includes('conversion') ||
+      chartTitle.includes('marketing') || chartTitle.includes('campaign')) {
+    return 'marketing';
+  }
+
+  // Operations keywords
+  if (title.includes('operations') || title.includes('process') || title.includes('efficiency') ||
+      title.includes('production') || title.includes('workflow') || title.includes('performance') ||
+      chartTitle.includes('operations') || chartTitle.includes('process')) {
+    return 'operations';
+  }
+
+  // Technical keywords
+  if (title.includes('technical') || title.includes('system') || title.includes('data') ||
+      title.includes('analytics') || title.includes('metrics') || title.includes('kpi') ||
+      chartTitle.includes('technical') || chartTitle.includes('system')) {
+    return 'technical';
+  }
+
+  // Default to executive for high-level content
+  return 'executive';
+}
+
+/**
+ * Apply data-driven optimizations to chart styling
+ */
+function applyDataDrivenOptimizations(chartStyle: any, dataPointCount: number): any {
+  const optimizedStyle = { ...chartStyle };
+
+  // Adjust based on data complexity
+  if (dataPointCount > 10) {
+    optimizedStyle.dataLabelStyle.showValues = false;
+    optimizedStyle.legendStyle.fontSize = Math.max(10, optimizedStyle.legendStyle.fontSize - 1);
+    optimizedStyle.axisStyle.fontSize = Math.max(9, optimizedStyle.axisStyle.fontSize - 1);
+  }
+
+  if (dataPointCount > 20) {
+    optimizedStyle.shadow.enabled = false;
+    optimizedStyle.borderRadius = 2;
+    optimizedStyle.legendStyle.position = 'bottom';
+  }
+
+  if (dataPointCount > 50) {
+    optimizedStyle.dataLabelStyle.showValues = false;
+    optimizedStyle.dataLabelStyle.showPercentages = false;
+    optimizedStyle.legendStyle.fontSize = Math.max(8, optimizedStyle.legendStyle.fontSize - 2);
+  }
+
+  return optimizedStyle;
+}
+
+/**
+ * Determine table context for optimal styling
+ */
+function determineTableContext(table: any): 'financial' | 'comparison' | 'data' | 'summary' | 'timeline' {
+  const headers = table.headers || [];
+  const headerText = headers.join(' ').toLowerCase();
+
+  // Financial context indicators
+  if (headerText.includes('revenue') || headerText.includes('cost') || headerText.includes('profit') ||
+      headerText.includes('budget') || headerText.includes('price') || headerText.includes('$') ||
+      headerText.includes('financial') || headerText.includes('roi')) {
+    return 'financial';
+  }
+
+  // Comparison context indicators
+  if (headerText.includes('vs') || headerText.includes('comparison') || headerText.includes('before') ||
+      headerText.includes('after') || headerText.includes('option') || headerText.includes('plan') ||
+      headers.length >= 3 && headers.some((h: string) => h.toLowerCase().includes('feature'))) {
+    return 'comparison';
+  }
+
+  // Timeline context indicators
+  if (headerText.includes('date') || headerText.includes('time') || headerText.includes('year') ||
+      headerText.includes('month') || headerText.includes('quarter') || headerText.includes('phase') ||
+      headerText.includes('milestone') || headerText.includes('timeline')) {
+    return 'timeline';
+  }
+
+  // Summary context indicators
+  if (headerText.includes('summary') || headerText.includes('total') || headerText.includes('overview') ||
+      table.rows.length <= 5) {
+    return 'summary';
+  }
+
+  // Default to data context
+  return 'data';
 }
 
 /**
@@ -584,19 +766,37 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
       const theme = getAppropriateTheme(spec);
       const useModernTheme = isModernTheme(theme);
 
-      // Validate slide style quality if enabled (only for traditional themes)
-      if (validateStyles && !useModernTheme) {
+      // Enhanced style validation and testing if enabled
+      if (validateStyles) {
         try {
-          const styleValidation = validateSlideStyle(spec, theme as ProfessionalTheme);
-          validationResults.push(styleValidation);
+          if (!useModernTheme) {
+            // Traditional theme validation
+            const styleValidation = validateSlideStyle(spec, theme as ProfessionalTheme);
+            validationResults.push(styleValidation);
 
-          // Log style issues for debugging
-          if (styleValidation.issues.length > 0) {
-            console.log(`Style validation for slide "${spec.title}":`, {
-              score: styleValidation.score,
-              grade: styleValidation.grade,
-              issues: styleValidation.issues.map(i => i.message)
+            // Log style issues for debugging
+            if (styleValidation.issues.length > 0) {
+              console.log(`Style validation for slide "${spec.title}":`, {
+                score: styleValidation.score,
+                grade: styleValidation.grade,
+                issues: styleValidation.issues.map(i => i.message)
+              });
+            }
+          } else {
+            // Enhanced testing for modern themes
+            const testResults = await runEnhancedStylingTests([spec], theme as unknown as ProfessionalTheme, {
+              includeAccessibilityTests: true,
+              includePerformanceTests: false, // Skip performance tests for individual slides
+              includeVisualConsistencyTests: false, // Skip consistency tests for individual slides
+              includeThemeCompatibilityTests: true,
+              strictMode: false
             });
+
+            const criticalIssues = testResults.filter(r => !r.passed && r.score < 50);
+            if (criticalIssues.length > 0) {
+              console.warn(`⚠️ Critical styling issues for slide "${spec.title}":`,
+                criticalIssues.map(r => r.testName));
+            }
           }
         } catch (styleError) {
           console.warn(`⚠️ Style validation failed for slide ${i + 1}:`, styleError);
@@ -852,6 +1052,25 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
       console.warn('⚠️ Generated file is suspiciously small, may be corrupted');
     }
 
+    // Performance and cache statistics
+    const cacheStats = getCacheStatistics();
+    console.log('📊 Enhanced Generation Performance Summary:', {
+      duration: `${generationTime}ms`,
+      memoryDelta: `${memoryUsed}MB`,
+      slidesPerSecond: (sanitizedSpecs.length / (generationTime / 1000)).toFixed(1),
+      cacheHitRates: {
+        color: `${(cacheStats.color.hitRate * 100).toFixed(1)}%`,
+        layout: `${(cacheStats.layout.hitRate * 100).toFixed(1)}%`,
+        font: `${(cacheStats.font.hitRate * 100).toFixed(1)}%`,
+        theme: `${(cacheStats.theme.hitRate * 100).toFixed(1)}%`
+      },
+      optimizationBenefits: {
+        cacheEnabled: true,
+        performanceMonitoring: true,
+        memoryManagement: true
+      }
+    });
+
     // Memory cleanup suggestion
     if (memoryAfter.heapUsed > 100 * 1024 * 1024) { // > 100MB
       console.warn('⚠️ High memory usage detected, consider garbage collection');
@@ -859,6 +1078,12 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
         global.gc();
         console.log('🧹 Garbage collection triggered');
       }
+    }
+
+    // Clear caches periodically to prevent memory leaks
+    if (sanitizedSpecs.length > 50) {
+      console.log('🧹 Clearing caches after large presentation generation');
+      clearAllCaches();
     }
 
     return buffer as Buffer;
@@ -1125,9 +1350,38 @@ async function renderSlideLayout(
   // Use unified layout constants for exact preview alignment
   const { CONTENT_Y, COLUMN_WIDTH, COLUMN_GAP } = LAYOUT_CONSTANTS;
 
-  // Add title to all slides with enhanced theme styling
+  // Create standardized measurements for preview-export alignment
+  const standardMeasurements = createStandardizedMeasurements();
+  const fontMapping = createFontMapping();
+
+  // Calculate aligned layout positions
+  const alignedLayouts = calculateAlignedLayout(spec, theme, standardMeasurements);
+
+  // Calculate optimal layout using enhanced layout engine
+  const layoutResult = calculateSlideLayout(spec, theme);
+  const contentDensity = determineContentDensity(spec);
+  const finalLayout = applyResponsiveAdjustments(layoutResult, contentDensity);
+
+  // Validate alignment between calculated layouts
+  const alignmentValidation = validateAlignment(
+    finalLayout.title,
+    alignedLayouts.title?.export || finalLayout.title,
+    0.01
+  );
+
+  if (!alignmentValidation.isAligned) {
+    console.log(`📐 Layout alignment recommendations:`, alignmentValidation.recommendations);
+  }
+
+  // Log layout recommendations
+  if (finalLayout.recommendations.length > 0) {
+    console.log(`📋 Layout recommendations for slide:`, finalLayout.recommendations);
+  }
+
+  // Add title to all slides with enhanced theme styling and aligned position
   if (spec.title) {
-    await addEnhancedTitle(slide, spec.title, theme, spec.layout);
+    const titlePosition = alignedLayouts.title?.export || finalLayout.title;
+    await addEnhancedTitleWithLayout(slide, spec.title, theme, spec.layout, titlePosition);
   }
 
   switch (spec.layout) {
@@ -1520,42 +1774,107 @@ async function renderImageFull(
 }
 
 /**
- * Render comparison table
+ * Render comparison table with professional styling
  */
 function renderComparisonTable(slide: pptxgen.Slide, table: NonNullable<SlideSpec['comparisonTable']>, theme: ProfessionalTheme, contentY: number): void {
-  // Add table background for better visual separation
   try {
+    // Prepare table data
+    const tableData = [table.headers, ...table.rows];
+
+    // Determine table context for optimal styling
+    const tableContext = determineTableContext(table);
+
+    // Create context-optimized table styling
+    const tableStyle = createBusinessContextTableStyle(theme, tableContext, {
+      style: 'modern',
+      size: 'normal',
+      headerPosition: 'top',
+      showFooter: false,
+      alternateRows: true
+    });
+
+    // Apply data density optimizations
+    const optimizedStyle = createDataDensityOptimizedTable(
+      theme,
+      table.rows.length,
+      table.headers.length,
+      {
+        style: 'modern',
+        size: table.rows.length > 10 ? 'compact' : 'normal',
+        headerPosition: 'top',
+        showFooter: false,
+        alternateRows: true
+      }
+    );
+
+    // Create responsive layout with advanced features
+    const layout = createResponsiveTableLayout(tableData, 9.0, optimizedStyle);
+
+    // Apply responsive adjustments
+    if (layout.recommendedFontSize !== optimizedStyle.bodyStyle.fontSize) {
+      optimizedStyle.bodyStyle.fontSize = layout.recommendedFontSize;
+      optimizedStyle.headerStyle.fontSize = layout.recommendedFontSize + 1;
+    }
+
+    // Add table background with professional styling
     slide.addShape('rect', {
       x: 0.4,
-      y: contentY - 0.1,
+      y: contentY - tableStyle.containerStyle.margin,
       w: 9.2,
-      h: (table.rows.length + 1) * 0.5 + 0.2,
+      h: (table.rows.length + 1) * 0.5 + (tableStyle.containerStyle.margin * 2),
       fill: {
-        color: safeColorFormat(theme.colors.surface),
-        transparency: 95
+        color: safeColorFormat(tableStyle.bodyStyle.backgroundColor),
+        transparency: 5
       },
       line: {
-        color: safeColorFormat(theme.colors.borders?.light || theme.colors.accent),
-        width: 1
+        color: safeColorFormat(tableStyle.bodyStyle.borderColor),
+        width: tableStyle.bodyStyle.borderWidth
       },
-      rectRadius: 0.1
+      rectRadius: tableStyle.containerStyle.borderRadius,
+      shadow: tableStyle.containerStyle.shadow.enabled ? {
+        type: 'outer',
+        color: tableStyle.containerStyle.shadow.color,
+        blur: tableStyle.containerStyle.shadow.blur,
+        offset: tableStyle.containerStyle.shadow.offset,
+        angle: 45,
+        opacity: (100 - tableStyle.containerStyle.shadow.transparency) / 100
+      } : undefined
     });
-  } catch (error) {
-    console.warn('⚠️ Failed to add table background:', error);
-  }
 
-  const rows = [table.headers, ...table.rows];
-  slide.addTable(rows.map(row => row.map(cell => ({ text: cell }))), {
-    x: 0.5,
-    y: contentY,
-    w: 9.0,
-    fontSize: Math.min(theme.typography?.body?.sizes?.small || 12, 12),
-    color: safeColorFormat(theme.colors.text.primary),
-    fill: {
-      color: safeColorFormat(theme.colors.background)
-    }
-    // Border styling removed to prevent compatibility issues
-  });
+    // Convert table style to PowerPoint options
+    const pptOptions = tableStyleToPptOptions(tableStyle, tableData, {
+      style: 'modern',
+      size: 'normal',
+      headerPosition: 'top',
+      showFooter: false,
+      alternateRows: true
+    });
+
+    // Add table with enhanced styling
+    slide.addTable(tableData.map(row => row.map(cell => ({ text: cell }))), {
+      x: 0.5,
+      y: contentY,
+      w: 9.0,
+      ...pptOptions
+    });
+
+    console.log('✅ Enhanced table applied with professional styling');
+  } catch (error) {
+    console.warn('⚠️ Failed to add enhanced table, using fallback:', error);
+
+    // Fallback to basic table
+    const rows = [table.headers, ...table.rows];
+    slide.addTable(rows.map(row => row.map(cell => ({ text: cell }))), {
+      x: 0.5,
+      y: contentY,
+      w: 9.0,
+      fontSize: 12,
+      color: safeColorFormat(theme.colors.text.primary),
+      fill: {
+        color: safeColorFormat(theme.colors.background)
+      }
+    });
+  }
 }
 
 /**
@@ -1850,7 +2169,7 @@ async function applyEnhancedSlideBackground(
 }
 
 /**
- * Enhanced title rendering with theme styling and visual effects
+ * Enhanced title rendering with professional typography and styling
  */
 async function addEnhancedTitle(
   slide: pptxgen.Slide,
@@ -1860,15 +2179,24 @@ async function addEnhancedTitle(
 ): Promise<void> {
   try {
     const isTitleSlide = layout === 'title' || layout === 'hero';
+    const palette = createEnhancedColorPalette(theme);
 
-    // Use enhanced typography system
-    const titleType = isTitleSlide ? 'hero' : 'title';
-    const textStyle = createTextStyle(titleType, undefined, {
-      color: theme.colors.text.primary,
-      contentLength: title.length
-    });
+    // Create typography theme based on presentation context
+    const typographyTheme = createTypographyTheme(
+      theme.category === 'corporate' || theme.category === 'consulting' || theme.category === 'finance' ? 'corporate' :
+      theme.category === 'creative' || theme.category === 'vibrant' ? 'creative' :
+      theme.category === 'technology' ? 'tech' : 'modern'
+    );
 
-    const pptOptions = textStyleToPptOptions(textStyle);
+    // Get typography hierarchy for the slide type
+    const hierarchy = createTypographyHierarchy(
+      typographyTheme,
+      isTitleSlide ? 'title' : 'content'
+    );
+
+    // Use primary style for titles
+    const titleStyle = hierarchy.primary;
+    const pptOptions = textStyleToPptOptions(titleStyle);
 
     // Add title with enhanced styling
     slide.addText(title, {
@@ -1877,30 +2205,23 @@ async function addEnhancedTitle(
       w: 8.5,
       h: 0.8,
       ...pptOptions,
-      align: isTitleSlide ? 'center' : 'left',
-      shadow: {
-        type: 'outer',
-        color: '000000',
-        blur: 3,
-        offset: 1,
-        angle: 45,
-        transparency: 90 // Fixed: use transparency instead of opacity
-      }
+      align: isTitleSlide ? 'center' : 'left'
     });
 
-    // Add accent underline for content slides
+    // Add accent underline for content slides using contextual colors
     if (!isTitleSlide) {
+      const accentColor = getContextualColor('accent-text', palette);
       slide.addShape('rect', {
         x: 0.75,
         y: 1.1,
         w: 2.0,
         h: 0.05,
-        fill: { color: safeColorFormat(theme.colors.accent) },
+        fill: { color: safeColorFormat(accentColor.color) },
         line: { width: 0 }
       });
     }
 
-    console.log('✅ Enhanced title applied');
+    console.log('✅ Enhanced title applied with professional typography');
   } catch (error) {
     console.warn('⚠️ Failed to apply enhanced title, using fallback:', error);
     // Fallback to basic title
@@ -1913,6 +2234,76 @@ async function addEnhancedTitle(
       bold: true,
       color: '000000',
       align: layout === 'title' ? 'center' : 'left'
+    });
+  }
+}
+
+/**
+ * Enhanced title rendering with layout positioning
+ */
+async function addEnhancedTitleWithLayout(
+  slide: pptxgen.Slide,
+  title: string,
+  theme: ProfessionalTheme,
+  layout: string,
+  titlePosition: { x: number; y: number; width: number; height: number; alignment?: string }
+): Promise<void> {
+  try {
+    const isTitleSlide = layout === 'title' || layout === 'hero';
+    const palette = createEnhancedColorPalette(theme);
+
+    // Create typography theme based on presentation context
+    const typographyTheme = createTypographyTheme(
+      theme.category === 'corporate' || theme.category === 'consulting' || theme.category === 'finance' ? 'corporate' :
+      theme.category === 'creative' || theme.category === 'vibrant' ? 'creative' :
+      theme.category === 'technology' ? 'tech' : 'modern'
+    );
+
+    // Get typography hierarchy for the slide type
+    const hierarchy = createTypographyHierarchy(
+      typographyTheme,
+      isTitleSlide ? 'title' : 'content'
+    );
+
+    // Use primary style for titles
+    const titleStyle = hierarchy.primary;
+    const pptOptions = textStyleToPptOptions(titleStyle);
+
+    // Add title with enhanced styling and calculated position
+    slide.addText(title, {
+      x: titlePosition.x,
+      y: titlePosition.y,
+      w: titlePosition.width,
+      h: titlePosition.height,
+      ...pptOptions,
+      align: (titlePosition.alignment as any) || (isTitleSlide ? 'center' : 'left')
+    });
+
+    // Add accent underline for content slides using contextual colors
+    if (!isTitleSlide) {
+      const accentColor = getContextualColor('accent-text', palette);
+      slide.addShape('rect', {
+        x: titlePosition.x,
+        y: titlePosition.y + titlePosition.height + 0.1,
+        w: Math.min(2.0, titlePosition.width * 0.3),
+        h: 0.05,
+        fill: { color: safeColorFormat(accentColor.color) },
+        line: { width: 0 }
+      });
+    }
+
+    console.log('✅ Enhanced title applied with layout positioning');
+  } catch (error) {
+    console.warn('⚠️ Failed to apply enhanced title with layout:', error);
+    // Fallback to simple title
+    slide.addText(title, {
+      x: titlePosition.x,
+      y: titlePosition.y,
+      w: titlePosition.width,
+      h: titlePosition.height,
+      fontSize: layout === 'title' ? 32 : 24,
+      color: safeColorFormat(theme.colors.text.primary),
+      align: (titlePosition.alignment as any) || (layout === 'title' ? 'center' : 'left')
     });
   }
 }
@@ -2192,19 +2583,26 @@ function addModernCard(
 
 
 /**
- * Enhanced bullet points with improved visual hierarchy (B-6: Modern Theme Rendering)
- * Supports both traditional and modern theme styling
+ * Enhanced bullet points with professional color management and typography
+ * Supports both traditional and modern theme styling with accessibility compliance
  */
 function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
+  // Create enhanced color palette for contextual color usage
+  const palette = createEnhancedColorPalette(theme);
+
+  // Get contextual colors with accessibility compliance
+  const textColorApp = getContextualColor('primary-text', palette, theme.colors.background);
+  const accentColorApp = getContextualColor('accent-text', palette, theme.colors.background);
+
   // Enhanced typography with theme-based sizing
   const fontSize = Math.max(theme.typography?.body?.sizes?.normal || 16, 14);
   const lineHeight = 0.8; // Increased spacing to prevent overlap
   const bulletHeight = 0.7; // Increased height for better text wrapping
   const maxHeight = 3.5; // Maximum content height for 16:9 format
 
-  // Use theme colors for better visual hierarchy
-  const textColor = safeColorFormat(theme.colors.text.primary);
-  const accentColor = safeColorFormat(theme.colors.accent || theme.colors.primary);
+  // Use accessible colors
+  const textColor = safeColorFormat(textColorApp.color);
+  const accentColor = safeColorFormat(accentColorApp.color);
 
   bullets.forEach((bullet, i) => {
     const bulletY = y + i * lineHeight;
@@ -2257,17 +2655,23 @@ function addBullets(slide: pptxgen.Slide, bullets: string[], theme: Professional
 }
 
 /**
- * Enhanced paragraph with improved typography and visual appeal
+ * Enhanced paragraph with professional color management and typography
  */
 function addEnhancedParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, isQuote: boolean = false) {
+  // Create enhanced color palette for contextual color usage
+  const palette = createEnhancedColorPalette(theme);
+
   // Enhanced typography with theme-based sizing
   const baseFontSize = theme.typography?.body?.sizes?.normal || 16;
   const fontSize = Math.max(isQuote ? baseFontSize + 2 : baseFontSize, 14);
 
-  // Use theme colors for better visual hierarchy
-  const textColor = isQuote
-    ? safeColorFormat(theme.colors.text.secondary)
-    : safeColorFormat(theme.colors.text.primary);
+  // Get contextual colors with accessibility compliance
+  const textColorApp = getContextualColor(
+    isQuote ? 'secondary-text' : 'primary-text',
+    palette,
+    theme.colors.background
+  );
+  const textColor = safeColorFormat(textColorApp.color);
 
   const maxHeight = 3.2; // Reduced height to prevent overflow
 
@@ -2536,24 +2940,28 @@ function addEnhancedChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['ch
     values: s.data
   }));
 
-  // Enhanced color palette using theme colors
-  const chartColors = [
-    safeColorFormat(theme.colors.primary),
-    safeColorFormat(theme.colors.secondary),
-    safeColorFormat(theme.colors.accent),
-    safeColorFormat(theme.colors.semantic?.success || '#10b981'),
-    safeColorFormat(theme.colors.semantic?.warning || '#f59e0b'),
-    safeColorFormat(theme.colors.semantic?.error || '#ef4444')
-  ];
+  // Create professional chart styling with business context optimization
+  const dataPointCount = chart.series.reduce((max, series) => Math.max(max, series.data.length), 0);
+
+  // Determine business context from slide content
+  const businessContext = determineBusinessContext(slide, chart);
+
+  const chartStyle = createBusinessContextChartStyle(
+    theme,
+    businessContext,
+    chart.type as any
+  );
+
+  // Apply data-driven optimizations
+  const optimizedStyle = applyDataDrivenOptimizations(chartStyle, dataPointCount);
+
+  // Convert to PowerPoint options
+  const pptOptions = chartStyleToPptOptions(optimizedStyle, chartData);
 
   slide.addChart(pptxChartType, chartData, {
     x, y, w, h,
     title: chart.title,
-    showLegend: chart.showLegend,
-    showDataTable: chart.showDataLabels,
-    chartColors,
-    titleColor: safeColorFormat(theme.colors.text.primary),
-    titleFontSize: 16
+    ...pptOptions
   });
 }
 

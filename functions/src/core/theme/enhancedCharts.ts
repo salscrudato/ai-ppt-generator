@@ -321,7 +321,10 @@ export function createEnhancedTable(
   } catch (error) {
     console.warn('⚠️ Failed to create enhanced table:', error);
     // Fallback to basic table
-    const basicRows = [tableData.headers, ...tableData.rows];
+    const basicRows = [
+      tableData.headers.map(h => ({ text: h })),
+      ...tableData.rows.map(row => row.map(cell => ({ text: cell })))
+    ];
     slide.addTable(basicRows, {
       x: position.x,
       y: position.y,

@@ -432,7 +432,14 @@ function getAnimationIntensity(
     corporate: 0.8,
     creative: 1.2,
     modern: 1.1,
-    academic: 0.9
+    academic: 0.9,
+    consulting: 0.8,
+    finance: 0.8,
+    healthcare: 0.9,
+    natural: 1.0,
+    startup: 1.1,
+    technology: 1.1,
+    vibrant: 1.2
   }[theme.category] || 1.0;
   
   return Math.min(baseIntensity * themeMultiplier, 1.0);

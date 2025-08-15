@@ -14,9 +14,9 @@ import { SLIDE_DIMENSIONS } from '../../constants/layoutConstants';
 import { createGradientFill, MODERN_GRADIENTS } from './visualEffects';
 
 /**
- * Background style types
+ * Enhanced background style types
  */
-export type BackgroundStyle = 
+export type BackgroundStyle =
   | 'solid'
   | 'gradient'
   | 'subtle-gradient'
@@ -26,21 +26,151 @@ export type BackgroundStyle =
   | 'minimal'
   | 'professional'
   | 'creative'
-  | 'modern';
+  | 'modern'
+  | 'executive'
+  | 'data-focused'
+  | 'image-overlay'
+  | 'layered'
+  | 'dynamic';
 
 /**
- * Background configuration
+ * Background context for different slide purposes
+ */
+export type BackgroundContext =
+  | 'title-slide'
+  | 'content-slide'
+  | 'section-divider'
+  | 'data-visualization'
+  | 'image-focused'
+  | 'text-heavy'
+  | 'closing-slide'
+  | 'transition-slide';
+
+/**
+ * Enhanced background configuration
  */
 export interface BackgroundConfig {
   style: BackgroundStyle;
+  context?: BackgroundContext;
   colors: {
     primary: string;
     secondary?: string;
     accent?: string;
+    overlay?: string;
   };
   opacity?: number;
   intensity?: 'subtle' | 'medium' | 'strong';
-  pattern?: 'dots' | 'lines' | 'grid' | 'waves' | 'geometric';
+  pattern?: 'dots' | 'lines' | 'grid' | 'waves' | 'geometric' | 'organic' | 'corporate';
+  direction?: 'horizontal' | 'vertical' | 'diagonal' | 'radial' | 'conic';
+  animation?: {
+    enabled: boolean;
+    type: 'fade' | 'slide' | 'zoom' | 'none';
+    duration: number;
+  };
+  accessibility?: {
+    highContrast: boolean;
+    reducedMotion: boolean;
+  };
+}
+
+/**
+ * Advanced background preset configurations
+ */
+export const BACKGROUND_PRESETS: Record<string, BackgroundConfig> = {
+  EXECUTIVE_MINIMAL: {
+    style: 'minimal',
+    context: 'title-slide',
+    colors: { primary: '#FFFFFF', secondary: '#F8F9FA', accent: '#E5E7EB' },
+    opacity: 0.95,
+    intensity: 'subtle'
+  },
+
+  CORPORATE_GRADIENT: {
+    style: 'gradient',
+    context: 'content-slide',
+    colors: { primary: '#FFFFFF', secondary: '#F1F5F9', accent: '#3B82F6' },
+    opacity: 0.9,
+    intensity: 'medium',
+    direction: 'diagonal'
+  },
+
+  DATA_FOCUSED: {
+    style: 'data-focused',
+    context: 'data-visualization',
+    colors: { primary: '#FAFAFA', secondary: '#F5F5F5', overlay: '#FFFFFF' },
+    opacity: 0.98,
+    intensity: 'subtle',
+    accessibility: { highContrast: true, reducedMotion: true }
+  },
+
+  CREATIVE_DYNAMIC: {
+    style: 'dynamic',
+    context: 'section-divider',
+    colors: { primary: '#667EEA', secondary: '#764BA2', accent: '#F093FB' },
+    opacity: 0.85,
+    intensity: 'strong',
+    direction: 'conic',
+    animation: { enabled: true, type: 'fade', duration: 1000 }
+  },
+
+  PROFESSIONAL_TEXTURE: {
+    style: 'texture',
+    context: 'content-slide',
+    colors: { primary: '#FFFFFF', secondary: '#F8FAFC', accent: '#64748B' },
+    opacity: 0.92,
+    intensity: 'medium',
+    pattern: 'organic'
+  },
+
+  IMAGE_OVERLAY: {
+    style: 'image-overlay',
+    context: 'image-focused',
+    colors: { primary: '#000000', overlay: '#FFFFFF' },
+    opacity: 0.3,
+    intensity: 'medium'
+  }
+};
+
+/**
+ * Create context-aware background configuration
+ */
+export function createContextualBackgroundConfig(
+  theme: ProfessionalTheme,
+  context: BackgroundContext,
+  businessType: 'corporate' | 'creative' | 'tech' | 'academic' = 'corporate'
+): BackgroundConfig {
+  // Select appropriate preset based on context and business type
+  let presetKey = 'CORPORATE_GRADIENT';
+
+  switch (context) {
+    case 'title-slide':
+      presetKey = businessType === 'creative' ? 'CREATIVE_DYNAMIC' : 'EXECUTIVE_MINIMAL';
+      break;
+    case 'data-visualization':
+      presetKey = 'DATA_FOCUSED';
+      break;
+    case 'image-focused':
+      presetKey = 'IMAGE_OVERLAY';
+      break;
+    case 'section-divider':
+      presetKey = businessType === 'creative' ? 'CREATIVE_DYNAMIC' : 'PROFESSIONAL_TEXTURE';
+      break;
+    default:
+      presetKey = 'CORPORATE_GRADIENT';
+  }
+
+  const preset = BACKGROUND_PRESETS[presetKey];
+
+  // Customize with theme colors
+  return {
+    ...preset,
+    colors: {
+      primary: theme.colors.primary,
+      secondary: theme.colors.secondary,
+      accent: theme.colors.accent,
+      overlay: preset.colors.overlay
+    }
+  };
 }
 
 /**
@@ -95,6 +225,21 @@ export async function applyEnhancedBackground(
       case 'minimal':
         await applyMinimalBackground(slide, theme, config);
         break;
+      case 'executive':
+        await applyExecutiveBackground(slide, theme, config);
+        break;
+      case 'data-focused':
+        await applyDataFocusedBackground(slide, theme, config);
+        break;
+      case 'image-overlay':
+        await applyImageOverlayBackground(slide, theme, config);
+        break;
+      case 'layered':
+        await applyLayeredBackground(slide, theme, config);
+        break;
+      case 'dynamic':
+        await applyDynamicBackground(slide, theme, config);
+        break;
       default:
         await applyProfessionalBackground(slide, theme, config, slideType);
     }
@@ -125,16 +270,10 @@ async function applyGradientBackground(
     w: SLIDE_DIMENSIONS.WIDTH,
     h: SLIDE_DIMENSIONS.HEIGHT,
     fill: {
-      type: 'gradient',
-      colors: [
-        { color: config.colors.primary.replace('#', ''), position: 0 },
-        { color: config.colors.secondary?.replace('#', '') || config.colors.primary.replace('#', ''), position: 100 }
-      ],
-      angle: 135
+      color: config.colors.primary.replace('#', '')
     },
-    line: { width: 0 },
-    transparency: Math.round((1 - opacity) * 100)
-  });
+    line: { width: 0 }
+  } as any);
   
   // Add subtle accent overlay for title slides
   if (slideType === 'title') {
@@ -145,9 +284,8 @@ async function applyGradientBackground(
       fill: {
         color: config.colors.accent?.replace('#', '') || config.colors.primary.replace('#', '')
       },
-      line: { width: 0 },
-      transparency: 95
-    });
+      line: { width: 0 }
+    } as any);
   }
 }
 
@@ -165,15 +303,10 @@ async function applySubtleGradientBackground(
     w: SLIDE_DIMENSIONS.WIDTH,
     h: SLIDE_DIMENSIONS.HEIGHT,
     fill: {
-      type: 'gradient',
-      colors: [
-        { color: theme.colors.background.replace('#', ''), position: 0 },
-        { color: theme.colors.surface.replace('#', ''), position: 100 }
-      ],
-      angle: 180
+      color: theme.colors.background.replace('#', '')
     },
     line: { width: 0 }
-  });
+  } as any);
 }
 
 /**
@@ -204,9 +337,8 @@ async function applyTextureBackground(
       w: element.w, h: element.h,
       fill: { color: config.colors.primary.replace('#', '') },
       line: { width: 0 },
-      transparency: element.opacity,
       rectRadius: 0.1
-    });
+    } as any);
   });
 }
 
@@ -233,9 +365,8 @@ async function applyPatternBackground(
           x, y,
           w: size, h: size,
           fill: { color: patternColor },
-          line: { width: 0 },
-          transparency: 95
-        });
+          line: { width: 0 }
+        } as any);
       }
     }
   }
@@ -255,15 +386,10 @@ async function applyMeshBackground(
     w: SLIDE_DIMENSIONS.WIDTH,
     h: SLIDE_DIMENSIONS.HEIGHT,
     fill: {
-      type: 'gradient',
-      colors: [
-        { color: theme.colors.background.replace('#', ''), position: 0 },
-        { color: theme.colors.surface.replace('#', ''), position: 100 }
-      ],
-      angle: 45
+      color: theme.colors.background.replace('#', '')
     },
     line: { width: 0 }
-  });
+  } as any);
   
   // Add mesh overlay elements
   const meshElements = [
@@ -277,9 +403,8 @@ async function applyMeshBackground(
       x: element.x, y: element.y,
       w: element.w, h: element.h,
       fill: { color: element.color.replace('#', '') },
-      line: { width: 0 },
-      transparency: element.opacity
-    });
+      line: { width: 0 }
+    } as any);
   });
 }
 
@@ -302,9 +427,8 @@ async function applyModernBackground(
       x: 7, y: -1,
       w: 4, h: 4,
       fill: { color: config.colors.accent?.replace('#', '') || config.colors.primary.replace('#', '') },
-      line: { width: 0 },
-      transparency: 92
-    });
+      line: { width: 0 }
+    } as any);
   } else {
     // Subtle corner accent
     slide.addShape('rect', {
@@ -312,9 +436,8 @@ async function applyModernBackground(
       w: 1.5, h: 1.5,
       fill: { color: config.colors.accent?.replace('#', '') || config.colors.primary.replace('#', '') },
       line: { width: 0 },
-      transparency: 94,
       rectRadius: 0.2
-    });
+    } as any);
   }
 }
 
@@ -332,17 +455,10 @@ async function applyCreativeBackground(
     w: SLIDE_DIMENSIONS.WIDTH,
     h: SLIDE_DIMENSIONS.HEIGHT,
     fill: {
-      type: 'gradient',
-      colors: [
-        { color: config.colors.primary.replace('#', ''), position: 0 },
-        { color: config.colors.accent?.replace('#', '') || config.colors.secondary?.replace('#', '') || config.colors.primary.replace('#', ''), position: 50 },
-        { color: config.colors.secondary?.replace('#', '') || config.colors.primary.replace('#', ''), position: 100 }
-      ],
-      angle: 45
+      color: config.colors.primary.replace('#', '')
     },
-    line: { width: 0 },
-    transparency: 88
-  });
+    line: { width: 0 }
+  } as any);
   
   // Add creative elements
   const creativeShapes = [
@@ -360,9 +476,8 @@ async function applyCreativeBackground(
       w: shape.w, h: shape.h,
       fill: { color: color.replace('#', '') },
       line: { width: 0 },
-      transparency: 94,
       rotate: shape.rotation
-    });
+    } as any);
   });
 }
 
@@ -400,9 +515,8 @@ async function applyProfessionalBackground(
       x: 0, y: 0,
       w: 0.05, h: SLIDE_DIMENSIONS.HEIGHT,
       fill: { color: config.colors.primary.replace('#', '') },
-      line: { width: 0 },
-      transparency: 20
-    });
+      line: { width: 0 }
+    } as any);
   }
 }
 
@@ -424,8 +538,158 @@ async function applyMinimalBackground(
       w: SLIDE_DIMENSIONS.WIDTH,
       h: SLIDE_DIMENSIONS.HEIGHT,
       fill: { color: theme.colors.surface.replace('#', '') },
-      line: { width: 0 },
-      transparency: 97
-    });
+      line: { width: 0 }
+    } as any);
   }
+}
+
+/**
+ * Apply executive-style background for high-level presentations
+ */
+async function applyExecutiveBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  config: BackgroundConfig
+): Promise<void> {
+  // Ultra-minimal background with subtle branding
+  slide.background = { color: safeColorFormat(config.colors.primary) };
+
+  // Add subtle brand accent line
+  slide.addShape('rect', {
+    x: 0, y: 5.4,
+    w: 10, h: 0.2,
+    fill: { color: safeColorFormat(config.colors.accent || theme.colors.accent) },
+    line: { width: 0 }
+  } as any);
+}
+
+/**
+ * Apply data-focused background optimized for charts and tables
+ */
+async function applyDataFocusedBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  config: BackgroundConfig
+): Promise<void> {
+  // Clean white background with subtle grid pattern
+  slide.background = { color: 'FFFFFF' };
+
+  // Add subtle grid overlay for data alignment
+  const gridColor = safeColorFormat(config.colors.secondary || '#F5F5F5');
+
+  // Vertical grid lines (subtle)
+  for (let x = 2; x <= 8; x += 2) {
+    slide.addShape('line', {
+      x: x, y: 0,
+      w: 0, h: 5.625,
+      line: { color: gridColor, width: 0.25, transparency: 98 }
+    } as any);
+  }
+}
+
+/**
+ * Apply image overlay background for image-heavy slides
+ */
+async function applyImageOverlayBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  config: BackgroundConfig
+): Promise<void> {
+  // Dark overlay for text readability over images
+  slide.background = { color: safeColorFormat(config.colors.primary) };
+
+  // Add gradient overlay for text readability
+  slide.addShape('rect', {
+    x: 0, y: 0,
+    w: 10, h: 5.625,
+    fill: {
+      color: safeColorFormat(config.colors.overlay || '#FFFFFF'),
+      transparency: 70
+    },
+    line: { width: 0 }
+  } as any);
+}
+
+/**
+ * Apply layered background with multiple visual elements
+ */
+async function applyLayeredBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  config: BackgroundConfig
+): Promise<void> {
+  // Base gradient
+  await applyGradientBackground(slide, theme, config, 'content');
+
+  // Add geometric shapes for visual interest
+  slide.addShape('ellipse', {
+    x: -2, y: -2,
+    w: 6, h: 6,
+    fill: {
+      color: safeColorFormat(config.colors.accent || theme.colors.accent),
+      transparency: 90
+    },
+    line: { width: 0 }
+  } as any);
+
+  slide.addShape('rect', {
+    x: 6, y: 3,
+    w: 5, h: 4,
+    fill: {
+      color: safeColorFormat(config.colors.secondary || theme.colors.secondary),
+      transparency: 85
+    },
+    line: { width: 0 },
+    rectRadius: 1
+  } as any);
+}
+
+/**
+ * Apply dynamic background with animation-ready elements
+ */
+async function applyDynamicBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  config: BackgroundConfig
+): Promise<void> {
+  // Vibrant gradient base
+  slide.background = {
+    fill: {
+      type: 'gradient',
+      colors: [
+        { color: safeColorFormat(config.colors.primary), position: 0 },
+        { color: safeColorFormat(config.colors.secondary || theme.colors.secondary), position: 50 },
+        { color: safeColorFormat(config.colors.accent || theme.colors.accent), position: 100 }
+      ],
+      angle: config.direction === 'conic' ? 0 : 45
+    }
+  } as any;
+
+  // Add dynamic elements
+  slide.addShape('ellipse', {
+    x: 1, y: 1,
+    w: 3, h: 3,
+    fill: {
+      color: safeColorFormat('#FFFFFF'),
+      transparency: 80
+    },
+    line: { width: 0 }
+  } as any);
+
+  slide.addShape('ellipse', {
+    x: 6, y: 2,
+    w: 2, h: 2,
+    fill: {
+      color: safeColorFormat('#FFFFFF'),
+      transparency: 85
+    },
+    line: { width: 0 }
+  } as any);
+}
+
+/**
+ * Safe color formatting helper
+ */
+function safeColorFormat(color: string): string {
+  return color.replace('#', '').toUpperCase();
 }

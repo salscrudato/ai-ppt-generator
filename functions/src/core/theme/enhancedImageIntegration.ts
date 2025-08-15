@@ -398,9 +398,8 @@ function addImageCaption(
         w: imageDimensions.width,
         h: captionH + 0.1,
         fill: { color: '000000' },
-        transparency: 70,
         line: { width: 0 }
-      });
+      } as any);
       break;
     case 'bottom':
     default:

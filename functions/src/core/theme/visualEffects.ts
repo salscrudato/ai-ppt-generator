@@ -271,7 +271,7 @@ export function createShadowEffect(shadow: ShadowConfig): any {
 }
 
 /**
- * Modern visual effect presets combining gradients, shadows, and borders
+ * Enhanced visual effect presets for professional presentations
  */
 export const VISUAL_EFFECT_PRESETS: Record<string, VisualEffectPreset> = {
   // Card styles
@@ -286,7 +286,7 @@ export const VISUAL_EFFECT_PRESETS: Record<string, VisualEffectPreset> = {
       radius: BORDER_RADIUS.MEDIUM
     }
   },
-  
+
   ELEVATED_CARD: {
     name: 'Elevated Card',
     description: 'Floating card with strong shadow',
@@ -298,7 +298,32 @@ export const VISUAL_EFFECT_PRESETS: Record<string, VisualEffectPreset> = {
       radius: BORDER_RADIUS.LARGE
     }
   },
-  
+
+  PROFESSIONAL_CARD: {
+    name: 'Professional Card',
+    description: 'Corporate-style card with subtle border',
+    shadow: SHADOW_PRESETS.CARD_SUBTLE,
+    border: {
+      width: 1,
+      color: '#E5E7EB',
+      style: 'solid',
+      radius: BORDER_RADIUS.SMALL
+    }
+  },
+
+  PREMIUM_CARD: {
+    name: 'Premium Card',
+    description: 'High-end card with gradient border',
+    shadow: SHADOW_PRESETS.FLOATING_LIGHT,
+    border: {
+      width: 2,
+      color: 'transparent',
+      style: 'solid',
+      radius: BORDER_RADIUS.LARGE
+    },
+    gradient: MODERN_GRADIENTS.TECH_GRADIENT
+  },
+
   // Gradient backgrounds
   HERO_GRADIENT: {
     name: 'Hero Gradient',
@@ -306,14 +331,28 @@ export const VISUAL_EFFECT_PRESETS: Record<string, VisualEffectPreset> = {
     gradient: MODERN_GRADIENTS.TECH_GRADIENT,
     shadow: SHADOW_PRESETS.CARD_SUBTLE
   },
-  
+
   SUBTLE_BACKGROUND: {
     name: 'Subtle Background',
     description: 'Soft gradient background',
     gradient: MODERN_GRADIENTS.COOL_BREEZE,
     opacity: 0.3
   },
-  
+
+  CORPORATE_BACKGROUND: {
+    name: 'Corporate Background',
+    description: 'Professional gradient for business presentations',
+    gradient: MODERN_GRADIENTS.CORPORATE_BLUE,
+    opacity: 0.1
+  },
+
+  CREATIVE_BACKGROUND: {
+    name: 'Creative Background',
+    description: 'Vibrant gradient for creative presentations',
+    gradient: MODERN_GRADIENTS.CREATIVE_PURPLE,
+    opacity: 0.2
+  },
+
   // Accent elements
   ACCENT_PILL: {
     name: 'Accent Pill',
@@ -326,6 +365,51 @@ export const VISUAL_EFFECT_PRESETS: Record<string, VisualEffectPreset> = {
       radius: BORDER_RADIUS.PILL
     },
     shadow: SHADOW_PRESETS.CARD_SUBTLE
+  },
+
+  HIGHLIGHT_BAR: {
+    name: 'Highlight Bar',
+    description: 'Accent bar for emphasis',
+    gradient: MODERN_GRADIENTS.TECH_GRADIENT,
+    border: {
+      width: 0,
+      color: 'transparent',
+      style: 'solid',
+      radius: BORDER_RADIUS.SMALL
+    }
+  },
+
+  SEPARATOR_LINE: {
+    name: 'Separator Line',
+    description: 'Elegant divider line',
+    gradient: MODERN_GRADIENTS.COOL_BREEZE,
+    opacity: 0.6
+  },
+
+  // Interactive elements
+  BUTTON_PRIMARY: {
+    name: 'Primary Button',
+    description: 'Main action button style',
+    gradient: MODERN_GRADIENTS.TECH_GRADIENT,
+    shadow: SHADOW_PRESETS.CARD_MEDIUM,
+    border: {
+      width: 0,
+      color: 'transparent',
+      style: 'solid',
+      radius: BORDER_RADIUS.MEDIUM
+    }
+  },
+
+  BUTTON_SECONDARY: {
+    name: 'Secondary Button',
+    description: 'Secondary action button style',
+    shadow: SHADOW_PRESETS.CARD_SUBTLE,
+    border: {
+      width: 1,
+      color: '#D1D5DB',
+      style: 'solid',
+      radius: BORDER_RADIUS.MEDIUM
+    }
   }
 };
 
