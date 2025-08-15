@@ -22,10 +22,32 @@ import {
 } from 'react-icons/hi2';
 import DraggableSlideList from './DraggableSlideList';
 import SlideEditor from './SlideEditor';
-import SlidePreview from './SlidePreview';
+// import SlidePreview from './SlidePreview'; // Removed with live preview
 import ThemeGallery from './ThemeGallery';
-import ThemePreview from './ThemePreview';
+// import ThemePreview from './ThemePreview'; // Removed with live preview
 import type { Presentation, SlideSpec } from '../types';
+
+// Simple placeholder components
+const SlidePreviewPlaceholder = ({ draft, onEdit, onBack }: any) => (
+  <div className="p-8 text-center">
+    <h3 className="text-lg font-semibold mb-4">Slide Preview</h3>
+    <div className="bg-gray-100 p-6 rounded-lg mb-4">
+      <h4 className="font-medium">{draft.title}</h4>
+      <p className="text-sm text-gray-600 mt-2">Preview functionality removed</p>
+    </div>
+    <div className="flex gap-2 justify-center">
+      <button onClick={onEdit} className="px-4 py-2 bg-blue-500 text-white rounded">Edit</button>
+      <button onClick={onBack} className="px-4 py-2 bg-gray-500 text-white rounded">Back</button>
+    </div>
+  </div>
+);
+
+const ThemePreviewPlaceholder = ({ theme }: any) => (
+  <div className="bg-gray-100 p-4 rounded-lg">
+    <div className="text-sm text-gray-600">Theme Preview: {theme?.name || 'Default'}</div>
+    <div className="text-xs text-gray-500 mt-1">Preview functionality removed</div>
+  </div>
+);
 import { createNewSlide, generateSlideId } from '../types';
 import { useTheme } from '../utils/themeUtils';
 
@@ -190,15 +212,12 @@ export default function PresentationManager({
       case 'preview':
         if (!previewingSlide) return null;
         return (
-          <SlidePreview
+          <SlidePreviewPlaceholder
             draft={previewingSlide}
-            loading={loading}
-            error={error}
             onEdit={() => {
               setEditingSlide(previewingSlide);
               setViewMode('edit');
             }}
-            onGenerate={() => handleSlideUpdate(previewingSlide)}
             onBack={handleBackToOverview}
           />
         );
@@ -237,10 +256,9 @@ export default function PresentationManager({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-900">Preview</h3>
                 {selectedSlide && (
-                  <ThemePreview
+                  <ThemePreviewPlaceholder
                     theme={currentTheme}
                     sampleSlide={selectedSlide}
-                    size="large"
                   />
                 )}
                 <div className="p-4 bg-slate-50 rounded-lg">

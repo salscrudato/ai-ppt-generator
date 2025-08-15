@@ -17,6 +17,10 @@ import {
 } from 'react-icons/hi2';
 import clsx from 'clsx';
 
+// Import the new SlidePreview component and theme context
+import { SlidePreview } from './SlidePreview';
+import { useCurrentTheme } from '../contexts/ThemeContext';
+
 interface SlideEditorProps {
   spec: SlideSpec;
   loading: boolean;
@@ -26,15 +30,16 @@ interface SlideEditorProps {
   onBack: () => void;
 }
 
-export default function SlideEditor({ 
-  spec, 
-  loading, 
-  error, 
-  onSpecChange, 
-  onGenerate, 
-  onBack 
+export default function SlideEditor({
+  spec,
+  loading,
+  error,
+  onSpecChange,
+  onGenerate,
+  onBack
 }: SlideEditorProps) {
   const [localSpec, setLocalSpec] = useState(spec);
+  const currentTheme = useCurrentTheme();
 
   const updateSpec = (updates: Partial<SlideSpec>) => {
     const updated = { ...localSpec, ...updates };
@@ -1195,306 +1200,11 @@ export default function SlideEditor({
               <HiEye className="w-5 h-5 text-blue-500" />
               Live Preview
             </h3>
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 aspect-video border border-gray-200">
-              <div className="h-full flex flex-col">
-                <h4 className="text-lg font-bold text-gray-900 text-center mb-4 truncate">
-                  {localSpec.title || 'Slide Title'}
-                </h4>
-                <div className="flex-1 text-sm text-gray-700 overflow-hidden">
-                  {localSpec.layout === 'title' && (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-gray-500">
-                        <HiSparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">Title-only slide</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'title-bullets' && (
-                    <div className="space-y-2">
-                      {(localSpec.bullets || []).slice(0, 5).map((bullet, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <div className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                          <span className="text-xs leading-relaxed truncate">{bullet}</span>
-                        </div>
-                      ))}
-                      {(localSpec.bullets || []).length > 5 && (
-                        <div className="text-xs text-gray-500 italic">
-                          +{(localSpec.bullets || []).length - 5} more items...
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'title-paragraph' && (
-                    <div className="space-y-3">
-                      {localSpec.paragraph && (
-                        <p className="text-xs leading-relaxed line-clamp-8">
-                          {localSpec.paragraph}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'two-column' && (
-                    <div className="grid grid-cols-2 gap-4 text-xs h-full">
-                      <div className="space-y-2">
-                        <div className="font-medium text-blue-600">{localSpec.left?.heading || 'Left Column'}</div>
-                        {localSpec.left?.paragraph && (
-                          <p className="line-clamp-3 text-xs">{localSpec.left.paragraph}</p>
-                        )}
-                        {localSpec.left?.bullets && (
-                          <div className="space-y-1">
-                            {localSpec.left.bullets.slice(0, 3).map((bullet, index) => (
-                              <div key={index} className="flex items-start gap-1">
-                                <div className="w-0.5 h-0.5 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />
-                                <span className="truncate text-xs">{bullet}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="font-medium text-green-600">{localSpec.right?.heading || 'Right Column'}</div>
-                        {localSpec.right?.paragraph && (
-                          <p className="line-clamp-3 text-xs">{localSpec.right.paragraph}</p>
-                        )}
-                        {localSpec.right?.bullets && (
-                          <div className="space-y-1">
-                            {localSpec.right.bullets.slice(0, 3).map((bullet, index) => (
-                              <div key={index} className="flex items-start gap-1">
-                                <div className="w-0.5 h-0.5 bg-green-500 rounded-full mt-1.5 flex-shrink-0" />
-                                <span className="truncate text-xs">{bullet}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'problem-solution' && (
-                    <div className="grid grid-cols-2 gap-3 text-xs h-full">
-                      <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                        <div className="font-medium text-red-700 mb-2">{localSpec.left?.heading || 'Problem'}</div>
-                        {localSpec.left?.paragraph && (
-                          <p className="line-clamp-2 text-red-600 mb-2">{localSpec.left.paragraph}</p>
-                        )}
-                        {localSpec.left?.bullets && (
-                          <div className="space-y-1">
-                            {localSpec.left.bullets.slice(0, 2).map((bullet, index) => (
-                              <div key={index} className="flex items-start gap-1">
-                                <div className="w-0.5 h-0.5 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />
-                                <span className="truncate text-red-600">{bullet}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                        <div className="font-medium text-green-700 mb-2">{localSpec.right?.heading || 'Solution'}</div>
-                        {localSpec.right?.paragraph && (
-                          <p className="line-clamp-2 text-green-600 mb-2">{localSpec.right.paragraph}</p>
-                        )}
-                        {localSpec.right?.bullets && (
-                          <div className="space-y-1">
-                            {localSpec.right.bullets.slice(0, 2).map((bullet, index) => (
-                              <div key={index} className="flex items-start gap-1">
-                                <div className="w-0.5 h-0.5 bg-green-500 rounded-full mt-1.5 flex-shrink-0" />
-                                <span className="truncate text-green-600">{bullet}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'comparison-table' && (
-                    <div className="space-y-2">
-                      {localSpec.comparisonTable && (
-                        <div className="overflow-hidden rounded border border-gray-300">
-                          <table className="w-full text-xs">
-                            <thead className="bg-blue-50">
-                              <tr>
-                                {localSpec.comparisonTable.headers?.slice(0, 3).map((header, index) => (
-                                  <th key={index} className="px-2 py-1 text-left font-medium text-blue-700 border-b border-blue-200">
-                                    {header}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {localSpec.comparisonTable.rows?.slice(0, 3).map((row, rowIndex) => (
-                                <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                  {row.slice(0, 3).map((cell, cellIndex) => (
-                                    <td key={cellIndex} className="px-2 py-1 text-gray-700 border-b border-gray-200 truncate">
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'mixed-content' && (
-                    <div className="space-y-3 h-full">
-                      {localSpec.paragraph && (
-                        <p className="text-xs leading-relaxed line-clamp-2 bg-blue-50 p-2 rounded">
-                          {localSpec.paragraph}
-                        </p>
-                      )}
-                      <div className="grid grid-cols-2 gap-3 text-xs flex-1">
-                        <div className="space-y-2">
-                          <div className="font-medium text-indigo-600">{localSpec.left?.heading || 'Left Section'}</div>
-                          {localSpec.left?.paragraph && (
-                            <p className="line-clamp-2 text-xs">{localSpec.left.paragraph}</p>
-                          )}
-                          {localSpec.left?.bullets && (
-                            <div className="space-y-1">
-                              {localSpec.left.bullets.slice(0, 2).map((bullet, index) => (
-                                <div key={index} className="flex items-start gap-1">
-                                  <div className="w-0.5 h-0.5 bg-indigo-500 rounded-full mt-1.5 flex-shrink-0" />
-                                  <span className="truncate text-xs">{bullet}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <div className="font-medium text-purple-600">{localSpec.right?.heading || 'Right Section'}</div>
-                          {localSpec.right?.paragraph && (
-                            <p className="line-clamp-2 text-xs">{localSpec.right.paragraph}</p>
-                          )}
-                          {localSpec.right?.bullets && (
-                            <div className="space-y-1">
-                              {localSpec.right.bullets.slice(0, 2).map((bullet, index) => (
-                                <div key={index} className="flex items-start gap-1">
-                                  <div className="w-0.5 h-0.5 bg-purple-500 rounded-full mt-1.5 flex-shrink-0" />
-                                  <span className="truncate text-xs">{bullet}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'quote' && (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <div className="text-2xl text-gray-400 mb-2">"</div>
-                        <p className="text-xs italic text-gray-600 line-clamp-3">
-                          {localSpec.bullets?.[0] || 'Quote text will appear here'}
-                        </p>
-                        <div className="text-2xl text-gray-400 mt-2">"</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'chart' && (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-gray-500">
-                        <div className="w-16 h-12 mx-auto mb-2 bg-blue-100 rounded flex items-center justify-center">
-                          <div className="w-8 h-8 bg-blue-300 rounded"></div>
-                        </div>
-                        <p className="text-xs">{localSpec.chart?.title || 'Chart'}</p>
-                        <p className="text-xs opacity-75">{localSpec.chart?.type || 'bar'} chart</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'timeline' && (
-                    <div className="space-y-2 h-full overflow-y-auto">
-                      {localSpec.paragraph && (
-                        <p className="text-xs leading-relaxed line-clamp-2 bg-blue-50 p-2 rounded mb-2">
-                          {localSpec.paragraph}
-                        </p>
-                      )}
-                      {(localSpec.timeline || []).slice(0, 4).map((item, index) => (
-                        <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium text-blue-700">{item.date}</span>
-                              {item.milestone && (
-                                <span className="w-1 h-1 bg-yellow-500 rounded-full" />
-                              )}
-                            </div>
-                            <p className="text-xs font-medium truncate">{item.title}</p>
-                            {item.description && (
-                              <p className="text-xs text-gray-600 line-clamp-1">{item.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {(localSpec.timeline || []).length > 4 && (
-                        <div className="text-xs text-gray-500 italic text-center">
-                          +{(localSpec.timeline || []).length - 4} more events...
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {localSpec.layout === 'process-flow' && (
-                    <div className="space-y-2 h-full overflow-y-auto">
-                      {localSpec.paragraph && (
-                        <p className="text-xs leading-relaxed line-clamp-2 bg-blue-50 p-2 rounded mb-2">
-                          {localSpec.paragraph}
-                        </p>
-                      )}
-                      {(localSpec.processSteps || []).slice(0, 4).map((step, index) => (
-                        <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
-                          <div className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">{step.title}</p>
-                            {step.description && (
-                              <p className="text-xs text-gray-600 line-clamp-2">{step.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {(localSpec.processSteps || []).length > 4 && (
-                        <div className="text-xs text-gray-500 italic text-center">
-                          +{(localSpec.processSteps || []).length - 4} more steps...
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Fallback for other layouts */}
-                  {!['title', 'title-bullets', 'title-paragraph', 'two-column', 'problem-solution', 'comparison-table', 'mixed-content', 'quote', 'chart', 'timeline', 'process-flow'].includes(localSpec.layout) && (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-gray-500">
-                        <HiDocumentText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs font-medium">{localSpec.layout} layout</p>
-                        <p className="text-xs opacity-75">Content will be displayed in final presentation</p>
-                        {localSpec.paragraph && (
-                          <p className="text-xs mt-2 line-clamp-2 bg-gray-50 p-2 rounded">{localSpec.paragraph}</p>
-                        )}
-                        {localSpec.bullets && localSpec.bullets.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {localSpec.bullets.slice(0, 3).map((bullet, index) => (
-                              <div key={index} className="flex items-start gap-1 text-xs">
-                                <div className="w-1 h-1 bg-gray-400 rounded-full mt-1.5 flex-shrink-0" />
-                                <span className="truncate">{bullet}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <SlidePreview
+              spec={localSpec}
+              theme={currentTheme}
+              className="w-full shadow-lg"
+            />
           </div>
         </motion.div>
       </div>

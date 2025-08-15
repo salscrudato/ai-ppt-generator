@@ -112,14 +112,22 @@ functions/test-outputs/
 functions/*.pptx
 test-modern-api.pptx
 
-# AI Agent optimization patterns
+# AI agent optimization patterns
 *.md.backup
 *.md.old
 *-backup.*
 *-old.*
 *-temp.*
+*-tmp.*
 benchmark-*.json
 performance-*.json
+optimization-*.md
+summary-*.md
+
+# Code review and analysis files
+code-review/*.txt
+*.analysis
+*.review
 
 # Environment variables
 .env.local

@@ -175,13 +175,37 @@ export default function DraggableSlideList({
     announcement.setAttribute('aria-atomic', 'true');
     announcement.setAttribute('class', 'sr-only');
     announcement.textContent = message;
-    
+
     document.body.appendChild(announcement);
-    
+
     // Remove after announcement
     setTimeout(() => {
       document.body.removeChild(announcement);
     }, 1000);
+  };
+
+  // Keyboard shortcuts and touch fallback for moving slides
+  const handleKeyboardReorder = (slideId: string, direction: 'up' | 'down') => {
+    const currentIndex = slides.findIndex(slide => slide.id === slideId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    // Check bounds
+    if (newIndex < 0 || newIndex >= slides.length) return;
+
+    const newSlides = arrayMove(slides, currentIndex, newIndex);
+    onSlidesReorder(newSlides);
+
+    // Announce the move
+    const slide = slides[currentIndex];
+    const announcement = `Moved slide "${slide.title}" ${direction} to position ${newIndex + 1}`;
+    announceToScreenReader(announcement);
+  };
+
+  // Touch device detection
+  const isTouchDevice = () => {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   };
 
   if (loading) {
@@ -260,6 +284,7 @@ export default function DraggableSlideList({
                     onDuplicate={onSlideDuplicate}
                     onDelete={onSlideDelete}
                     onPreview={onSlidePreview}
+                    onMove={handleKeyboardReorder}
                   />
                 </motion.li>
               ))}

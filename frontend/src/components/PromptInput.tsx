@@ -1,22 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import type { GenerationParams, SlideSpec } from '../types';
+import type { GenerationParams } from '../types';
 import {
   HiPencilSquare,
-
   HiExclamationTriangle,
   HiSparkles,
   HiUsers,
   HiChatBubbleLeftRight,
   HiPhoto,
   HiRectangleStack,
-  HiEye,
-  HiEyeSlash
+  HiDocumentText,
+  HiBriefcase
 } from 'react-icons/hi2';
-import clsx from 'clsx';
+
 import ThemeGallery from './ThemeGallery';
-import LiveSlidePreview from './LiveSlidePreview';
 import LoadingButton from './LoadingButton';
+
+// Import validation components
+// import { useFormValidation, useValidatedSubmit } from '../hooks/useFormValidation';
+// import { ValidatedTextarea, ValidatedSelect } from './form/ValidatedInput';
+// import { ValidationSummary } from './form/ValidationMessage';
+import {
+  AUDIENCE_OPTIONS,
+  TONE_OPTIONS,
+  CONTENT_LENGTH_OPTIONS,
+  PRESENTATION_TYPE_OPTIONS
+} from '../validation/clientSchema';
 
 interface PromptInputProps {
   params: GenerationParams;
@@ -34,9 +43,25 @@ export default function PromptInput({
   onGenerate
 }: PromptInputProps) {
   const [localParams, setLocalParams] = useState(params);
-  const [charCount, setCharCount] = useState(params.prompt.length);
-  const [showLivePreview, setShowLivePreview] = useState(true);
-  const [enablePreviewEditing, setEnablePreviewEditing] = useState(false);
+
+  // Form validation state
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+
+  // Simplified validation for deployment
+  const validateForm = (params: GenerationParams) => {
+    const errors: Record<string, string> = {};
+
+    if (!params.prompt || params.prompt.trim().length < 10) {
+      errors.prompt = 'Prompt must be at least 10 characters';
+    }
+    if (params.prompt && params.prompt.length > 2000) {
+      errors.prompt = 'Prompt must be under 2000 characters';
+    }
+
+    setValidationErrors(errors);
+    return { success: Object.keys(errors).length === 0, data: params, fieldErrors: errors };
+  };
 
   const updateParam = <K extends keyof GenerationParams>(
     key: K,
@@ -45,48 +70,63 @@ export default function PromptInput({
     const updated = { ...localParams, [key]: value };
     setLocalParams(updated);
     onParamsChange(updated);
+
+    // Mark field as touched
+    setTouchedFields(prev => new Set(prev).add(key as string));
+
+    // Validate the form after a short delay
+    setTimeout(() => {
+      validateForm(updated);
+    }, 100);
   };
+
+  // Remove the automatic validation useEffect to prevent infinite loops
+  // Validation will happen on field changes and form submission
 
 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Only proceed if this is an explicit form submission
-    if (localParams.prompt.trim()) {
-      onGenerate(localParams);
+
+    // Ensure all required fields have defaults
+    const paramsWithDefaults = {
+      ...localParams,
+      audience: localParams.audience || 'general',
+      tone: localParams.tone || 'professional',
+      contentLength: localParams.contentLength || 'moderate',
+      presentationType: localParams.presentationType || 'general',
+      industry: localParams.industry || 'general',
+      withImage: localParams.withImage || false,
+      imageStyle: localParams.imageStyle || 'professional',
+      qualityLevel: localParams.qualityLevel || 'standard',
+      includeNotes: localParams.includeNotes || false,
+      includeSources: localParams.includeSources || false
+    };
+
+    // Validate the form before submission
+    const validationResult = validateForm(paramsWithDefaults);
+
+    if (validationResult.success && validationResult.data) {
+      console.log('Sending validated data:', validationResult.data);
+      onGenerate(validationResult.data);
+    } else {
+      console.log('Form validation failed:', validationResult.fieldErrors);
+      // Mark all fields as touched to show errors
+      setTouchedFields(new Set(Object.keys(paramsWithDefaults)));
     }
   };
 
-  const handleGenerateClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (localParams.prompt.trim()) {
-      onGenerate(localParams);
-    }
-  };
+  // Check if form can be submitted
+  const canSubmit = !loading && localParams.prompt.trim().length >= 10 && Object.keys(validationErrors).length === 0;
 
-  const handlePreviewContentEdit = (updatedSpec: Partial<SlideSpec>) => {
-    // When content is edited in preview, we could update the params
-    // For now, we'll just log it - in a full implementation, you might want to
-    // sync this back to the form or store it separately
-    console.log('Preview content edited:', updatedSpec);
-  };
-
-  // Prevent accidental form submission from select elements
-  const handleSelectKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
-
-  // Handle textarea key events - only prevent form submission on Ctrl+Enter
-  const handleTextareaKeyDown = (e: React.KeyboardEvent) => {
+  // Handle keyboard shortcuts for form submission
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       e.stopPropagation();
-      // Optionally trigger generation on Ctrl+Enter
-      if (localParams.prompt.trim()) {
-        handleGenerateClick(e as any);
+      // Trigger form submission on Ctrl+Enter if valid
+      if (canSubmit) {
+        handleSubmit(e);
       }
     }
   };
@@ -114,71 +154,38 @@ export default function PromptInput({
           Tell us what you want to present, and we'll help you create a professional slide with AI assistance.
         </p>
 
-        {/* Live Preview Controls */}
-        <div className="flex items-center justify-center gap-3 mt-4">
-          <button
-            type="button"
-            onClick={() => setShowLivePreview(!showLivePreview)}
-            className={clsx(
-              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-              showLivePreview
-                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            )}
-          >
-            {showLivePreview ? <HiEye className="w-4 h-4" /> : <HiEyeSlash className="w-4 h-4" />}
-            {showLivePreview ? 'Hide Live Preview' : 'Show Live Preview'}
-          </button>
 
-          {showLivePreview && (
-            <button
-              type="button"
-              onClick={() => setEnablePreviewEditing(!enablePreviewEditing)}
-              className={clsx(
-                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                enablePreviewEditing
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              )}
-            >
-              <HiPencilSquare className="w-4 h-4" />
-              {enablePreviewEditing ? 'Editing Enabled' : 'Enable Editing'}
-            </button>
-          )}
-        </div>
       </motion.div>
 
-      {/* Two-Column Layout */}
-      <div className={clsx(
-        'flex flex-col lg:flex-row min-h-[calc(100vh-200px)]',
-        showLivePreview ? 'lg:grid lg:grid-cols-2' : ''
-      )}>
-        {/* Left Column - Input Form */}
-        <div className={clsx(
-          'flex-1 p-6 lg:p-10 overflow-y-auto',
-          showLivePreview ? 'lg:border-r lg:border-gray-200' : 'max-w-4xl mx-auto'
-        )}>
-          <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto lg:max-w-none">
-        {/* Enhanced Main Prompt */}
+      {/* Main Content - Full Width */}
+      <div className="min-h-[calc(100vh-200px)]">
+        {/* Input Form - Full Width */}
+        <div className="p-4 sm:p-6 lg:p-10 overflow-y-auto max-w-6xl mx-auto">
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={handleKeyDown}
+            className="space-y-6 sm:space-y-8"
+            role="form"
+            aria-label="Presentation generation form"
+            noValidate
+          >
+        {/* Enhanced Main Prompt with Validation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="space-y-4"
         >
-          <label htmlFor="prompt" className="block text-lg font-bold text-slate-900 mb-2">
-            What would you like to present about?
-          </label>
-          <div className="relative">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiPencilSquare className="w-5 h-5" />
+              What would you like to present about? *
+            </label>
             <textarea
-              id="prompt"
+              name="prompt"
               value={localParams.prompt}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setCharCount(newValue.length);
-                updateParam('prompt', newValue);
-              }}
-              onKeyDown={handleTextareaKeyDown}
+              onChange={(e) => updateParam('prompt', e.target.value)}
+              onBlur={() => setTouchedFields(prev => new Set(prev).add('prompt'))}
               placeholder="Describe your presentation topic here...
 
 • Include specific data and metrics
@@ -188,86 +195,194 @@ export default function PromptInput({
 
 Example: Quarterly sales results showing 25% growth, key challenges in Q3, and strategic initiatives for Q4..."
               rows={5}
+              maxLength={2000}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-lg ${
+                touchedFields.has('prompt') && validationErrors.prompt ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
               required
-              maxLength={1000}
-              className={clsx(
-                'input resize-none text-lg leading-relaxed pr-20 py-4 min-h-[140px]',
-                charCount > 800 && 'border-amber-300 focus:border-amber-500 focus:ring-amber-500',
-                charCount >= 1000 && 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              )}
             />
-            <div className={clsx(
-              'absolute bottom-4 right-4 text-sm font-semibold px-2 py-1 rounded-lg',
-              charCount < 800 ? 'text-slate-400 bg-slate-100' :
-              charCount < 1000 ? 'text-amber-600 bg-amber-100' : 'text-red-600 bg-red-100'
-            )}>
-              {charCount}/1000
-            </div>
-
-            {/* Character count indicator */}
-            <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
-              <motion.div
-                className={clsx(
-                  'h-1 rounded-full transition-colors',
-                  charCount < 800 ? 'bg-primary-500' :
-                  charCount < 1000 ? 'bg-warning-500' : 'bg-error-500'
-                )}
-                initial={{ width: 0 }}
-                animate={{ width: `${(charCount / 1000) * 100}%` }}
-                transition={{ duration: 0.3 }}
-              />
+            {touchedFields.has('prompt') && validationErrors.prompt && (
+              <p className="text-sm text-red-600">{validationErrors.prompt}</p>
+            )}
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-gray-500">Provide a detailed description of your presentation topic (10-2000 characters)</p>
+              <span className="text-xs text-gray-400">{localParams.prompt.length}/2000</span>
             </div>
           </div>
         </motion.div>
 
-        {/* Parameters Grid */}
+        {/* Parameters Grid with Validation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
         >
           {/* Audience Selection */}
-          <div className="space-y-3">
-            <label htmlFor="audience" className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <HiUsers className="w-4 h-4 text-primary-500" />
-              Target Audience
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiUsers className="w-4 h-4" />
+              Target Audience *
             </label>
             <select
-              id="audience"
+              name="audience"
               value={localParams.audience || 'general'}
               onChange={(e) => updateParam('audience', e.target.value as any)}
-              onKeyDown={handleSelectKeyDown}
-              className="input"
+              onBlur={() => setTouchedFields(prev => new Set(prev).add('audience'))}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                touchedFields.has('audience') && validationErrors.audience ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+              required
             >
-              <option value="general">General Audience</option>
-              <option value="executives">Executives</option>
-              <option value="technical">Technical Team</option>
-              <option value="sales">Sales Team</option>
-              <option value="investors">Investors</option>
-              <option value="students">Students</option>
+              {AUDIENCE_OPTIONS.map(type => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
             </select>
+            {touchedFields.has('audience') && validationErrors.audience && (
+              <p className="text-sm text-red-600">{validationErrors.audience}</p>
+            )}
+            <p className="text-xs text-gray-500">Who will be viewing this presentation?</p>
           </div>
 
           {/* Tone Selection */}
-          <div className="space-y-3">
-            <label htmlFor="tone" className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <HiChatBubbleLeftRight className="w-4 h-4 text-primary-500" />
-              Presentation Tone
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiChatBubbleLeftRight className="w-4 h-4" />
+              Presentation Tone *
             </label>
             <select
-              id="tone"
+              name="tone"
               value={localParams.tone || 'professional'}
               onChange={(e) => updateParam('tone', e.target.value as any)}
-              onKeyDown={handleSelectKeyDown}
-              className="input"
+              onBlur={() => setTouchedFields(prev => new Set(prev).add('tone'))}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                touchedFields.has('tone') && validationErrors.tone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+              required
             >
-              <option value="professional">Professional</option>
-              <option value="casual">Casual</option>
-              <option value="persuasive">Persuasive</option>
-              <option value="educational">Educational</option>
-              <option value="inspiring">Inspiring</option>
+              {TONE_OPTIONS.map(type => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
             </select>
+            {touchedFields.has('tone') && validationErrors.tone && (
+              <p className="text-sm text-red-600">{validationErrors.tone}</p>
+            )}
+            <p className="text-xs text-gray-500">What tone should the content have?</p>
+          </div>
+
+          {/* Content Length Selection */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiDocumentText className="w-4 h-4" />
+              Content Length *
+            </label>
+            <select
+              name="contentLength"
+              value={localParams.contentLength || 'moderate'}
+              onChange={(e) => updateParam('contentLength', e.target.value as any)}
+              onBlur={() => setTouchedFields(prev => new Set(prev).add('contentLength'))}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                touchedFields.has('contentLength') && validationErrors.contentLength ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+              required
+            >
+              {CONTENT_LENGTH_OPTIONS.map(type => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
+            </select>
+            {touchedFields.has('contentLength') && validationErrors.contentLength && (
+              <p className="text-sm text-red-600">{validationErrors.contentLength}</p>
+            )}
+            <p className="text-xs text-gray-500">How detailed should the content be?</p>
+          </div>
+
+          {/* Presentation Type Selection */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiBriefcase className="w-4 h-4" />
+              Presentation Type *
+            </label>
+            <select
+              name="presentationType"
+              value={localParams.presentationType || 'general'}
+              onChange={(e) => updateParam('presentationType', e.target.value as any)}
+              onBlur={() => setTouchedFields(prev => new Set(prev).add('presentationType'))}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                touchedFields.has('presentationType') && validationErrors.presentationType ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+              required
+            >
+              {PRESENTATION_TYPE_OPTIONS.map(type => (
+                <option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
+            </select>
+            {touchedFields.has('presentationType') && validationErrors.presentationType && (
+              <p className="text-sm text-red-600">{validationErrors.presentationType}</p>
+            )}
+            <p className="text-xs text-gray-500">What type of presentation is this?</p>
+          </div>
+        </motion.div>
+
+        {/* Theme Selection */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="space-y-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg">
+              <HiRectangleStack className="w-5 h-5 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">Choose Theme</h3>
+          </div>
+
+          <ThemeGallery
+            selectedId={localParams.design?.theme}
+            onSelect={(themeId) => updateParam('design', { ...localParams.design, theme: themeId })}
+            compact={true}
+            showCategories={false}
+            enablePreview={true}
+            showPreviewButton={true}
+            title=""
+          />
+        </motion.div>
+
+        {/* Additional Parameters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
+        >
+          {/* Industry Selection */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiBriefcase className="w-4 h-4" />
+              Industry Context
+            </label>
+            <select
+              name="industry"
+              value={localParams.industry || 'general'}
+              onChange={(e) => updateParam('industry', e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="general">General</option>
+              <option value="technology">Technology</option>
+              <option value="healthcare">Healthcare</option>
+              <option value="finance">Finance</option>
+              <option value="education">Education</option>
+              <option value="marketing">Marketing</option>
+            </select>
+            <p className="text-xs text-gray-500">What industry context should be considered?</p>
           </div>
         </motion.div>
 
@@ -276,36 +391,28 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
         >
           {/* Layout Selection */}
-          <div className="space-y-3">
-            <label htmlFor="layout" className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <HiRectangleStack className="w-4 h-4 text-primary-500" />
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiRectangleStack className="w-4 h-4" />
               Slide Layout
             </label>
             <select
-              id="layout"
+              name="layout"
               value={localParams.layout || ''}
               onChange={(e) => updateParam('layout', e.target.value as any)}
-              onKeyDown={handleSelectKeyDown}
-              className="input"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="">Auto-select (Recommended)</option>
-              <option value="title">Title Only</option>
-              <option value="title-bullets">Title with Bullet Points</option>
+              <option value="title-bullets">Title with Bullets</option>
               <option value="title-paragraph">Title with Paragraph</option>
-              <option value="two-column">Two Column Layout</option>
-              <option value="image-right">Image on Right</option>
-              <option value="image-left">Image on Left</option>
-              <option value="quote">Quote/Testimonial</option>
-              <option value="chart">Chart/Data Visualization</option>
-              <option value="timeline">Timeline</option>
-              <option value="process-flow">Process Flow</option>
-              <option value="comparison-table">Comparison Table</option>
-              <option value="before-after">Before & After</option>
-              <option value="problem-solution">Problem & Solution</option>
+              <option value="two-column">Two Column</option>
+              <option value="image-left">Image Left</option>
+              <option value="image-right">Image Right</option>
             </select>
+            <p className="text-xs text-gray-500">Choose a specific layout or let AI decide</p>
           </div>
 
           {/* AI Image Generation */}
@@ -330,10 +437,9 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
                   Automatically create a relevant image for your presentation using AI
                 </div>
               </label>
-              <HiSparkles className={clsx(
-                "w-5 h-5 transition-colors",
+              <HiSparkles className={`w-5 h-5 transition-colors ${
                 localParams.withImage ? "text-primary-500" : "text-gray-400"
-              )} />
+              }`} />
             </div>
             {localParams.withImage && (
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -346,20 +452,6 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           </div>
         </motion.div>
         {/* Enhanced Theme Gallery */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.35 }}
-          className="mt-8"
-        >
-          <ThemeGallery
-            selectedId={localParams.design?.theme}
-            onSelect={(themeId) => updateParam('design', { ...(localParams.design || {}), theme: themeId })}
-            title="Choose Your Theme"
-            showCategories={true}
-            compact={false}
-          />
-        </motion.div>
 
 
 
@@ -369,7 +461,15 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
 
 
 
-        {/* Error Message */}
+
+        {/* Validation Summary - Temporarily disabled for deployment */}
+        {/* <ValidationSummary
+          errors={validation.errors}
+          show={!validation.isValid && validation.isDirty}
+          title="Please fix the following errors before generating:"
+        /> */}
+
+        {/* API Error Message */}
         {error && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -382,47 +482,57 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           </motion.div>
         )}
 
-        {/* Enhanced Submit Button */}
+        {/* Enhanced Submit Button with Validation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
-          className="flex justify-center pt-8"
+          className="flex flex-col items-center gap-4 pt-8"
         >
           <LoadingButton
-            onClick={handleGenerateClick}
+            type="submit"
             loading={loading}
             loadingText="Generating Draft..."
-            disabled={!localParams.prompt.trim()}
+            disabled={!canSubmit}
             size="lg"
             variant="primary"
             icon={<HiSparkles className="w-6 h-6" />}
-            className="px-12 py-5 text-xl font-bold rounded-3xl shadow-xl hover:shadow-glow-lg"
+            className="px-8 sm:px-12 py-4 sm:py-5 text-lg sm:text-xl font-bold rounded-3xl shadow-xl hover:shadow-glow-lg focus:ring-4 focus:ring-indigo-300 min-h-[44px] touch-target"
+            aria-describedby="form-status"
+            aria-label={canSubmit ? "Generate presentation draft" : "Complete the form to generate draft"}
           >
             Generate Draft
           </LoadingButton>
+
+          {/* Form Status Indicator */}
+          <div id="form-status" className="text-center" role="status" aria-live="polite">
+            {localParams.prompt ? (
+              canSubmit ? (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Ready to generate
+                </div>
+              ) : Object.keys(validationErrors).length > 0 ? (
+                <div className="flex items-center gap-2 text-red-600 text-sm">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  Please fix validation errors
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-600 text-sm">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                  Prompt needs at least 10 characters
+                </div>
+              )
+            ) : (
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                Enter a prompt to get started
+              </div>
+            )}
+          </div>
         </motion.div>
           </form>
         </div>
-
-        {/* Right Column - Live Preview */}
-        {showLivePreview && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-            className="flex-1 bg-gray-50 lg:min-h-[calc(100vh-200px)]"
-          >
-            <LiveSlidePreview
-              params={localParams}
-              isVisible={showLivePreview}
-              editable={enablePreviewEditing}
-              onContentEdit={handlePreviewContentEdit}
-              theme={localParams.design?.theme || 'corporate-blue'}
-            />
-          </motion.div>
-        )}
       </div>
     </div>
   );

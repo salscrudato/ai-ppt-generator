@@ -6,7 +6,7 @@
  *
  * Production URLs (Firebase Hosting):
  * - API Base: https://us-central1-plsfixthx-ai.cloudfunctions.net/api
- * - Draft: https://us-central1-plsfixthx-ai.cloudfunctions.net/api/draft
+
  * - Generate: https://us-central1-plsfixthx-ai.cloudfunctions.net/api/generate
  * - Health: https://us-central1-plsfixthx-ai.cloudfunctions.net/api/health
  *

@@ -1,7 +1,7 @@
 # 🤖 AI Code Review Guide
 
 ## Overview
-This guide explains how to use the code combination scripts to generate a comprehensive code review document for AI analysis of the PowerPoint generation system.
+This guide explains how to use the optimized code combination scripts to generate comprehensive code review documents for AI analysis of the PowerPoint generation system. These tools are specifically designed for AI agent development and codebase understanding.
 
 ## 🚀 Quick Start
 
@@ -14,7 +14,7 @@ chmod +x generate-combined-code.sh
 ./generate-combined-code.sh
 ```
 
-This creates `./code-review/combined-ppt-code.txt` with all PowerPoint generation code in logical execution order.
+This creates `./code-review/combined-ppt-code.txt` with all PowerPoint generation code in logical execution order, optimized for AI consumption.
 
 ## 📁 Generated Files
 

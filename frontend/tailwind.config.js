@@ -7,6 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Enhanced primary color system
         primary: {
           50: '#eef2ff',
           100: '#e0e7ff',
@@ -19,6 +20,58 @@ export default {
           800: '#3730a3',
           900: '#312e81',
           950: '#1e1b4b',
+        },
+
+        // Theme-specific color palettes
+        corporate: {
+          primary: '#1e40af',
+          secondary: '#64748b',
+          accent: '#0ea5e9',
+          background: '#ffffff',
+          surface: '#f8fafc',
+          text: '#1e293b',
+          muted: '#64748b',
+          border: '#e2e8f0',
+        },
+        creative: {
+          primary: '#7c3aed',
+          secondary: '#ec4899',
+          accent: '#f59e0b',
+          background: '#fefefe',
+          surface: '#faf5ff',
+          text: '#1f2937',
+          muted: '#6b7280',
+          border: '#e5e7eb',
+        },
+        academic: {
+          primary: '#059669',
+          secondary: '#0f766e',
+          accent: '#0891b2',
+          background: '#ffffff',
+          surface: '#f0fdf4',
+          text: '#064e3b',
+          muted: '#6b7280',
+          border: '#d1fae5',
+        },
+        startup: {
+          primary: '#dc2626',
+          secondary: '#ea580c',
+          accent: '#7c2d12',
+          background: '#ffffff',
+          surface: '#fef2f2',
+          text: '#1f2937',
+          muted: '#6b7280',
+          border: '#fecaca',
+        },
+        technology: {
+          primary: '#0f172a',
+          secondary: '#334155',
+          accent: '#06b6d4',
+          background: '#ffffff',
+          surface: '#f8fafc',
+          text: '#0f172a',
+          muted: '#64748b',
+          border: '#e2e8f0',
         },
         slate: {
           50: '#f8fafc',

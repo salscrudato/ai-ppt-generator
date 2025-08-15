@@ -194,6 +194,8 @@ export function useLoadingState(options: UseLoadingStateOptions = {}) {
 
   return {
     ...state,
+    stages: stagesRef.current,
+    currentStageIndex: currentStageIndexRef.current,
     startLoading,
     nextStage,
     updateProgress,

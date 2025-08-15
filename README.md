@@ -15,11 +15,10 @@ The AI PowerPoint Generator is a cutting-edge web application that leverages Ope
 
 ## ✨ Key Features
 
-### **🎨 Intelligent 3-Step Workflow**
+### **🎨 Intelligent 2-Step Workflow**
 1. **📝 Input & Configuration** - Define your presentation with smart parameters
-2. **👁️ AI Preview & Review** - Examine AI-generated content before committing
-3. **✏️ Edit & Customize** - Fine-tune every detail to match your vision
-4. **📥 Generate & Download** - Receive professional PowerPoint files instantly
+2. **✏️ Edit & Customize** - Fine-tune every detail to match your vision
+3. **📥 Generate & Download** - Receive professional PowerPoint files instantly
 
 ### **🧠 Advanced AI Capabilities**
 - **Multi-Step AI Processing**: Content → Layout → Images → Refinement pipeline
@@ -185,11 +184,10 @@ OPENAI_API_KEY=your_openai_api_key_here
    - **Moderate**: Balanced detail with supporting information
    - **Comprehensive**: Detailed analysis with examples and context
 
-#### **Step 2: AI Preview & Review**
-- 🤖 **AI Processing**: Multi-step content generation pipeline
-- 👁️ **Content Review**: Examine AI-generated title, layout, and content
-- ✅ **Quality Check**: Verify accuracy and relevance
-- 🔄 **Iteration Option**: Regenerate if needed
+#### **Step 2: Edit & Customize**
+- ✏️ **Direct Editing**: Modify title, content, and layout
+- 🎨 **Style Customization**: Adjust themes and visual elements
+- 📝 **Content Refinement**: Fine-tune bullet points and descriptions
 
 #### **Step 3: Edit & Customize**
 - ✏️ **Content Editing**: Modify title, bullets, paragraphs
@@ -222,42 +220,9 @@ curl http://localhost:5001/plsfixthx-ai/us-central1/api/health
 }
 ```
 
-#### **`POST /draft`** - Generate Slide Draft
-Creates AI-generated slide content for preview and editing.
 
-**Request:**
-```json
-{
-  "prompt": "Quarterly sales results showing 25% growth with key achievements",
-  "audience": "executives",
-  "tone": "professional",
-  "contentLength": "moderate",
-  "withImage": false,
-  "design": {
-    "theme": "corporate-blue",
-    "brand": {
-      "primary": "#3b82f6",
-      "secondary": "#64748b"
-    }
-  }
-}
-```
 
-**Response:**
-```json
-{
-  "title": "Q3 Sales Results",
-  "layout": "title-bullets",
-  "bullets": [
-    "25% revenue growth year-over-year",
-    "Exceeded targets in all key markets",
-    "Strong customer acquisition metrics",
-    "Positive outlook for Q4"
-  ],
-  "notes": "Emphasize the consistent growth trend...",
-  "sources": ["Internal sales data", "Market analysis"]
-}
-```
+
 
 #### **`POST /generate`** - Create PowerPoint File
 Generates final .pptx file from slide specification.
@@ -363,7 +328,7 @@ cd frontend && npm run test:watch
 ## 🤖 AI Agent Development Guide
 
 ### **🎯 Optimized for AI Collaboration**
-This codebase is specifically designed for AI agent development and iteration:
+This codebase is specifically designed for AI agent development and iteration with a clean, professional structure:
 
 #### **Core Architecture Principles**
 - **Clean Structure**: Logical file organization with clear separation of concerns
@@ -371,6 +336,7 @@ This codebase is specifically designed for AI agent development and iteration:
 - **Comprehensive Documentation**: Every module includes detailed AI-readable comments
 - **Modular Design**: Single-responsibility modules for easy understanding and modification
 - **Consistent Patterns**: Standardized naming conventions and code patterns throughout
+- **Lean Repository**: Optimized structure with redundant files removed for better AI navigation
 
 #### **Key Files for AI Agents**
 - **`functions/src/index.ts`**: Main API endpoints and request handling
@@ -396,6 +362,12 @@ All AI prompts are centralized in `functions/src/prompts.ts`:
 3. **Make Changes**: Edit relevant files with proper TypeScript types
 4. **Test Changes**: Run tests and use `npm run dev` for live testing
 5. **Validate**: Ensure all tests pass and functionality works as expected
+
+#### **AI Agent Code Review Tools**
+- **Code Combination Script**: Use `./generate-combined-code.sh` to create comprehensive code review documents
+- **Structured Documentation**: All modules include detailed AI-readable comments
+- **Type Definitions**: Complete TypeScript interfaces for all data structures
+- **Clean Architecture**: Logical separation of concerns for easy understanding
 
 ## 🚀 Production Deployment
 

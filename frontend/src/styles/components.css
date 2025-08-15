@@ -1,0 +1,415 @@
+/**
+ * Reusable Component Styles
+ * 
+ * This file contains reusable component styles using Tailwind's @apply directive
+ * to maintain consistency across the application and make global style updates easier.
+ * 
+ * Organization:
+ * - Base Components (cards, buttons, inputs)
+ * - Layout Components (containers, grids)
+ * - Interactive Components (modals, dropdowns)
+ * - Theme-specific Components
+ * - Responsive Utilities
+ * 
+ * @version 1.0.0
+ */
+
+/* ===== BASE COMPONENTS ===== */
+
+/* Card Components */
+.card-default {
+  @apply bg-white rounded-xl shadow-soft border border-slate-200 transition-all duration-200;
+}
+
+.card-default:hover {
+  @apply shadow-medium border-slate-300 transform translate-y-[-1px];
+}
+
+.card-elevated {
+  @apply bg-white rounded-xl shadow-medium border border-slate-200 transition-all duration-300;
+}
+
+.card-elevated:hover {
+  @apply shadow-large border-slate-300 transform translate-y-[-2px];
+}
+
+.card-interactive {
+  @apply card-default cursor-pointer select-none;
+}
+
+.card-interactive:hover {
+  @apply shadow-medium border-primary-300 bg-primary-50/30;
+}
+
+.card-interactive:active {
+  @apply transform translate-y-0 shadow-soft;
+}
+
+.card-theme {
+  @apply card-interactive p-4 relative overflow-hidden;
+}
+
+.card-theme::before {
+  @apply absolute inset-0 bg-gradient-to-br opacity-5 transition-opacity duration-200;
+  content: '';
+}
+
+.card-theme:hover::before {
+  @apply opacity-10;
+}
+
+/* Button Components */
+.btn-base {
+  @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply btn-base bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm hover:shadow-md;
+}
+
+.btn-secondary {
+  @apply btn-base bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-500 border border-slate-300;
+}
+
+.btn-accent {
+  @apply btn-base bg-accent-600 text-white hover:bg-accent-700 focus:ring-accent-500 shadow-sm hover:shadow-md;
+}
+
+.btn-ghost {
+  @apply btn-base text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-500;
+}
+
+.btn-danger {
+  @apply btn-base bg-error-600 text-white hover:bg-error-700 focus:ring-error-500 shadow-sm hover:shadow-md;
+}
+
+.btn-success {
+  @apply btn-base bg-success-600 text-white hover:bg-success-700 focus:ring-success-500 shadow-sm hover:shadow-md;
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-base;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-xs;
+}
+
+.btn-icon {
+  @apply p-2 rounded-lg;
+}
+
+/* Input Components */
+.input-base {
+  @apply block w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+}
+
+.input-error {
+  @apply border-error-300 focus:ring-error-500 focus:border-error-500;
+}
+
+.input-success {
+  @apply border-success-300 focus:ring-success-500 focus:border-success-500;
+}
+
+.textarea-base {
+  @apply input-base resize-none;
+}
+
+.select-base {
+  @apply input-base cursor-pointer;
+}
+
+/* ===== LAYOUT COMPONENTS ===== */
+
+/* Container Components */
+.container-app {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.container-narrow {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.container-wide {
+  @apply max-w-full mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Grid Components */
+.grid-auto-fit {
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.grid-auto-fill {
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.grid-theme-gallery {
+  @apply grid gap-6;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* Flex Components */
+.flex-center {
+  @apply flex items-center justify-center;
+}
+
+.flex-between {
+  @apply flex items-center justify-between;
+}
+
+.flex-start {
+  @apply flex items-center justify-start;
+}
+
+.flex-end {
+  @apply flex items-center justify-end;
+}
+
+/* ===== INTERACTIVE COMPONENTS ===== */
+
+/* Modal Components */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-large max-w-lg w-full max-h-[90vh] overflow-hidden;
+}
+
+.modal-header {
+  @apply px-6 py-4 border-b border-slate-200 flex-between;
+}
+
+.modal-body {
+  @apply px-6 py-4 overflow-y-auto;
+}
+
+.modal-footer {
+  @apply px-6 py-4 border-t border-slate-200 flex justify-end gap-3;
+}
+
+/* Dropdown Components */
+.dropdown-menu {
+  @apply absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-large border border-slate-200 py-1 z-50;
+}
+
+.dropdown-item {
+  @apply block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors duration-150;
+}
+
+.dropdown-divider {
+  @apply border-t border-slate-200 my-1;
+}
+
+/* Notification Components */
+.notification-container {
+  @apply fixed top-4 right-4 z-50 space-y-2 max-w-sm;
+}
+
+.notification-card {
+  @apply bg-white border-l-4 rounded-lg shadow-medium p-4 transition-all duration-300 ease-in-out;
+}
+
+.notification-success {
+  @apply border-success-500;
+}
+
+.notification-error {
+  @apply border-error-500;
+}
+
+.notification-warning {
+  @apply border-warning-500;
+}
+
+.notification-info {
+  @apply border-primary-500;
+}
+
+/* ===== THEME-SPECIFIC COMPONENTS ===== */
+
+/* Corporate Theme */
+.theme-corporate .card-theme {
+  @apply border-corporate-border bg-corporate-surface;
+}
+
+.theme-corporate .btn-primary {
+  @apply bg-corporate-primary hover:bg-corporate-primary/90;
+}
+
+.theme-corporate .text-theme-primary {
+  @apply text-corporate-primary;
+}
+
+/* Creative Theme */
+.theme-creative .card-theme {
+  @apply border-creative-border bg-creative-surface;
+}
+
+.theme-creative .btn-primary {
+  @apply bg-creative-primary hover:bg-creative-primary/90;
+}
+
+.theme-creative .text-theme-primary {
+  @apply text-creative-primary;
+}
+
+/* Academic Theme */
+.theme-academic .card-theme {
+  @apply border-academic-border bg-academic-surface;
+}
+
+.theme-academic .btn-primary {
+  @apply bg-academic-primary hover:bg-academic-primary/90;
+}
+
+.theme-academic .text-theme-primary {
+  @apply text-academic-primary;
+}
+
+/* ===== RESPONSIVE UTILITIES ===== */
+
+/* Mobile-first responsive components */
+.responsive-grid {
+  @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+.responsive-flex {
+  @apply flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.responsive-text {
+  @apply text-sm sm:text-base lg:text-lg;
+}
+
+.responsive-padding {
+  @apply p-4 sm:p-6 lg:p-8;
+}
+
+.responsive-margin {
+  @apply m-4 sm:m-6 lg:m-8;
+}
+
+/* Mobile-specific utilities */
+.mobile-only {
+  @apply block sm:hidden;
+}
+
+.desktop-only {
+  @apply hidden sm:block;
+}
+
+.mobile-stack {
+  @apply flex flex-col sm:flex-row;
+}
+
+.mobile-full {
+  @apply w-full sm:w-auto;
+}
+
+/* Touch-friendly components for mobile */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px] flex-center;
+}
+
+.touch-button {
+  @apply btn-base touch-target;
+}
+
+/* ===== ANIMATION UTILITIES ===== */
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.animate-glow {
+  animation: glowPulse 2s ease-in-out infinite alternate;
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glowPulse {
+  from {
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(79, 70, 229, 0.6);
+  }
+}
+
+/* ===== ACCESSIBILITY UTILITIES ===== */
+
+.sr-only-focusable {
+  @apply sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black focus:border focus:border-black;
+}
+
+.focus-visible-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+}
+
+.high-contrast {
+  filter: contrast(1.25) saturate(1.25);
+}
+
+/* ===== PRINT UTILITIES ===== */
+
+@media print {
+  .print-hidden {
+    @apply hidden;
+  }
+  
+  .print-visible {
+    @apply block;
+  }
+  
+  .print-break-before {
+    page-break-before: always;
+  }
+  
+  .print-break-after {
+    page-break-after: always;
+  }
+}

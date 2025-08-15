@@ -28,6 +28,7 @@ if ! command -v firebase &> /dev/null; then
     npm install -g firebase-tools
 fi
 
+echo "📦 Installing dependencies..."
 echo "  → Frontend dependencies..."
 cd frontend && npm install && cd ..
 
@@ -50,4 +51,4 @@ echo ""
 echo "📋 Next steps:"
 echo "1. Add your OpenAI API key to functions/.env"
 echo "2. Run './start-dev.sh' to start development servers"
-echo "3. Open http://localhost:5174 in your browser"
+echo "3. Open http://localhost:5173 in your browser"

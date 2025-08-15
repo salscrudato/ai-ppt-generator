@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiCheck, HiSparkles, HiAdjustmentsHorizontal } from 'react-icons/hi2';
+import { HiCheck, HiSparkles, HiAdjustmentsHorizontal, HiEye } from 'react-icons/hi2';
 import { api } from '../utils/apiClient';
 import type { ProfessionalTheme } from '../themes/professionalThemes';
+import { useCurrentTheme } from '../contexts/ThemeContext';
 import clsx from 'clsx';
 
 interface ThemeGalleryProps {
@@ -11,6 +12,10 @@ interface ThemeGalleryProps {
   showCategories?: boolean;
   compact?: boolean;
   title?: string;
+  /** Enable instant preview on hover */
+  enablePreview?: boolean;
+  /** Show preview button on theme cards */
+  showPreviewButton?: boolean;
 }
 
 export default function ThemeGallery({
@@ -18,12 +23,17 @@ export default function ThemeGallery({
   selectedId,
   showCategories = true,
   compact = false,
-  title = "Choose Your Theme"
+  title = "Choose Your Theme",
+  enablePreview = true,
+  showPreviewButton = false
 }: ThemeGalleryProps) {
   const [themes, setThemes] = useState<ProfessionalTheme[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [previewThemeId, setPreviewThemeId] = useState<string | null>(null);
+
+  const currentTheme = useCurrentTheme();
 
   useEffect(() => {
     let mounted = true;
@@ -109,17 +119,25 @@ export default function ThemeGallery({
 
       {/* Category Filter */}
       {showCategories && categories.length > 2 && (
-        <div className="flex flex-wrap gap-2">
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Theme categories"
+        >
           {categories.map(category => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
               className={clsx(
-                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
                 selectedCategory === category
                   ? 'bg-indigo-600 text-white shadow-md'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               )}
+              role="tab"
+              aria-selected={selectedCategory === category}
+              aria-controls="theme-grid"
+              aria-label={`Filter themes by ${categoryNames[category] || category}`}
             >
               {categoryNames[category] || category}
             </button>
@@ -138,9 +156,11 @@ export default function ThemeGallery({
           className={clsx(
             'grid gap-4',
             compact
-              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+              ? 'grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
               : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
           )}
+          role="grid"
+          aria-label={`Available themes in ${selectedCategory} category`}
         >
           {filteredThemes.map(theme => (
             <ThemeCard
@@ -149,17 +169,34 @@ export default function ThemeGallery({
               selected={selectedId === theme.id}
               onSelect={onSelect}
               compact={compact}
+              enablePreview={enablePreview}
+              showPreviewButton={showPreviewButton}
+              onPreview={(themeId) => setPreviewThemeId(themeId)}
+              onPreviewEnd={() => setPreviewThemeId(null)}
+              isCurrentTheme={currentTheme.id === theme.id}
             />
           ))}
         </motion.div>
       </AnimatePresence>
 
       {filteredThemes.length === 0 && (
-        <div className="text-center py-8 text-slate-500">
+        <div className="text-center py-8 text-slate-500" role="status">
           <div className="text-lg font-medium">No themes found</div>
           <div className="text-sm">Try selecting a different category</div>
         </div>
       )}
+
+      {/* Live region for screen reader announcements */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        id="theme-announcements"
+      >
+        {selectedId && themes.find(t => t.id === selectedId) && (
+          `Selected theme: ${themes.find(t => t.id === selectedId)?.name}`
+        )}
+      </div>
     </div>
   );
 }
@@ -170,11 +207,26 @@ interface ThemeCardProps {
   selected: boolean;
   onSelect?: (themeId: string) => void;
   compact?: boolean;
+  enablePreview?: boolean;
+  showPreviewButton?: boolean;
+  onPreview?: (themeId: string) => void;
+  onPreviewEnd?: () => void;
+  isCurrentTheme?: boolean;
 }
 
-function ThemeCard({ theme, selected, onSelect, compact = false }: ThemeCardProps) {
+function ThemeCard({
+  theme,
+  selected,
+  onSelect,
+  compact = false,
+  enablePreview = false,
+  showPreviewButton = false,
+  onPreview,
+  onPreviewEnd,
+  isCurrentTheme = false
+}: ThemeCardProps) {
   return (
-    <motion.button
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{
@@ -185,13 +237,27 @@ function ThemeCard({ theme, selected, onSelect, compact = false }: ThemeCardProp
       }}
       whileTap={{ scale: 0.97 }}
       className={clsx(
-        'relative text-left rounded-xl border-2 shadow-sm transition-all duration-200 overflow-hidden group',
+        'relative text-left rounded-xl border-2 shadow-sm transition-all duration-200 overflow-hidden group cursor-pointer',
         selected
           ? 'border-indigo-500 ring-2 ring-indigo-200 shadow-lg'
+          : isCurrentTheme
+          ? 'border-green-500 ring-2 ring-green-200 shadow-lg'
           : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
       )}
       onClick={() => onSelect?.(theme.id)}
-      aria-label={`Select ${theme.name} theme`}
+      onMouseEnter={() => enablePreview && onPreview?.(theme.id)}
+      onMouseLeave={() => enablePreview && onPreviewEnd?.()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect?.(theme.id);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${selected ? 'Selected' : isCurrentTheme ? 'Current' : 'Select'} ${theme.name} theme. ${theme.description || ''}`}
+      aria-selected={selected}
+      aria-current={isCurrentTheme ? 'true' : undefined}
     >
       {/* Theme Preview */}
       <div
@@ -242,15 +308,44 @@ function ThemeCard({ theme, selected, onSelect, compact = false }: ThemeCardProp
           </div>
         </div>
 
-        {/* Selection indicator */}
+        {/* Selection and current theme indicators */}
         {selected && (
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute top-2 right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg"
+            className="absolute top-2 right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg z-10"
           >
             <HiCheck className="w-4 h-4 text-white" />
           </motion.div>
+        )}
+
+        {isCurrentTheme && !selected && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute top-2 right-2 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center shadow-lg z-10"
+          >
+            <HiCheck className="w-4 h-4 text-white" />
+          </motion.div>
+        )}
+
+        {/* Preview button */}
+        {showPreviewButton && !selected && !isCurrentTheme && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="absolute top-2 right-2 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview?.(theme.id);
+              setTimeout(() => onPreviewEnd?.(), 2000); // Auto-hide preview after 2s
+            }}
+            aria-label={`Preview ${theme.name} theme`}
+          >
+            <HiEye className="w-3 h-3 text-gray-600" />
+          </motion.button>
         )}
       </div>
 
@@ -263,11 +358,18 @@ function ThemeCard({ theme, selected, onSelect, compact = false }: ThemeCardProp
           )}>
             {theme.name}
           </div>
-          <div className={clsx(
-            'px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize flex-shrink-0 ml-2',
-            compact ? 'text-xs' : 'text-xs'
-          )}>
-            {theme.category}
+          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+            {isCurrentTheme && (
+              <div className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                Current
+              </div>
+            )}
+            <div className={clsx(
+              'px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize',
+              compact ? 'text-xs' : 'text-xs'
+            )}>
+              {theme.category}
+            </div>
           </div>
         </div>
 
@@ -280,7 +382,7 @@ function ThemeCard({ theme, selected, onSelect, compact = false }: ThemeCardProp
 
       {/* Hover effect overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
-    </motion.button>
+    </motion.div>
   );
 }
 

@@ -1,6 +1,6 @@
 import type { AppState } from '../types';
 import { motion } from 'framer-motion';
-import { HiPencilSquare, HiEye, HiPencil, HiArrowDownTray, HiCheck } from 'react-icons/hi2';
+import { HiPencilSquare, HiPencil, HiArrowDownTray, HiCheck } from 'react-icons/hi2';
 import clsx from 'clsx';
 
 interface StepIndicatorProps {
@@ -9,7 +9,6 @@ interface StepIndicatorProps {
 
 const steps = [
   { key: 'input', label: 'Input & Parameters', icon: HiPencilSquare, description: 'Describe your presentation' },
-  { key: 'preview', label: 'Preview Draft', icon: HiEye, description: 'Review AI-generated content' },
   { key: 'edit', label: 'Edit & Customize', icon: HiPencil, description: 'Fine-tune your slide' },
   { key: 'generate', label: 'Generate', icon: HiArrowDownTray, description: 'Download PowerPoint' }
 ];

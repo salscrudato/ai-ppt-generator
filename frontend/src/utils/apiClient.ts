@@ -299,16 +299,7 @@ export const api = {
   // Health check
   healthCheck: () => apiClient.healthCheck(),
 
-  // Draft generation with enhanced error context
-  generateDraft: async (params: any) => {
-    try {
-      const result = await apiClient.post('/draft', params);
-      return result;
-    } catch (error) {
-      console.error('Draft generation API error:', error);
-      throw new Error(`Draft generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
+
 
   // PowerPoint generation with enhanced error context
   generatePowerPoint: async (params: any) => {

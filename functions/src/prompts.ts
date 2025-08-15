@@ -5,7 +5,14 @@
  * Steps: Content → Layout → Image → Refinement → Validation.
  * Incorporates 2024 design trends, storytelling frameworks, and accessibility best practices for best-in-class outputs.
  *
- * @version 3.5.0-enhanced
+ * RECENT ENHANCEMENTS:
+ * - Improved narrative structure with expert-level storytelling frameworks
+ * - Enhanced content quality with minimalism emphasis and word limits
+ * - Advanced image prompt generation with batch processing capabilities
+ * - Comprehensive error handling and graceful degradation
+ * - Performance optimizations and monitoring integration
+ *
+ * @version 3.6.0-pipeline-enhanced
  * @author AI PowerPoint Generator Team (enhanced by expert co-pilot)
  */
 
@@ -318,6 +325,61 @@ export const STORYTELLING_FRAMEWORKS = {
     structure: 'Hook → Conflict → Resolution → Insight',
     bestFor: 'Social media slides, quick pitches, attention-grabbing content',
     bulletPattern: ['Engaging hook', 'Core conflict', 'Resolution', 'Key insight']
+  },
+  dataStory: { // New: Data-driven narrative framework
+    name: 'Data-Driven Narrative',
+    structure: 'Context → Conflict → Resolution',
+    bestFor: 'Analytics presentations, research findings, performance reviews',
+    bulletPattern: ['Set the data context', 'Reveal the insight or conflict', 'Present the resolution or recommendation']
+  }
+};
+
+/**
+ * Enhanced tone adaptation strategies for storytelling frameworks (C-1: Narrative Quality & Structure)
+ * Maps each framework to specific tone implementations
+ */
+export const FRAMEWORK_TONE_ADAPTATIONS = {
+  problemSolution: {
+    professional: 'Focus on business metrics, ROI, and strategic implications',
+    casual: 'Use relatable examples, conversational language, and personal anecdotes',
+    analytical: 'Emphasize data-driven problem identification and solution validation',
+    persuasive: 'Highlight urgency, compelling benefits, and competitive advantages',
+    educational: 'Break down complex problems into understandable components with clear explanations'
+  },
+  beforeAfter: {
+    professional: 'Use strategic language, business outcomes, and transformation metrics',
+    casual: 'Paint vivid pictures of transformation with relatable scenarios',
+    analytical: 'Quantify current state vs future state gaps with detailed analysis',
+    persuasive: 'Emphasize the cost of inaction and benefits of change',
+    educational: 'Explain the transformation process step-by-step with learning objectives'
+  },
+  heroJourney: {
+    professional: 'Focus on strategic decisions, business outcomes, and leadership lessons',
+    casual: 'Tell an engaging story with personal touches and emotional connection',
+    analytical: 'Document the journey with data, milestones, and measurable progress',
+    persuasive: 'Inspire action through triumph over adversity and proven success',
+    educational: 'Extract learnings from each stage with actionable insights'
+  },
+  pyramid: {
+    professional: 'Lead with strategic recommendations and executive-level insights',
+    casual: 'Start with the bottom line in accessible, jargon-free language',
+    analytical: 'Present conclusions backed by rigorous analysis and methodology',
+    persuasive: 'Lead with compelling recommendations that drive immediate action',
+    educational: 'Structure learning from conclusion to supporting concepts with clear progression'
+  },
+  microStory: {
+    professional: 'Sharp, executive-level insights with immediate business relevance',
+    casual: 'Engaging hooks with relatable insights and conversational delivery',
+    analytical: 'Data-driven hooks with actionable insights and clear methodology',
+    persuasive: 'Compelling hooks that drive immediate action and decision-making',
+    educational: 'Thought-provoking hooks with learning insights and knowledge transfer'
+  },
+  dataStory: {
+    professional: 'Business-focused data interpretation with strategic implications',
+    casual: 'Make data accessible and relatable with real-world examples',
+    analytical: 'Deep dive into statistical significance and methodological rigor',
+    persuasive: 'Use data to build compelling arguments and drive decisions',
+    educational: 'Teach data literacy and interpretation with clear explanations'
   }
 };
 
@@ -355,23 +417,71 @@ export const LAYOUT_SELECTION_GUIDE = {
  * Incorporates chain-of-thought reasoning, few-shot examples, and quality enforcement
  */
 /**
- * Intelligently select storytelling framework based on content and context
+ * Intelligently select storytelling framework based on content and context (C-1: Narrative Quality & Structure)
+ * Enhanced with tone awareness and content analysis
  */
-function selectOptimalFramework(input: GenerationParams): typeof STORYTELLING_FRAMEWORKS[keyof typeof STORYTELLING_FRAMEWORKS] {
+function selectOptimalFramework(input: GenerationParams): {
+  framework: typeof STORYTELLING_FRAMEWORKS[keyof typeof STORYTELLING_FRAMEWORKS];
+  toneGuidance: string;
+  narrativeStrategy: string;
+} {
   const prompt = input.prompt.toLowerCase();
+  let selectedFramework: keyof typeof STORYTELLING_FRAMEWORKS;
 
-  // Analyze prompt content to select best framework
-  if (prompt.includes('before') && prompt.includes('after') || prompt.includes('transform') || prompt.includes('improve')) {
-    return STORYTELLING_FRAMEWORKS.beforeAfter;
-  } else if (prompt.includes('timeline') || prompt.includes('history') || prompt.includes('journey') || prompt.includes('progress')) {
-    return STORYTELLING_FRAMEWORKS.heroJourney;
+  // Enhanced content analysis for framework selection
+  if (prompt.includes('data') || prompt.includes('analytics') || prompt.includes('metrics') || prompt.includes('research')) {
+    selectedFramework = 'dataStory';
+  } else if (prompt.includes('before') && prompt.includes('after') || prompt.includes('transform') || prompt.includes('improve')) {
+    selectedFramework = 'beforeAfter';
+  } else if (prompt.includes('timeline') || prompt.includes('history') || prompt.includes('journey') || prompt.includes('progress') || prompt.includes('story')) {
+    selectedFramework = 'heroJourney';
   } else if (prompt.includes('recommend') || prompt.includes('analysis') || prompt.includes('conclusion') || input.audience === 'executives') {
-    return STORYTELLING_FRAMEWORKS.pyramid;
+    selectedFramework = 'pyramid';
   } else if (input.contentLength === 'minimal' || input.contentLength === 'brief') {
-    return STORYTELLING_FRAMEWORKS.microStory;
+    selectedFramework = 'microStory';
   } else {
-    return STORYTELLING_FRAMEWORKS.problemSolution; // Default fallback
+    selectedFramework = 'problemSolution'; // Default fallback
   }
+
+  const framework = STORYTELLING_FRAMEWORKS[selectedFramework];
+  const toneGuidance = (FRAMEWORK_TONE_ADAPTATIONS[selectedFramework] as any)?.[input.tone] ||
+                      FRAMEWORK_TONE_ADAPTATIONS[selectedFramework]?.professional ||
+                      'Use professional tone with clear, concise language';
+
+  // Generate narrative strategy based on framework and audience
+  const narrativeStrategy = generateNarrativeStrategy(selectedFramework, input);
+
+  return {
+    framework,
+    toneGuidance,
+    narrativeStrategy
+  };
+}
+
+/**
+ * Generate narrative strategy based on framework and input parameters
+ */
+function generateNarrativeStrategy(frameworkKey: keyof typeof STORYTELLING_FRAMEWORKS, input: GenerationParams): string {
+  const audienceStrategies = {
+    executives: 'Lead with strategic impact, use executive summary format, focus on ROI and business outcomes',
+    managers: 'Balance strategic overview with tactical details, emphasize team impact and implementation',
+    technical: 'Include technical depth, use precise terminology, provide implementation details',
+    general: 'Use accessible language, provide context, focus on practical benefits',
+    students: 'Use educational approach, provide background context, include learning objectives'
+  };
+
+  const lengthStrategies = {
+    minimal: 'Distill to absolute essentials, use powerful single statements, maximize impact per word',
+    brief: 'Focus on key points only, use concise bullets, maintain clarity without detail',
+    moderate: 'Balance detail with brevity, provide sufficient context, use structured approach',
+    detailed: 'Provide comprehensive coverage, include supporting details, use thorough explanations',
+    comprehensive: 'Cover all aspects thoroughly, include extensive context, provide complete analysis'
+  };
+
+  const audienceStrategy = (audienceStrategies as any)[input.audience] || audienceStrategies.general;
+  const lengthStrategy = lengthStrategies[input.contentLength] || lengthStrategies.moderate;
+
+  return `${audienceStrategy}. ${lengthStrategy}. Framework: ${STORYTELLING_FRAMEWORKS[frameworkKey].structure}`;
 }
 
 /**
@@ -434,27 +544,36 @@ function analyzeContentForLayout(partialSpec: Partial<SlideSpec>): {
 }
 
 /**
- * Analyze content to recommend optimal image concepts
+ * Enhanced content analysis for context-aware imagery (C-2: Context-Aware Image Prompts)
+ * Analyzes slide content and theme to recommend optimal image concepts
  */
 function analyzeContentForImagery(partialSpec: Partial<SlideSpec>, input: GenerationParams): {
   contentType: string;
   themes: string[];
   recommendedConcept: string;
   visualMetaphor: string;
+  themeAlignment: string;
+  emotionalTone: string;
+  technicalSpecs: string;
 } {
   const content = (partialSpec.title + ' ' + (partialSpec.paragraph || partialSpec.bullets?.join(' ') || '')).toLowerCase();
+  const selectedTheme = input.design?.theme || 'professional';
 
   const themes: string[] = [];
   let contentType = 'general';
   let recommendedConcept = 'professional business setting';
   let visualMetaphor = 'clean, modern workspace';
+  let themeAlignment = 'professional corporate aesthetic';
+  let emotionalTone = 'confident and trustworthy';
+  let technicalSpecs = 'high resolution, professional lighting';
 
-  // Analyze for business themes
+  // Enhanced content analysis with theme integration (C-2: Context-Aware Image Prompts)
   if (/growth|increase|revenue|profit|success/.test(content)) {
     themes.push('growth', 'success');
     contentType = 'business-growth';
     recommendedConcept = 'upward trending charts or growth imagery';
     visualMetaphor = 'ascending arrows, growing plants, or climbing stairs';
+    emotionalTone = 'optimistic and aspirational';
   }
 
   if (/team|collaboration|people|together/.test(content)) {
@@ -462,6 +581,7 @@ function analyzeContentForImagery(partialSpec: Partial<SlideSpec>, input: Genera
     contentType = 'team-focused';
     recommendedConcept = 'diverse team collaboration';
     visualMetaphor = 'connected networks or unified team dynamics';
+    emotionalTone = 'inclusive and energetic';
   }
 
   if (/technology|digital|ai|automation|innovation/.test(content)) {
@@ -469,6 +589,7 @@ function analyzeContentForImagery(partialSpec: Partial<SlideSpec>, input: Genera
     contentType = 'tech-focused';
     recommendedConcept = 'modern technology interfaces';
     visualMetaphor = 'digital transformation or futuristic elements';
+    emotionalTone = 'cutting-edge and progressive';
   }
 
   if (/data|analytics|metrics|statistics/.test(content)) {
@@ -476,14 +597,63 @@ function analyzeContentForImagery(partialSpec: Partial<SlideSpec>, input: Genera
     contentType = 'data-driven';
     recommendedConcept = 'data visualization or dashboard';
     visualMetaphor = 'flowing data streams or organized information';
+    emotionalTone = 'analytical and precise';
   }
+
+  if (/problem|challenge|issue|difficulty/.test(content)) {
+    themes.push('problem-solving', 'challenge');
+    contentType = 'problem-focused';
+    recommendedConcept = 'problem-solving or overcoming obstacles';
+    visualMetaphor = 'breaking through barriers or finding solutions';
+    emotionalTone = 'determined and solution-oriented';
+  }
+
+  if (/solution|answer|resolve|fix/.test(content)) {
+    themes.push('solution', 'resolution');
+    contentType = 'solution-focused';
+    recommendedConcept = 'clear pathways or breakthrough moments';
+    visualMetaphor = 'light at the end of tunnel or key unlocking potential';
+    emotionalTone = 'confident and reassuring';
+  }
+
+  // Theme-specific visual alignment
+  const themeVisualMappings = {
+    'creative-studio': 'artistic, vibrant colors, creative workspace aesthetic',
+    'corporate-blue': 'professional blue tones, corporate environment, clean lines',
+    'modern-minimal': 'minimalist design, white space, geometric elements',
+    'tech-forward': 'futuristic elements, digital interfaces, high-tech environment',
+    'warm-professional': 'warm tones, approachable professional setting',
+    'bold-impact': 'high contrast, dramatic lighting, powerful visual impact'
+  };
+
+  themeAlignment = (themeVisualMappings as any)[selectedTheme] || 'professional corporate aesthetic';
+
+  // Technical specifications based on theme
+  const themeTechnicalSpecs = {
+    'creative-studio': 'vibrant colors, artistic lighting, creative composition',
+    'corporate-blue': 'professional lighting, blue color palette, clean composition',
+    'modern-minimal': 'minimal elements, soft lighting, geometric composition',
+    'tech-forward': 'high-tech lighting, digital elements, futuristic composition',
+    'warm-professional': 'warm lighting, earth tones, approachable composition',
+    'bold-impact': 'dramatic lighting, high contrast, powerful composition'
+  };
+
+  technicalSpecs = (themeTechnicalSpecs as any)[selectedTheme] || 'high resolution, professional lighting';
 
   // Default fallback
   if (themes.length === 0) {
     themes.push('professional', 'business');
   }
 
-  return { contentType, themes, recommendedConcept, visualMetaphor };
+  return {
+    contentType,
+    themes,
+    recommendedConcept,
+    visualMetaphor,
+    themeAlignment,
+    emotionalTone,
+    technicalSpecs
+  };
 }
 
 /**
@@ -538,7 +708,7 @@ function performQuickQualityCheck(partialSpec: Partial<SlideSpec>, input: Genera
 }
 
 export function generateContentPrompt(input: GenerationParams): string {
-  const framework = selectOptimalFramework(input);
+  const { framework, toneGuidance, narrativeStrategy } = selectOptimalFramework(input);
   const audienceGuidance = AUDIENCE_GUIDANCE[input.audience] || AUDIENCE_GUIDANCE.general;
   const toneSpec = TONE_SPECIFICATIONS[input.tone] || TONE_SPECIFICATIONS.professional;
   const lengthSpec = CONTENT_LENGTH_SPECS[input.contentLength] || CONTENT_LENGTH_SPECS.moderate;
@@ -556,6 +726,8 @@ Create compelling slide content for: "${input.prompt}"
 ## STORYTELLING FRAMEWORK: ${framework.name}
 **Structure**: ${framework.structure}
 **Flow Pattern**: ${framework.bulletPattern ? framework.bulletPattern.join(' → ') : 'Problem → Solution → Impact'}
+**Tone Adaptation**: ${toneGuidance}
+**Narrative Strategy**: ${narrativeStrategy}
 
 ## CONTENT SPECIFICATIONS:
 
@@ -565,12 +737,14 @@ Create compelling slide content for: "${input.prompt}"
 - Include quantified benefits and clear value proposition
 - Ensure authenticity with realistic, contextual metrics
 
-### Quality Standards
+### Quality Standards (2024 Minimalism Emphasis)
 - **Title**: Outcome-focused, 15-60 characters, quantified when possible
 - **Content**: ${lengthSpec.contentGuidance}
+- **Bullet Points**: Maximum 5 bullets, 15-25 words each (strict limit for maximum impact)
 - **Style**: ${toneSpec.bulletStyle}
 - **Voice**: Active, confident, evidence-based for ${input.audience}
 - **Language**: ${audienceGuidance.language}
+- **Minimalism**: Prioritize impact over volume - every word must earn its place
 
 ## INDUSTRY CONTEXT:
 ${input.industry && input.industry !== 'general' ? `**Industry Focus**: ${input.industry} - Tailor content with industry-specific terminology, metrics, and challenges relevant to ${input.industry} professionals.` : '**Industry**: General business context - Use universally applicable language and examples.'}
@@ -590,15 +764,16 @@ ${input.presentationType && input.presentationType !== 'general' ? `**Presentati
 ❌ "Some Updates" (no specificity or value)
 ❌ "Information About Our Performance" (wordy, unclear benefit)
 
-**EXCELLENT Bullet Examples:**
-✅ "Reduced customer churn from 12% to 8.5% through personalized onboarding program launched in Q3"
-✅ "Captured 15% market share in APAC within 6 months, generating $1.2M additional revenue"
-✅ "Automated invoice processing, eliminating 200 manual hours weekly and reducing errors by 85%"
+**EXCELLENT Bullet Examples (15-25 words each):**
+✅ "Reduced customer churn from 12% to 8.5% through personalized onboarding program launched in Q3" (16 words)
+✅ "Captured 15% market share in APAC within 6 months, generating $1.2M additional revenue" (14 words)
+✅ "Automated invoice processing, eliminating 200 manual hours weekly and reducing errors by 85%" (13 words)
 
 **POOR Bullet Examples:**
 ❌ "We did better this quarter" (vague, no metrics or context)
 ❌ "Improvements were made to our processes" (passive voice, no specifics)
 ❌ "Things are going well with customers" (meaningless, no evidence)
+❌ "Our comprehensive customer relationship management system implementation has resulted in significant improvements across multiple key performance indicators including but not limited to customer satisfaction scores" (26+ words - too verbose)
 
 **CONTENT AUTHENTICITY REQUIREMENTS:**
 - Use realistic percentage ranges (15-25% not 23.7%)
@@ -627,12 +802,15 @@ Create a JSON object with these exact fields:
 
 ## FINAL QUALITY CHECK:
 Before responding, verify:
-- ✅ Title is specific and benefit-focused
+- ✅ Title is specific and benefit-focused (15-60 characters)
 - ✅ Content matches audience sophistication level
 - ✅ Tone aligns with ${input.tone} requirements
 - ✅ Length matches ${input.contentLength} specification
+- ✅ Each bullet point is 15-25 words maximum (count them!)
+- ✅ Maximum 5 bullet points total for optimal impact
 - ✅ JSON format is valid and complete
 - ✅ Content would score 85+ on quality assessment
+- ✅ Every word serves a purpose - no filler content
 
 Generate content that executives would be proud to present to their most important stakeholders.
 
@@ -782,28 +960,32 @@ ${CHAIN_OF_THOUGHT_TEMPLATES.layoutOptimization}`;
 }
 
 /**
- * Step 3: Enhanced image generation prompt with advanced visual storytelling
- * Incorporates brand alignment, emotional psychology, and technical optimization
+ * Step 3: Enhanced context-aware image generation (C-2: Context-Aware Image Prompts)
+ * Incorporates theme alignment, emotional psychology, and technical optimization
  */
 export function generateImagePrompt(input: GenerationParams, partialSpec: Partial<SlideSpec>): string {
-  // Analyze content to suggest optimal image concepts
+  // Enhanced content analysis with theme integration
   const imageAnalysis = analyzeContentForImagery(partialSpec, input);
 
-  return `## IMAGE PROMPT GENERATION TASK
-Create a compelling, professional image prompt that enhances the slide's message and emotional impact.
+  return `## CONTEXT-AWARE IMAGE PROMPT GENERATION TASK
+Create a compelling, professional image prompt that perfectly aligns with the slide's message, selected theme, and emotional impact.
 
-## SLIDE CONTENT ANALYSIS:
+## COMPREHENSIVE SLIDE ANALYSIS:
 **Title**: ${partialSpec.title}
 **Layout**: ${partialSpec.layout}
 **Content Type**: ${imageAnalysis.contentType}
 **Key Themes**: ${imageAnalysis.themes.join(', ')}
+**Selected Theme**: ${input.design?.theme || 'professional'}
 
-## VISUAL STRATEGY CONTEXT:
+## ENHANCED VISUAL STRATEGY CONTEXT:
 **Audience**: ${input.audience} - Professional expectations and visual preferences
 **Tone**: ${input.tone} - Emotional and stylistic alignment required
 **Image Style**: ${input.imageStyle || 'professional'} - Technical approach for generation
 **Recommended Concept**: ${imageAnalysis.recommendedConcept}
 **Visual Metaphor**: ${imageAnalysis.visualMetaphor}
+**Theme Alignment**: ${imageAnalysis.themeAlignment}
+**Emotional Tone**: ${imageAnalysis.emotionalTone}
+**Technical Specifications**: ${imageAnalysis.technicalSpecs}
 
 ## ENHANCED IMAGE PROMPT DEVELOPMENT PROCESS:
 
@@ -877,6 +1059,48 @@ Return the COMPLETE slide specification with:
 4. **Quality validation** - Ensure prompt would generate professional imagery
 
 Create an image prompt that elevates the slide's professional impact and supports the core message for ${input.audience} audience.`;
+}
+
+/**
+ * NEW: Batch image prompt generation for multiple slides
+ * Optimizes API calls by generating image prompts for all slides in one request
+ */
+export function generateBatchImagePrompts(input: GenerationParams, slideSpecs: Partial<SlideSpec>[]): string {
+  const slideSummaries = slideSpecs.map((spec, index) =>
+    `Slide ${index + 1}: "${spec.title}" (${spec.layout})`
+  ).join('\n');
+
+  return `## BATCH IMAGE PROMPT GENERATION TASK
+Generate optimized image prompts for ${slideSpecs.length} slides in a cohesive presentation.
+
+## PRESENTATION CONTEXT:
+**Topic**: ${input.prompt}
+**Audience**: ${input.audience}
+**Tone**: ${input.tone}
+**Style**: ${input.imageStyle || 'professional'}
+
+## SLIDES TO PROCESS:
+${slideSummaries}
+
+## BATCH PROCESSING REQUIREMENTS:
+1. **Visual Consistency**: Ensure all images work together as a cohesive presentation
+2. **Style Uniformity**: Maintain consistent visual style and quality across all slides
+3. **Audience Alignment**: All prompts should resonate with ${input.audience} expectations
+4. **Professional Quality**: Each prompt should generate boardroom-quality imagery
+
+## OUTPUT FORMAT:
+Return a JSON array with image prompts for each slide:
+[
+  {
+    "slideIndex": 0,
+    "title": "slide title",
+    "imagePrompt": "specific, professional image prompt (20-200 characters)",
+    "placement": "field name for image placement based on layout",
+    "reasoning": "brief explanation of visual choice"
+  }
+]
+
+Generate cohesive, professional image prompts that enhance the overall presentation narrative.`;
 }
 
 /**

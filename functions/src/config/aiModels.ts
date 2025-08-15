@@ -1,32 +1,46 @@
 /**
- * AI Model Configuration for Testing vs Production
- * 
- * This file centralizes AI model configuration to easily switch between
- * low-cost testing models and high-quality production models.
+ * Enhanced AI Model Configuration for Testing vs Production (C-4: Model Configuration & Cost Guardrails)
+ *
+ * This file centralizes AI model configuration with comprehensive cost guardrails,
+ * performance monitoring, and intelligent model selection for optimal cost-quality balance.
+ *
+ * @version 2.0.0
+ * @author AI PowerPoint Generator Team
  */
 
-// Environment detection
+// Enhanced environment detection with cost guardrails
 const isProduction = process.env.NODE_ENV === 'production';
 const isTestingMode = process.env.AI_TESTING_MODE === 'true' || !isProduction;
+const costLimitEnabled = process.env.AI_COST_LIMIT_ENABLED === 'true';
+const dailyCostLimit = parseFloat(process.env.AI_DAILY_COST_LIMIT || '10.00'); // Default $10/day limit
 
 /**
- * Text Generation Model Configuration
+ * Enhanced Text Generation Model Configuration (C-4: Model Configuration & Cost Guardrails)
+ * Optimized for cost-quality balance with intelligent model selection
  */
 export const TEXT_MODEL_CONFIG = {
-  // Testing Mode: Low-cost models for development
+  // Testing Mode: Ultra low-cost models for development and testing
   testing: {
     model: 'gpt-4o-mini' as const,
     fallbackModel: 'gpt-3.5-turbo' as const,
     temperature: 0.7,
-    maxTokens: 1500,
+    maxTokens: 1200, // Reduced for cost optimization
     maxRetries: 2,
     retryDelay: 500,
-    timeoutMs: 20000,
-    maxBackoffDelay: 5000,
-    costPerToken: 0.00015 // GPT-4o Mini: $0.15 per 1M input tokens
+    timeoutMs: 15000, // Shorter timeout for faster feedback
+    maxBackoffDelay: 3000,
+    costPerToken: 0.00015, // GPT-4o Mini: $0.15 per 1M input tokens
+    costPerOutputToken: 0.0006, // $0.60 per 1M output tokens
+    maxDailyCost: 2.00, // $2 daily limit for testing
+    costOptimization: {
+      enableTokenLimiting: true,
+      preferShorterResponses: true,
+      enableCaching: true,
+      batchRequests: false // Disabled for testing to get faster feedback
+    }
   },
 
-  // Production Mode: High-quality models for best results
+  // Production Mode: Balanced cost-quality for optimal results
   production: {
     model: 'gpt-4o-mini' as const,
     fallbackModel: 'gpt-4o' as const,
@@ -36,7 +50,36 @@ export const TEXT_MODEL_CONFIG = {
     retryDelay: 1000,
     timeoutMs: 30000,
     maxBackoffDelay: 10000,
-    costPerToken: 0.00015 // GPT-4o Mini: $0.15 per 1M input tokens, $0.60 per 1M output tokens
+    costPerToken: 0.00015, // GPT-4o Mini: $0.15 per 1M input tokens
+    costPerOutputToken: 0.0006, // $0.60 per 1M output tokens
+    maxDailyCost: 25.00, // $25 daily limit for production
+    costOptimization: {
+      enableTokenLimiting: true,
+      preferShorterResponses: false, // Allow full responses in production
+      enableCaching: true,
+      batchRequests: true // Enable batching for efficiency
+    }
+  },
+
+  // Premium Mode: High-quality models for critical presentations
+  premium: {
+    model: 'gpt-4o' as const,
+    fallbackModel: 'gpt-4o-mini' as const,
+    temperature: 0.7,
+    maxTokens: 3000,
+    maxRetries: 4,
+    retryDelay: 1500,
+    timeoutMs: 45000,
+    maxBackoffDelay: 15000,
+    costPerToken: 0.005, // GPT-4o: $5.00 per 1M input tokens
+    costPerOutputToken: 0.015, // $15.00 per 1M output tokens
+    maxDailyCost: 100.00, // $100 daily limit for premium
+    costOptimization: {
+      enableTokenLimiting: false, // No limits for premium
+      preferShorterResponses: false,
+      enableCaching: true,
+      batchRequests: true
+    }
   }
 };
 
@@ -155,6 +198,138 @@ export function getCurrentMode(): 'testing' | 'production' {
   return isTestingMode ? 'testing' : 'production';
 }
 
+/**
+ * Enhanced cost tracking and guardrails (C-4: Model Configuration & Cost Guardrails)
+ */
+
+// In-memory cost tracking (in production, this would be stored in a database)
+let dailyCostTracker = {
+  date: new Date().toDateString(),
+  totalCost: 0,
+  requestCount: 0,
+  lastReset: Date.now()
+};
+
+/**
+ * Check if request is within cost limits
+ */
+export function checkCostLimits(estimatedCost: number): {
+  allowed: boolean;
+  reason?: string;
+  currentDailyCost: number;
+  dailyLimit: number;
+} {
+  const config = getTextModelConfig();
+  const today = new Date().toDateString();
+
+  // Reset daily tracker if it's a new day
+  if (dailyCostTracker.date !== today) {
+    dailyCostTracker = {
+      date: today,
+      totalCost: 0,
+      requestCount: 0,
+      lastReset: Date.now()
+    };
+  }
+
+  const projectedDailyCost = dailyCostTracker.totalCost + estimatedCost;
+  const dailyLimit = config.maxDailyCost;
+
+  if (costLimitEnabled && projectedDailyCost > dailyLimit) {
+    return {
+      allowed: false,
+      reason: `Daily cost limit exceeded. Current: $${dailyCostTracker.totalCost.toFixed(4)}, Estimated: $${estimatedCost.toFixed(4)}, Limit: $${dailyLimit.toFixed(2)}`,
+      currentDailyCost: dailyCostTracker.totalCost,
+      dailyLimit
+    };
+  }
+
+  return {
+    allowed: true,
+    currentDailyCost: dailyCostTracker.totalCost,
+    dailyLimit
+  };
+}
+
+/**
+ * Record actual cost after API call
+ */
+export function recordActualCost(actualCost: number, operation: string): void {
+  const today = new Date().toDateString();
+
+  // Reset if new day
+  if (dailyCostTracker.date !== today) {
+    dailyCostTracker = {
+      date: today,
+      totalCost: 0,
+      requestCount: 0,
+      lastReset: Date.now()
+    };
+  }
+
+  dailyCostTracker.totalCost += actualCost;
+  dailyCostTracker.requestCount += 1;
+
+  console.log(`💰 Cost Recorded: $${actualCost.toFixed(4)} for ${operation}`);
+  console.log(`📊 Daily Total: $${dailyCostTracker.totalCost.toFixed(4)} (${dailyCostTracker.requestCount} requests)`);
+
+  // Warn if approaching limit
+  const config = getTextModelConfig();
+  const utilizationPercent = (dailyCostTracker.totalCost / config.maxDailyCost) * 100;
+
+  if (utilizationPercent > 80) {
+    console.warn(`⚠️ High cost utilization: ${utilizationPercent.toFixed(1)}% of daily limit`);
+  }
+}
+
+/**
+ * Get current cost statistics
+ */
+export function getCostStatistics(): {
+  dailyCost: number;
+  dailyLimit: number;
+  requestCount: number;
+  utilizationPercent: number;
+  remainingBudget: number;
+} {
+  const config = getTextModelConfig();
+  const utilizationPercent = (dailyCostTracker.totalCost / config.maxDailyCost) * 100;
+
+  return {
+    dailyCost: dailyCostTracker.totalCost,
+    dailyLimit: config.maxDailyCost,
+    requestCount: dailyCostTracker.requestCount,
+    utilizationPercent,
+    remainingBudget: config.maxDailyCost - dailyCostTracker.totalCost
+  };
+}
+
+/**
+ * Intelligent model selection based on cost and quality requirements
+ */
+export function selectOptimalModel(requirements: {
+  qualityLevel: 'basic' | 'standard' | 'premium';
+  maxCost?: number;
+  urgency: 'low' | 'medium' | 'high';
+}): keyof typeof TEXT_MODEL_CONFIG {
+  const costStats = getCostStatistics();
+
+  // If approaching daily limit, use testing mode
+  if (costStats.utilizationPercent > 90) {
+    console.log('🔄 Switching to testing mode due to cost limits');
+    return 'testing';
+  }
+
+  // Select based on quality requirements and cost constraints
+  if (requirements.qualityLevel === 'premium' && costStats.remainingBudget > 5.00) {
+    return 'premium';
+  } else if (requirements.qualityLevel === 'standard' || isProduction) {
+    return 'production';
+  } else {
+    return 'testing';
+  }
+}
+
 export default {
   getTextModelConfig,
   getImageModelConfig,
@@ -162,5 +337,9 @@ export default {
   logCostEstimate,
   enableProductionMode,
   enableTestingMode,
-  getCurrentMode
+  getCurrentMode,
+  checkCostLimits,
+  recordActualCost,
+  getCostStatistics,
+  selectOptimalModel
 };

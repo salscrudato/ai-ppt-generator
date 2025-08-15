@@ -23,6 +23,7 @@ import pptxgen from 'pptxgenjs';
 import type { SlideSpec } from './schema';
 import { getThemeById, selectThemeForContent, customizeTheme, type ProfessionalTheme } from './professionalThemes';
 import { ModernTheme, getModernTheme, MODERN_THEMES } from './core/theme/modernThemes';
+import { UNIFIED_LAYOUT_CONSTANTS, LAYOUT_POSITIONS, LAYOUT_CONSTANTS, SLIDE_DIMENSIONS, TYPOGRAPHY_CONSTANTS } from './constants/layoutConstants';
 import {
   createModernHeroSlide,
   createModernContentSlide,
@@ -34,6 +35,40 @@ import {
 } from './slides/modernSlideGenerators';
 import { VISUAL_EFFECT_PRESETS, createModernCardBackground, createAccentElement, applyVisualEffects } from './core/theme/visualEffects';
 import { getTypographyPairing, createModernTextOptions, TEXT_STYLE_PRESETS } from './core/theme/modernTypography';
+import {
+  defineSlideMasters,
+  addSlideWithMaster,
+  SLIDE_MASTER_NAMES,
+  getMasterForLayout,
+  type SlideMasterConfig
+} from './core/slideMasters';
+import {
+  ImageProcessor,
+  createImageProcessorConfig,
+  type ImageProcessingConfig
+} from './core/imageProcessor';
+import {
+  generateContextualNotes,
+  generatePresentationSummary,
+  type SpeakerNotesConfig
+} from './core/speakerNotes';
+import {
+  generatePresentationMetadata,
+  applyMetadataToPresentation,
+  generateFileName,
+  type MetadataConfig
+} from './core/documentMetadata';
+import {
+  addNativeChart,
+  extractDataFromSlide,
+  generateSampleData,
+  type ChartConfig
+} from './core/chartGeneration';
+import {
+  addNativeTable,
+  extractTableDataFromSlide,
+  type TableConfig
+} from './core/tableGeneration';
 import { validateSlideStyle, type StyleValidationResult } from './styleValidator';
 import OpenAI from 'openai';
 import { defineSecret } from 'firebase-functions/params';
@@ -68,6 +103,186 @@ function safeColorFormat(color: string): string {
   }
 
   return cleanColor;
+}
+
+/**
+ * Sanitize slide specification to prevent PowerPoint corruption
+ */
+function sanitizeSlideSpec(spec: SlideSpec): SlideSpec {
+  const sanitized: SlideSpec = {
+    ...spec,
+    // Sanitize title - remove problematic characters and limit length
+    title: sanitizeText(spec.title || 'Untitled Slide', 100),
+
+    // Sanitize paragraph content
+    paragraph: spec.paragraph ? sanitizeText(spec.paragraph, 2000) : undefined,
+
+    // Sanitize bullets
+    bullets: spec.bullets?.map(bullet => sanitizeText(bullet, 500)).filter(Boolean),
+
+    // Sanitize speaker notes (correct property name is 'notes')
+    notes: spec.notes ? sanitizeText(spec.notes, 3000) : undefined,
+
+    // Sanitize image prompt
+    imagePrompt: spec.imagePrompt ? sanitizeText(spec.imagePrompt, 1000) : undefined
+  };
+
+  // Sanitize nested content for two-column layouts
+  if (spec.left) {
+    sanitized.left = {
+      ...spec.left,
+      heading: spec.left.heading ? sanitizeText(spec.left.heading, 80) : undefined,
+      paragraph: spec.left.paragraph ? sanitizeText(spec.left.paragraph, 1000) : undefined,
+      bullets: spec.left.bullets?.map(bullet => sanitizeText(bullet, 500)).filter(Boolean),
+      imagePrompt: spec.left.imagePrompt ? sanitizeText(spec.left.imagePrompt, 1000) : undefined
+    };
+  }
+
+  if (spec.right) {
+    sanitized.right = {
+      ...spec.right,
+      heading: spec.right.heading ? sanitizeText(spec.right.heading, 80) : undefined,
+      paragraph: spec.right.paragraph ? sanitizeText(spec.right.paragraph, 1000) : undefined,
+      bullets: spec.right.bullets?.map(bullet => sanitizeText(bullet, 500)).filter(Boolean),
+      imagePrompt: spec.right.imagePrompt ? sanitizeText(spec.right.imagePrompt, 1000) : undefined
+    };
+  }
+
+  return sanitized;
+}
+
+/**
+ * Sanitize text content to prevent PowerPoint corruption
+ */
+function sanitizeText(text: string, maxLength: number = 1000): string {
+  if (!text) return '';
+
+  // Remove or replace problematic characters that can cause PowerPoint corruption
+  let sanitized = text
+    // Remove null bytes and other control characters
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Replace problematic Unicode characters
+    .replace(/[\uFEFF\uFFFE\uFFFF]/g, '')
+    // Normalize line breaks
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Remove excessive whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Truncate if too long
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength - 3) + '...';
+  }
+
+  return sanitized;
+}
+
+/**
+ * Extract presentation metadata from slide specifications
+ */
+function extractPresentationMetadata(specs: SlideSpec[]): {
+  title: string;
+  description: string;
+  keywords: string[];
+  estimatedDuration: number;
+  slideTypes: string[];
+} {
+  const title = specs.length > 0 ? specs[0].title : 'Professional Presentation';
+
+  // Extract keywords from all slide content
+  const allText = specs.map(spec =>
+    [spec.title, spec.paragraph, ...(spec.bullets || [])].filter(Boolean).join(' ')
+  ).join(' ');
+
+  // Simple keyword extraction (could be enhanced with NLP)
+  const words = allText.toLowerCase().match(/\b\w{4,}\b/g) || [];
+  const wordFreq = words.reduce((acc, word) => {
+    acc[word] = (acc[word] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const keywords = Object.entries(wordFreq)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 10)
+    .map(([word]) => word);
+
+  // Estimate presentation duration (roughly 1-2 minutes per slide)
+  const estimatedDuration = specs.length * 1.5;
+
+  // Collect slide types
+  const slideTypes = [...new Set(specs.map(spec => spec.layout))];
+
+  const description = `Professional presentation with ${specs.length} slides covering ${slideTypes.join(', ')} layouts.`;
+
+  return {
+    title,
+    description,
+    keywords,
+    estimatedDuration,
+    slideTypes
+  };
+}
+
+/**
+ * Add consistent visual branding elements to slides
+ */
+function addVisualBrandingElements(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme | ModernTheme,
+  slideIndex: number,
+  totalSlides: number,
+  options: {
+    includeProgressBar?: boolean;
+    includeBrandAccent?: boolean;
+    slideType?: string;
+  } = {}
+): void {
+  const isModern = 'palette' in theme;
+  const accentColor = isModern
+    ? (theme as ModernTheme).palette.accent
+    : (theme as ProfessionalTheme).colors.accent;
+
+  const primaryColor = isModern
+    ? (theme as ModernTheme).palette.primary
+    : (theme as ProfessionalTheme).colors.primary;
+
+  // Add progress bar at the top (optional)
+  if (options.includeProgressBar && slideIndex > 0) {
+    const progressWidth = (slideIndex / totalSlides) * 10.0;
+
+    // Background progress bar
+    slide.addShape('rect', {
+      x: 0, y: 0, w: 10.0, h: 0.05,
+      fill: {
+        color: safeColorFormat(accentColor),
+        transparency: 90
+      },
+      line: { width: 0 }
+    });
+
+    // Active progress bar
+    slide.addShape('rect', {
+      x: 0, y: 0, w: progressWidth, h: 0.05,
+      fill: {
+        color: safeColorFormat(accentColor),
+        transparency: 20
+      },
+      line: { width: 0 }
+    });
+  }
+
+  // Add subtle brand accent in corner (optional)
+  if (options.includeBrandAccent && options.slideType !== 'title') {
+    slide.addShape('ellipse', {
+      x: 9.5, y: 0.1, w: 0.4, h: 0.4,
+      fill: {
+        color: safeColorFormat(primaryColor),
+        transparency: 80
+      },
+      line: { width: 0 }
+    });
+  }
 }
 
 /**
@@ -114,6 +329,14 @@ function getAppropriateTheme(spec: SlideSpec): ProfessionalTheme | ModernTheme {
                 tone: 'professional'
               });
 
+  // Ensure we have a theme (fallback to default if needed)
+  if (!theme) {
+    theme = selectThemeForContent({
+      presentationType: 'business',
+      tone: 'professional'
+    });
+  }
+
   // Apply custom brand colors if provided
   if (spec.design?.brand) {
     theme = customizeTheme(theme, {
@@ -125,6 +348,30 @@ function getAppropriateTheme(spec: SlideSpec): ProfessionalTheme | ModernTheme {
   }
 
   return theme;
+}
+
+/**
+ * Determine presentation type from slide specifications
+ */
+function determinePresentationType(specs: SlideSpec[]): 'business' | 'creative' | 'academic' | 'technical' {
+  // Analyze slide content to determine presentation type
+  const keywords = specs.flatMap(spec => [
+    spec.title?.toLowerCase() || '',
+    spec.bullets?.join(' ').toLowerCase() || '',
+    spec.paragraph?.toLowerCase() || ''
+  ]).join(' ');
+
+  if (keywords.includes('research') || keywords.includes('study') || keywords.includes('analysis')) {
+    return 'academic';
+  }
+  if (keywords.includes('technical') || keywords.includes('development') || keywords.includes('engineering')) {
+    return 'technical';
+  }
+  if (keywords.includes('creative') || keywords.includes('design') || keywords.includes('art')) {
+    return 'creative';
+  }
+
+  return 'business'; // Default
 }
 
 /**
@@ -151,20 +398,85 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
     }))
   });
 
+  // Validate and sanitize input specs to prevent corruption
+  const sanitizedSpecs = specs.map(spec => sanitizeSlideSpec(spec));
+  console.log(`🧹 Sanitized ${sanitizedSpecs.length} slide specifications`);
+
+  // Validate that we have at least one slide
+  if (sanitizedSpecs.length === 0) {
+    throw new Error('No valid slide specifications provided');
+  }
+
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_WIDE';
 
-  // 16:9 slide format constants
-  const SLIDE_WIDTH = 10.0;    // Standard 16:9 slide width
-  const SLIDE_HEIGHT = 5.625;  // Standard 16:9 slide height
-  const contentPadding = 0.75; // Enhanced padding for 16:9 format
-  const maxContentWidth = 8.5; // Optimized content width for 16:9
+  // Use unified layout constants for exact preview alignment
+
+  // Generate comprehensive presentation metadata
+  const metadataConfig: MetadataConfig = {
+    author: 'AI PowerPoint Generator',
+    company: 'Professional Presentations',
+    department: 'AI Generated Content',
+    project: 'Professional Presentation',
+    confidentialityLevel: 'internal',
+    status: 'draft',
+    includeAnalytics: true,
+    includeAccessibilityInfo: true,
+    customProperties: {
+      'Generator-Version': '2.0.0',
+      'Quality-Assurance': 'Automated',
+      'Template-System': 'Slide Masters'
+    }
+  };
+
+  // Get theme for slide masters (use first slide's theme or default)
+  const masterTheme: ProfessionalTheme | ModernTheme = sanitizedSpecs.length > 0
+    ? getAppropriateTheme(sanitizedSpecs[0])
+    : getModernTheme('minimal') || selectThemeForContent({ presentationType: 'business', tone: 'professional' });
+
+  const presentationMetadata = generatePresentationMetadata(sanitizedSpecs, masterTheme, metadataConfig);
+
+  // Initialize advanced image processor
+  const presentationType = determinePresentationType(sanitizedSpecs);
+  const imageProcessorConfig = createImageProcessorConfig(presentationType, 'balanced');
+  const imageProcessor = new ImageProcessor(imageProcessorConfig);
+
+  console.log(`🖼️ Initialized image processor for ${presentationType} presentation`);
+
+  // Apply comprehensive metadata to presentation
+  applyMetadataToPresentation(pres, presentationMetadata);
+
+  // Set presentation properties for professional appearance
+  pres.rtlMode = false; // Left-to-right reading
+
+
+
+  // TEMPORARILY DISABLE SLIDE MASTERS TO PREVENT CORRUPTION
+  // TODO: Re-enable after fixing corruption issues
+  console.log('⚠️ Slide masters temporarily disabled to prevent corruption');
+
+  // // Define slide masters for consistent design with enhanced visual elements
+  // defineSlideMasters(pres, {
+  //   theme: masterTheme,
+  //   includeSlideNumbers: true,
+  //   includeFooter: true,
+  //   footerText: 'AI-Generated Professional Presentation',
+  //   companyName: 'Professional Presentations',
+  //   includeWatermark: false, // Can be enabled for branded presentations
+  //   watermarkText: 'CONFIDENTIAL',
+  //   includeAccentElements: true,
+  //   brandColor: 'palette' in masterTheme
+  //     ? (masterTheme as ModernTheme).palette.accent
+  //     : (masterTheme as ProfessionalTheme).colors.accent
+  // });
+
+  // Note: Slide numbering is handled through slide masters
 
   // Style validation results for quality assurance
   const validationResults: StyleValidationResult[] = [];
 
-  for (let i = 0; i < specs.length; i++) {
-    const spec = specs[i];
+  for (let i = 0; i < sanitizedSpecs.length; i++) {
+    const spec = sanitizedSpecs[i];
 
     // Enhanced theme selection with modern theme support
     const theme = getAppropriateTheme(spec);
@@ -185,6 +497,9 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
       }
     }
 
+    // TEMPORARILY USE REGULAR SLIDES INSTEAD OF MASTERS
+    // const masterName = getMasterForLayout(spec.layout);
+    // const slide = addSlideWithMaster(pres, masterName);
     const slide = pres.addSlide();
 
     // Use modern slide generation for modern themes
@@ -270,69 +585,324 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
     // Traditional slide rendering for non-modern themes
     const traditionalTheme = theme as ProfessionalTheme;
 
-    // Apply safe background color (avoid complex gradients)
+    // TEMPORARILY DISABLE VISUAL BRANDING TO PREVENT CORRUPTION
+    // addVisualBrandingElements(slide, traditionalTheme, i, sanitizedSpecs.length, {
+    //   includeProgressBar: sanitizedSpecs.length > 3, // Only for longer presentations
+    //   includeBrandAccent: true,
+    //   slideType: spec.layout
+    // });
+
+    // TEMPORARILY USE REGULAR SLIDE RENDERING INSTEAD OF MASTERS
+    // Set slide background
     const bgColor = safeColorFormat(traditionalTheme.colors.background);
     if (bgColor !== 'FFFFFF') { // Only set if not default white
       slide.background = { color: bgColor };
     }
 
-    // Optionally add a subtle background enhancement layer
-    addSlideBackground(slide, traditionalTheme);
-
-    // Simple, reliable title positioning
-    const titleFontSize = Math.min(traditionalTheme.typography.headings.sizes.h1, 32);
-    const titleColor = safeColorFormat(traditionalTheme.colors.primary);
-
-    slide.addText(spec.title, {
-      x: contentPadding,
-      y: 0.4,
-      w: maxContentWidth,
-      h: 1.0,
-      fontSize: titleFontSize,
+    // Add slide title
+    slide.addText(spec.title || 'Untitled Slide', {
+      x: 0.75, y: 0.4, w: 8.5, h: 0.8,
+      fontSize: spec.layout === 'title' ? 36 : 28,
       bold: true,
-      color: titleColor,
-      align: 'center',
-      valign: 'middle',
-      fontFace: 'Arial', // Force basic font for compatibility
-      wrap: true // Enable text wrapping
+      color: safeColorFormat(traditionalTheme.colors.primary),
+      align: spec.layout === 'title' ? 'center' : 'left',
+      fontFace: traditionalTheme.typography.headings.fontFamily
     });
-
-    // Add tasteful decorations for title slides
-    if (spec.layout === 'title') {
-      addTitleSlideDecorations(slide, traditionalTheme);
-    }
 
     // Enhanced dynamic layout handling with comprehensive support
-    await renderSlideLayout(slide, spec, traditionalTheme, contentPadding, maxContentWidth);
+    const slideContext = { title: spec.title, layout: spec.layout, index: i, totalSlides: sanitizedSpecs.length };
+    await renderSlideLayout(slide, spec, traditionalTheme, imageProcessor, slideContext);
+    // All slide master logic has been replaced with regular slide rendering above
 
-    // Footer: page number
-    const pageNumber = `${i + 1}/${specs.length}`;
-    slide.addText(pageNumber, {
-      x: SLIDE_WIDTH - 1.5,
-      y: SLIDE_HEIGHT - 0.4,
-      w: 1.0,
-      h: 0.3,
-      fontSize: Math.min(traditionalTheme.typography.body.sizes.tiny, 10),
-      color: safeColorFormat(traditionalTheme.colors.text.secondary),
-      align: 'right',
-      valign: 'middle'
-    });
+    // Generate comprehensive speaker notes
+    const speakerNotesConfig: SpeakerNotesConfig = {
+      includeTransitions: true,
+      includeTimingGuidance: true,
+      includeEngagementTips: specs.length > 5, // Only for longer presentations
+      includeAccessibilityNotes: true,
+      verbosityLevel: 'detailed',
+      audienceLevel: 'general'
+    };
 
-    // Add notes and sources (enhanced with formatting)
-    let notesText = spec.notes || '';
-    if (spec.sources?.length) notesText += `\n\nSources:\n${spec.sources.join('\n')}`;
+    let notesText = '';
+
+    // Use existing notes if provided, otherwise generate comprehensive notes
+    if (spec.notes && spec.notes.trim()) {
+      notesText = spec.notes;
+      // Enhance existing notes with contextual information
+      notesText += '\n\n' + generateContextualNotes(specs, i, {
+        ...speakerNotesConfig,
+        verbosityLevel: 'concise' // Less verbose when user provided notes
+      });
+    } else {
+      // Generate full contextual notes
+      notesText = generateContextualNotes(specs, i, speakerNotesConfig);
+    }
+
+    // Add sources to notes if provided
+    if (spec.sources && spec.sources.length > 0) {
+      notesText += '\n\n📚 SOURCES & REFERENCES:\n';
+      spec.sources.forEach((source, index) => {
+        // Check if source is a URL or text reference
+        if (source.startsWith('http://') || source.startsWith('https://')) {
+          notesText += `${index + 1}. ${source}\n`;
+        } else {
+          notesText += `${index + 1}. ${source}\n`;
+        }
+      });
+      notesText += '\n💡 TIP: Reference these sources during your presentation to build credibility and provide additional context for audience questions.';
+    }
+
+    // Add presentation summary to first slide notes
+    if (i === 0) {
+      const presentationSummary = generatePresentationSummary(specs);
+      notesText = presentationSummary + '\n\n' + notesText;
+    }
+
     slide.addNotes(notesText);
+
+    // Add page numbers and footer (B-3: Page Numbers & Footer)
+    addPageNumbersAndFooter(slide, i + 1, sanitizedSpecs.length, spec.layout === 'title');
   }
 
-  // Write the presentation to buffer
-  return (await pres.write({ outputType: 'nodebuffer' })) as Buffer;
+  // Write the presentation to buffer with error handling
+  try {
+    console.log('🔄 Generating PowerPoint buffer...');
+
+    // Use explicit options for better compatibility
+    const buffer = await pres.write({
+      outputType: 'nodebuffer',
+      compression: true // Enable compression for smaller file size
+    });
+
+    console.log(`✅ PowerPoint buffer generated successfully: ${Math.round((buffer as Buffer).length / 1024)}KB`);
+    return buffer as Buffer;
+  } catch (error) {
+    console.error('❌ Failed to generate PowerPoint buffer:', error);
+    throw new Error(`PowerPoint generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Slide layout renderer for slide masters - populates placeholders
+ * Enhanced with improved spacing, professional positioning, and modern visual elements
+ */
+async function renderSlideLayoutWithMaster(
+  slide: pptxgen.Slide,
+  spec: SlideSpec,
+  theme: ProfessionalTheme,
+  contentPadding: number,
+  maxContentWidth: number,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+): Promise<void> {
+  console.log('🎯 renderSlideLayoutWithMaster called with:', {
+    title: spec.title,
+    layout: spec.layout,
+    hasBullets: !!spec.bullets,
+    bulletsCount: spec.bullets?.length,
+    hasRightImage: !!spec.right?.imagePrompt,
+    hasLeftImage: !!spec.left?.imagePrompt
+  });
+
+  // Check for automatic chart generation opportunities
+  const extractedData = extractDataFromSlide(spec);
+  const extractedTableData = extractTableDataFromSlide(spec);
+
+  // Temporarily disable automatic chart generation to prevent corruption
+  // TODO: Fix chart data validation and format issues
+  if (false && extractedData.hasNumericData && extractedData.confidence > 60) {
+    console.log('🔍 Auto-generating chart from extracted data:', {
+      confidence: extractedData.confidence,
+      type: extractedData.suggestedChartType,
+      datasets: extractedData.datasets.length
+    });
+
+    // Generate chart automatically if we have good data
+    const chartConfig: ChartConfig = {
+      type: extractedData.suggestedChartType,
+      title: `${spec.title} - Data Visualization`,
+      data: extractedData.datasets,
+      position: { x: 0.75, y: 2.0, w: 8.5, h: 2.5 },
+      theme,
+      showLegend: true,
+      showDataLabels: false,
+      showTitle: true
+    };
+
+    addNativeChart(slide, chartConfig);
+
+    // Add remaining content below chart if any
+    let remainingContent = '';
+    if (spec.bullets && spec.bullets!.length > 0) {
+      const nonNumericBullets = spec.bullets!.filter(bullet =>
+        !bullet.match(/\d+(?:\.\d+)?/g) || bullet.length > 50
+      );
+      if (nonNumericBullets.length > 0) {
+        remainingContent = nonNumericBullets.map(bullet => `• ${bullet}`).join('\n');
+      }
+    } else if (spec.paragraph) {
+      remainingContent = spec.paragraph!;
+    }
+
+    if (remainingContent) {
+      slide.addText(remainingContent, {
+        x: 0.75, y: 4.7, w: 8.5, h: 0.8,
+        fontSize: 14,
+        fontFace: 'Arial'
+      });
+    }
+  } else if (false && extractedTableData.hasTableData && extractedTableData.confidence > 70) {
+    // Temporarily disable automatic table generation to prevent corruption
+    console.log('🔍 Auto-generating table from extracted data:', {
+      confidence: extractedTableData.confidence,
+      headers: extractedTableData.headers.length,
+      rows: extractedTableData.rows.length
+    });
+
+    // Generate table automatically if we have good structured data
+    const tableConfig: TableConfig = {
+      headers: extractedTableData.headers,
+      rows: extractedTableData.rows,
+      position: { x: 0.75, y: 2.0, w: 8.5, h: 3.0 },
+      theme,
+      title: extractedTableData.suggestedTitle,
+      showHeaders: true,
+      alternateRowColors: true,
+      borderStyle: 'light',
+      headerStyle: 'primary'
+    };
+
+    addNativeTable(slide, tableConfig);
+  } else {
+    // Enhanced content rendering for slide masters with layout support
+    if (spec.layout === 'mixed-content') {
+      // Handle mixed-content layout with left/right sections
+      console.log('🔄 Processing mixed-content layout in master renderer');
+      console.log('📊 Spec details:', {
+        hasLeft: !!spec.left,
+        hasRight: !!spec.right,
+        leftBullets: spec.left?.bullets?.length || 0,
+        rightBullets: spec.right?.bullets?.length || 0,
+        leftParagraph: !!spec.left?.paragraph,
+        rightParagraph: !!spec.right?.paragraph,
+        rootParagraph: !!spec.paragraph,
+        rootBullets: spec.bullets?.length || 0
+      });
+
+      // Handle case where content is in left/right sections
+      if (spec.left || spec.right) {
+        // Left section content
+        if (spec.left) {
+          let leftContent = '';
+          if (spec.left.bullets) {
+            leftContent = spec.left.bullets.map(bullet => `• ${bullet}`).join('\n');
+            console.log('📝 Left bullets content:', leftContent);
+          } else if (spec.left.paragraph) {
+            leftContent = spec.left.paragraph;
+            console.log('📝 Left paragraph content:', leftContent);
+          }
+
+          if (leftContent) {
+            slide.addText(leftContent, {
+              x: 0.5, y: 1.6, w: 4.5, h: 4.0,
+              fontSize: 14,
+              fontFace: 'Arial',
+              color: safeColorFormat((theme.colors.text as any)?.primary || '#000000'),
+              valign: 'top'
+            });
+          }
+        }
+
+        // Right section content
+        if (spec.right) {
+          let rightContent = '';
+          if (spec.right.bullets) {
+            rightContent = spec.right.bullets.map(bullet => `• ${bullet}`).join('\n');
+            console.log('📝 Right bullets content:', rightContent);
+          } else if (spec.right.paragraph) {
+            rightContent = spec.right.paragraph;
+            console.log('📝 Right paragraph content:', rightContent);
+          }
+
+          if (rightContent) {
+            slide.addText(rightContent, {
+              x: 5.5, y: 1.6, w: 4.0, h: 4.0,
+              fontSize: 14,
+              fontFace: 'Arial',
+              color: safeColorFormat((theme.colors.text as any)?.primary || '#000000'),
+              valign: 'top'
+            });
+          }
+        }
+      } else {
+        // Handle case where content is at root level - split it into two columns
+        console.log('🔄 Root-level content detected, splitting into columns');
+
+        let leftContent = '';
+        let rightContent = '';
+
+        // Put paragraph on left, bullets on right
+        if (spec.paragraph) {
+          leftContent = spec.paragraph;
+          console.log('📝 Left paragraph content (from root):', leftContent);
+        }
+
+        if (spec.bullets) {
+          rightContent = spec.bullets.map(bullet => `• ${bullet}`).join('\n');
+          console.log('📝 Right bullets content (from root):', rightContent);
+        }
+
+        // Add left content (paragraph)
+        if (leftContent) {
+          slide.addText(leftContent, {
+            x: 0.5, y: 1.6, w: 4.5, h: 4.0,
+            fontSize: 14,
+            fontFace: 'Arial',
+            color: safeColorFormat((theme.colors.text as any)?.primary || '#000000'),
+            valign: 'top'
+          });
+        }
+
+        // Add right content (bullets)
+        if (rightContent) {
+          slide.addText(rightContent, {
+            x: 5.5, y: 1.6, w: 4.0, h: 4.0,
+            fontSize: 14,
+            fontFace: 'Arial',
+            color: safeColorFormat((theme.colors.text as any)?.primary || '#000000'),
+            valign: 'top'
+          });
+        }
+      }
+    } else {
+      // Standard content rendering for other layouts
+      let bodyContent = '';
+
+      if (spec.bullets) {
+        bodyContent = spec.bullets.map(bullet => `• ${bullet}`).join('\n');
+      } else if (spec.paragraph) {
+        bodyContent = spec.paragraph;
+      }
+
+      if (bodyContent) {
+        slide.addText(bodyContent, { placeholder: 'body' });
+      }
+    }
+  }
 }
 
 /**
  * Comprehensive slide layout renderer supporting all layout types
  * Enhanced with improved spacing, professional positioning, and modern visual elements
  */
-async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentPadding: number, maxContentWidth: number): Promise<void> {
+async function renderSlideLayout(
+  slide: pptxgen.Slide,
+  spec: SlideSpec,
+  theme: ProfessionalTheme,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+): Promise<void> {
   console.log('🎯 renderSlideLayout called with:', {
     title: spec.title,
     layout: spec.layout,
@@ -342,10 +912,8 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
     hasLeftImage: !!spec.left?.imagePrompt
   });
 
-  // Optimized 16:9 layout constants for professional spacing
-  const contentY = 1.6;        // Optimized starting Y position below title
-  const columnWidth = 4.0;     // Optimized column width for 16:9
-  const columnGap = 0.5;       // Standard gap between columns
+  // Use unified layout constants for exact preview alignment
+  const { CONTENT_Y, COLUMN_WIDTH, COLUMN_GAP } = LAYOUT_CONSTANTS;
 
   switch (spec.layout) {
     case 'title':
@@ -353,116 +921,154 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
       break;
 
     case 'title-bullets':
-      if (spec.bullets) addBullets(slide, spec.bullets, theme, contentPadding, contentY, maxContentWidth);
+      if (spec.bullets) addBullets(slide, spec.bullets, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y, LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH);
       break;
 
     case 'title-paragraph':
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, contentPadding, contentY, maxContentWidth);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y, LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH);
       break;
 
     case 'two-column':
-      if (spec.left) await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, contentPadding, contentY, columnWidth);
-      if (spec.right) await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, contentPadding + columnWidth + columnGap, contentY, columnWidth, true);
+      if (spec.left) await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y, COLUMN_WIDTH, false, imageProcessor, slideContext);
+      if (spec.right) await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, LAYOUT_CONSTANTS.CONTENT_PADDING + COLUMN_WIDTH + COLUMN_GAP, CONTENT_Y, COLUMN_WIDTH, true, imageProcessor, slideContext);
       break;
 
     case 'mixed-content':
-      await renderMixedContent(slide, spec, theme, contentY);
+      await renderMixedContent(slide, spec, theme, CONTENT_Y, imageProcessor, slideContext);
       break;
 
     case 'image-right':
-      await renderImageRight(slide, spec, theme, contentY);
+      await renderImageRight(slide, spec, theme, CONTENT_Y, imageProcessor, slideContext);
       break;
 
     case 'image-left':
-      await renderImageLeft(slide, spec, theme, contentY);
+      await renderImageLeft(slide, spec, theme, CONTENT_Y, imageProcessor, slideContext);
       break;
 
     case 'image-full':
-      await renderImageFull(slide, spec, theme);
+      await renderImageFull(slide, spec, theme, imageProcessor, slideContext);
       break;
 
     case 'quote':
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, contentY, 8.0, true);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, CONTENT_Y, 8.0, true);
       break;
 
     case 'chart':
-      if (spec.chart) addChart(slide, spec.chart, theme, 1.0, contentY, 8.0, 4.0);
+      if (spec.chart) {
+        try {
+          // Validate chart data before rendering
+          const isValidChart = validateChartData(spec.chart);
+
+          if (isValidChart.valid) {
+            // Use new native chart system with enhanced error handling
+            const chartConfig: ChartConfig = {
+              type: spec.chart.type as ChartConfig['type'],
+              title: spec.chart.title,
+              data: spec.chart.series.map(series => ({
+                name: series.name,
+                labels: spec.chart!.categories,
+                values: series.data,
+                color: series.color
+              })),
+              position: { x: 1.0, y: CONTENT_Y, w: 8.0, h: 4.0 },
+              theme,
+              showLegend: spec.chart.showLegend,
+              showDataLabels: spec.chart.showDataLabels,
+              showTitle: true
+            };
+            addNativeChart(slide, chartConfig);
+          } else {
+            // Graceful fallback: render chart description as text
+            console.warn('Invalid chart data, falling back to text description:', isValidChart.errors);
+            renderChartFallback(slide, spec.chart, theme, isValidChart.errors);
+          }
+        } catch (error) {
+          console.error('Chart rendering failed, using fallback:', error);
+          renderChartFallback(slide, spec.chart, theme, [`Chart rendering error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+        }
+      }
       break;
 
     case 'comparison-table':
-      if (spec.comparisonTable) renderComparisonTable(slide, spec.comparisonTable, theme, contentY);
+      if (spec.comparisonTable) {
+        // Use new native table system
+        const tableConfig: TableConfig = {
+          headers: spec.comparisonTable.headers,
+          rows: spec.comparisonTable.rows,
+          position: { x: 1.0, y: CONTENT_Y, w: 8.0, h: 3.5 },
+          theme,
+          title: `${spec.title} - Comparison`,
+          showHeaders: true,
+          alternateRowColors: true,
+          borderStyle: 'medium',
+          headerStyle: 'primary'
+        };
+        addNativeTable(slide, tableConfig);
+      }
       break;
 
     case 'timeline':
-      if (spec.timeline) renderTimeline(slide, spec.timeline, theme, contentY);
+      if (spec.timeline) renderTimeline(slide, spec.timeline, theme, CONTENT_Y);
       break;
 
     case 'process-flow':
-      if (spec.processSteps) renderProcessFlow(slide, spec.processSteps, theme, contentY);
+      if (spec.processSteps) renderProcessFlow(slide, spec.processSteps, theme, CONTENT_Y);
       break;
 
     case 'before-after':
     case 'problem-solution':
       // Both are two-column semantics
-      await renderBeforeAfter(slide, spec, theme, contentY);
+      await renderBeforeAfter(slide, spec, theme, CONTENT_Y);
       break;
 
     case 'data-visualization':
-      if (spec.chart) addChart(slide, spec.chart, theme, 1.0, contentY, 8.0, 4.0);
+      if (spec.chart) addChart(slide, spec.chart, theme, 1.0, CONTENT_Y, 8.0, 4.0);
       break;
 
     case 'testimonial':
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, contentY, 8.0, true);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, CONTENT_Y, 8.0, true);
       break;
 
     case 'team-intro':
     case 'contact-info':
-      if (spec.bullets) addBullets(slide, spec.bullets, theme, 1.0, contentY, 8.0);
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, contentY + 0.8, 8.0);
+      if (spec.bullets) addBullets(slide, spec.bullets, theme, 1.0, CONTENT_Y, 8.0);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, 1.0, CONTENT_Y + 0.8, 8.0);
       break;
 
     case 'agenda':
       // Polished agenda layout with consistent spacing and separators
       slide.addText('Agenda', {
-        x: contentPadding,
-        y: contentY,
-        w: maxContentWidth,
+        x: LAYOUT_CONSTANTS.CONTENT_PADDING,
+        y: CONTENT_Y,
+        w: LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH,
         h: 0.5,
         fontFace: theme.typography.headings.fontFamily,
         fontSize: theme.typography.headings.sizes.h2,
         bold: true,
         color: safeColorFormat(theme.colors.text.primary)
       });
-      addModernSeparator(slide, theme, contentPadding, contentY + 0.6, maxContentWidth, 0.04);
-      if (spec.bullets) addEnhancedBullets(slide, spec.bullets, theme, contentPadding, contentY + 0.9, maxContentWidth);
+      addModernSeparator(slide, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y + 0.6, LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH, 0.04);
+      if (spec.bullets) addEnhancedBullets(slide, spec.bullets, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y + 0.9, LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH);
       break;
 
     case 'section-divider':
-      // Section divider card
-      slide.addShape('rect', {
-        x: contentPadding,
-        y: contentY + 0.4,
-        w: maxContentWidth,
-        h: 2.0,
-        fill: { color: safeColorFormat(theme.colors.surface) },
-        line: { width: 0 }
-      });
+      // SIMPLIFIED SECTION DIVIDER - NO SHAPES TO PREVENT CORRUPTION
       slide.addText(spec.title || 'Section', {
-        x: contentPadding + 0.3,
-        y: contentY + 0.6,
-        w: maxContentWidth - 0.6,
+        x: LAYOUT_CONSTANTS.CONTENT_PADDING,
+        y: CONTENT_Y + 1.0,
+        w: LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH,
         h: 1.0,
-        fontFace: theme.typography.headings.fontFamily,
         fontSize: Math.min(theme.typography.headings.sizes.h1, 40),
         bold: true,
-        color: safeColorFormat(theme.colors.primary)
+        color: safeColorFormat(theme.colors.primary),
+        align: 'center'
       });
       break;
 
     case 'thank-you':
       slide.addText('Thank You', {
         x: 0,
-        y: contentY + 1.0,
+        y: CONTENT_Y + 1.0,
         w: 10,
         h: 1.0,
         align: 'center',
@@ -473,7 +1079,7 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
       });
       if (spec.paragraph) {
         slide.addText(spec.paragraph, {
-          x: 2.0, y: contentY + 2.2, w: 6.0, h: 1.5,
+          x: 2.0, y: CONTENT_Y + 2.2, w: 6.0, h: 1.5,
           align: 'center',
           fontFace: theme.typography.body.fontFamily,
           fontSize: theme.typography.body.sizes.normal,
@@ -483,8 +1089,8 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
       break;
 
     default:
-      if (spec.bullets) addBullets(slide, spec.bullets, theme, contentPadding, contentY, maxContentWidth);
-      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, contentPadding, contentY, maxContentWidth);
+      if (spec.bullets) addBullets(slide, spec.bullets, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y, LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH);
+      if (spec.paragraph) addParagraph(slide, spec.paragraph, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y, LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH);
       break;
   }
 }
@@ -492,7 +1098,14 @@ async function renderSlideLayout(slide: pptxgen.Slide, spec: SlideSpec, theme: P
 /**
  * Render mixed content layout
  */
-async function renderMixedContent(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentY: number): Promise<void> {
+async function renderMixedContent(
+  slide: pptxgen.Slide,
+  spec: SlideSpec,
+  theme: ProfessionalTheme,
+  contentY: number,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+): Promise<void> {
   console.log('🔍 renderMixedContent called with spec:', {
     title: spec.title,
     layout: spec.layout,
@@ -515,7 +1128,7 @@ async function renderMixedContent(slide: pptxgen.Slide, spec: SlideSpec, theme: 
   }
   if (spec.right?.imagePrompt) {
     console.log('🖼️ Adding image:', spec.right.imagePrompt);
-    await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
 }
 
@@ -523,7 +1136,14 @@ async function renderMixedContent(slide: pptxgen.Slide, spec: SlideSpec, theme: 
  * Render image-right layout
  * Text on LEFT side (x: 0.5), image on RIGHT side (x: 5.5)
  */
-async function renderImageRight(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentY: number): Promise<void> {
+async function renderImageRight(
+  slide: pptxgen.Slide,
+  spec: SlideSpec,
+  theme: ProfessionalTheme,
+  contentY: number,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+): Promise<void> {
   let currentY = contentY;
 
   // Text content goes on the LEFT side
@@ -547,15 +1167,15 @@ async function renderImageRight(slide: pptxgen.Slide, spec: SlideSpec, theme: Pr
 
   // Image goes on the RIGHT side - check multiple locations
   if (spec.right?.imagePrompt) {
-    await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check left column for backward compatibility
   else if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt) {
-    await addImage(slide, spec.left.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.left.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check root imagePrompt
   else if (spec.imagePrompt) {
-    await addImage(slide, spec.imagePrompt, theme, 5.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
 }
 
@@ -563,48 +1183,55 @@ async function renderImageRight(slide: pptxgen.Slide, spec: SlideSpec, theme: Pr
  * Render image-left layout
  * Image on LEFT side (x: 0.5), text on RIGHT side (x: 5.5)
  */
-async function renderImageLeft(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, contentY: number): Promise<void> {
+async function renderImageLeft(
+  slide: pptxgen.Slide,
+  spec: SlideSpec,
+  theme: ProfessionalTheme,
+  contentY: number,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+): Promise<void> {
   let currentY = contentY;
 
   // Check for image in LEFT column (image-left layout)
   if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt) {
-    await addImage(slide, spec.left.imagePrompt, theme, 0.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.left.imagePrompt, theme, 0.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check right column for backward compatibility
   else if (spec.right && 'imagePrompt' in spec.right && spec.right.imagePrompt) {
-    await addImage(slide, spec.right.imagePrompt, theme, 0.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.right.imagePrompt, theme, 0.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check root imagePrompt
   else if (spec.imagePrompt) {
-    await addImage(slide, spec.imagePrompt, theme, 0.5, contentY, 4.0, 4.0);
+    await addImage(slide, spec.imagePrompt, theme, 0.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
 
-  // Text content goes on the RIGHT side
-  if (spec.paragraph) {
-    addParagraph(slide, spec.paragraph, theme, 5.5, currentY, 4.5);
-    currentY += 2.0;
-  }
-  if (spec.bullets) {
-    addBullets(slide, spec.bullets, theme, 5.5, currentY, 4.5);
-  }
-  // Add right column content if available
-  if (spec.right && !spec.right.imagePrompt) {
-    if (spec.right.paragraph) {
-      addParagraph(slide, spec.right.paragraph, theme, 5.5, currentY, 4.5);
-      currentY += 1.5;
-    }
-    if (spec.right.bullets) {
-      addBullets(slide, spec.right.bullets, theme, 5.5, currentY, 4.5);
-    }
+  // Enhanced text content on the RIGHT side (B-5: Two-Column + Image Support)
+  const rightColumnContent = {
+    paragraph: spec.paragraph || spec.right?.paragraph,
+    bullets: spec.bullets || spec.right?.bullets,
+    heading: spec.right?.heading,
+    metrics: spec.right?.metrics
+  };
+
+  // Use enhanced column content renderer for better mixed content support
+  if (rightColumnContent.paragraph || rightColumnContent.bullets || rightColumnContent.heading || rightColumnContent.metrics) {
+    await addColumnContent(slide, rightColumnContent as ExtendedColumnContent, theme, 5.5, currentY, 4.5, true, imageProcessor, slideContext);
   }
 }
 
 /**
  * Render full image layout
  */
-async function renderImageFull(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme): Promise<void> {
+async function renderImageFull(
+  slide: pptxgen.Slide,
+  spec: SlideSpec,
+  theme: ProfessionalTheme,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+): Promise<void> {
   const prompt = spec.right?.imagePrompt || 'default placeholder image';
-  await addImage(slide, prompt, theme, 0.5, 1.5, 9.0, 5.0);
+  await addImage(slide, prompt, theme, 0.5, 1.5, 9.0, 5.0, imageProcessor, slideContext);
 }
 
 /**
@@ -811,7 +1438,17 @@ type ExtendedColumnContent = NonNullable<SlideSpec['left'] | SlideSpec['right']>
 /**
  * Add column content (updated with extended type)
  */
-async function addColumnContent(slide: pptxgen.Slide, content: ExtendedColumnContent, theme: ProfessionalTheme, x: number, y: number, w: number, isRight: boolean = false) {
+async function addColumnContent(
+  slide: pptxgen.Slide,
+  content: ExtendedColumnContent,
+  theme: ProfessionalTheme,
+  x: number,
+  y: number,
+  w: number,
+  isRight: boolean = false,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+) {
   let currentY = y;
 
   if (content.heading) {
@@ -839,8 +1476,19 @@ async function addColumnContent(slide: pptxgen.Slide, content: ExtendedColumnCon
     currentY += content.bullets.length * 0.5;
   }
 
-  if (content.imagePrompt && isRight) {
-    await addImage(slide, content.imagePrompt, theme, x, currentY, w, 3.0);
+  // Enhanced image support for both left and right columns (B-5: Two-Column + Image Support)
+  if (content.imagePrompt) {
+    await addImage(slide, content.imagePrompt, theme, x, currentY, w, 3.0, imageProcessor, slideContext);
+    currentY += 3.2; // Add space after image
+  }
+
+  // Enhanced metrics support for both columns
+  if (content.metrics && content.metrics.length > 0) {
+    content.metrics.forEach((metric, index) => {
+      const metricY = currentY + (index * 0.8);
+      addMetricCard(slide, metric.label, metric.value, metric.unit || '', theme, x, metricY, w, 0.6);
+    });
+    currentY += content.metrics.length * 0.8 + 0.2;
   }
 }
 
@@ -849,141 +1497,146 @@ async function addColumnContent(slide: pptxgen.Slide, content: ExtendedColumnCon
  */
 
 /**
- * Add subtle slide background enhancement
+ * Add subtle slide background enhancement - DISABLED TO PREVENT CORRUPTION
  */
 function addSlideBackground(slide: pptxgen.Slide, theme: ProfessionalTheme) {
-  try {
-    // Add subtle gradient background
-    slide.addShape('rect', {
-      x: 0,
-      y: 0,
-      w: 10,
-      h: 7.5,
-      fill: {
-        color: safeColorFormat(theme.colors.background),
-        transparency: 5
-      },
-      line: { width: 0 }
-    });
-  } catch (error) {
-    console.warn('Failed to add slide background, skipping:', error);
-  }
+  // TEMPORARILY DISABLED - Complex shapes can cause PowerPoint corruption
+  console.log('⚠️ Slide background disabled to prevent corruption');
+  return;
 }
 
 /**
- * Add decorative elements for title slides
+ * Add decorative elements for title slides - DISABLED TO PREVENT CORRUPTION
  */
 function addTitleSlideDecorations(slide: pptxgen.Slide, theme: ProfessionalTheme) {
-  try {
-    // Add decorative accent line below title
-    slide.addShape('rect', {
-      x: 2.0,
-      y: 2.0,
-      w: 6.0,
-      h: 0.05,
-      fill: { color: safeColorFormat(theme.colors.accent) },
-      line: { width: 0 }
-    });
-
-    // Add subtle corner accents
-    slide.addShape('rect', {
-      x: 0.2,
-      y: 0.2,
-      w: 1.5,
-      h: 0.05,
-      fill: { color: safeColorFormat(theme.colors.primary) },
-      line: { width: 0 }
-    });
-
-    slide.addShape('rect', {
-      x: 8.3,
-      y: 7.0,
-      w: 1.5,
-      h: 0.05,
-      fill: { color: safeColorFormat(theme.colors.primary) },
-      line: { width: 0 }
-    });
-  } catch (error) {
-    console.warn('Failed to add title decorations, skipping:', error);
-  }
+  // TEMPORARILY DISABLED - Complex shapes can cause PowerPoint corruption
+  console.log('⚠️ Title decorations disabled to prevent corruption');
+  return;
 }
 
 /**
- * Add modern separator with enhanced styling
+ * Add modern separator with enhanced styling (B-6: Modern Theme Rendering)
+ * Safe implementation using text-based accent underlines
  */
 function addModernSeparator(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  try {
-    // Main separator line
-    slide.addShape('rect', {
-      x,
-      y,
-      w,
-      h,
-      fill: { color: safeColorFormat(theme.colors.borders.medium) },
-      line: { width: 0 }
-    });
+  // Use safe text-based accent underline instead of shapes
+  const accentColor = theme.colors.accent || theme.colors.primary;
 
-    // Add subtle shadow effect
-    slide.addShape('rect', {
-      x: x + 0.02,
-      y,
-      w,
-      h,
-      fill: {
-        color: safeColorFormat(theme.colors.borders.light),
-        transparency: 50
-      },
-      line: { width: 0 }
+  // Create accent underline using text character
+  slide.addText('━'.repeat(Math.floor(w * 10)), {
+    x,
+    y,
+    w,
+    h: h || 0.1,
+    fontSize: Math.max(h * 72, 8), // Convert inches to points
+    color: safeColorFormat(accentColor),
+    align: 'left',
+    fontFace: 'Arial',
+    bold: true
+  });
+}
+
+/**
+ * Add modern card layout for content (B-6: Modern Theme Rendering)
+ * Safe implementation using text-based styling
+ */
+function addModernCard(
+  slide: pptxgen.Slide,
+  content: string,
+  theme: ProfessionalTheme,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  options: {
+    title?: string;
+    accentColor?: string;
+    backgroundColor?: string;
+  } = {}
+): void {
+  const accentColor = options.accentColor || theme.colors.accent || theme.colors.primary;
+  const backgroundColor = options.backgroundColor || theme.colors.surface || '#FFFFFF';
+
+  // Add card background using safe rectangle
+  slide.addShape('rect', {
+    x,
+    y,
+    w,
+    h,
+    fill: { color: backgroundColor },
+    line: { color: safeColorFormat(accentColor), width: 1 },
+    shadow: {
+      type: 'outer',
+      blur: 3,
+      offset: 2,
+      angle: 45,
+      color: '00000020'
+    }
+  });
+
+  // Add accent line at top of card
+  slide.addShape('rect', {
+    x,
+    y,
+    w,
+    h: 0.05,
+    fill: { color: safeColorFormat(accentColor) },
+    line: { width: 0 }
+  });
+
+  let contentY = y + 0.15;
+
+  // Add card title if provided
+  if (options.title) {
+    slide.addText(options.title, {
+      x: x + 0.2,
+      y: contentY,
+      w: w - 0.4,
+      h: 0.4,
+      fontSize: TYPOGRAPHY_CONSTANTS.HEADING_SIZE,
+      color: safeColorFormat(theme.colors.text.primary),
+      fontFace: theme.typography.headings.fontFamily,
+      bold: true,
+      align: 'left'
     });
-  } catch (error) {
-    console.warn('Failed to add modern separator, skipping:', error);
+    contentY += 0.5;
   }
+
+  // Add card content
+  slide.addText(content, {
+    x: x + 0.2,
+    y: contentY,
+    w: w - 0.4,
+    h: h - (contentY - y) - 0.15,
+    fontSize: TYPOGRAPHY_CONSTANTS.BODY_SIZE,
+    color: safeColorFormat(theme.colors.text.primary),
+    fontFace: theme.typography.body.fontFamily,
+    align: 'left',
+    valign: 'top'
+  });
 }
 
 /**
  * Add enhanced column background with subtle styling
  */
 function addColumnBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number, side: 'left' | 'right') {
-  try {
-    // Subtle background with rounded corners
-    slide.addShape('rect', {
-      x: x - 0.1,
-      y: y - 0.1,
-      w: w + 0.2,
-      h: h + 0.2,
-      fill: {
-        color: safeColorFormat(theme.colors.surface),
-        transparency: 15
-      },
-      line: {
-        color: safeColorFormat(theme.colors.borders.light),
-        width: 1
-      },
-      rectRadius: 0.1
-    });
-
-    // Add accent border on the appropriate side
-    const accentX = side === 'left' ? x - 0.1 : x + w + 0.05;
-    slide.addShape('rect', {
-      x: accentX,
-      y: y - 0.1,
-      w: 0.05,
-      h: h + 0.2,
-      fill: { color: safeColorFormat(theme.colors.accent) },
-      line: { width: 0 }
-    });
-  } catch (error) {
-    console.warn('Failed to add column background, skipping:', error);
-  }
+  // TEMPORARILY DISABLED - Complex shapes can cause PowerPoint corruption
+  console.log('⚠️ Column background disabled to prevent corruption');
+  return;
 }
 
 /**
- * Enhanced bullet points with improved visual hierarchy
+ * Enhanced bullet points with improved visual hierarchy (B-6: Modern Theme Rendering)
+ * Supports both traditional and modern theme styling
  */
 function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
   const fontSize = Math.min(theme.typography.body.sizes.normal, 16); // Increased for better readability
   const lineHeight = 0.6; // Increased spacing for 16:9 format
   const maxHeight = 3.5; // Maximum content height for 16:9 format
+
+  // Check if this is a modern theme for enhanced styling
+  const isModern = 'palette' in theme;
+  const accentColor = isModern ? (theme as any).palette.accent : theme.colors.accent;
 
   bullets.forEach((bullet, i) => {
     const bulletY = y + i * lineHeight;
@@ -991,18 +1644,50 @@ function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: Prof
     // Ensure bullets don't exceed slide boundaries
     if (bulletY + 0.5 > 5.625) return;
 
-    slide.addText(`• ${bullet}`, {
-      x: x,
-      y: bulletY,
-      w: w,
-      h: 0.5, // Increased height for better text rendering
-      fontSize,
-      color: safeColorFormat(theme.colors.text.primary),
-      align: 'left',
-      valign: 'top',
-      fontFace: 'Arial', // Force basic font for compatibility
-      wrap: true // Enable text wrapping
-    });
+    // Modern theme: use accent-colored bullet points
+    if (isModern) {
+      // Add modern bullet point with accent color
+      slide.addText('▶', {
+        x: x,
+        y: bulletY,
+        w: 0.3,
+        h: 0.5,
+        fontSize: fontSize * 0.8,
+        color: safeColorFormat(accentColor),
+        align: 'left',
+        valign: 'middle',
+        fontFace: 'Arial',
+        bold: true
+      });
+
+      // Add bullet text with modern typography
+      slide.addText(bullet, {
+        x: x + 0.4,
+        y: bulletY,
+        w: w - 0.4,
+        h: 0.5,
+        fontSize,
+        color: safeColorFormat(theme.colors.text.primary),
+        align: 'left',
+        valign: 'top',
+        fontFace: 'Arial',
+        wrap: true
+      });
+    } else {
+      // Traditional theme: standard bullet points
+      slide.addText(`• ${bullet}`, {
+        x: x,
+        y: bulletY,
+        w: w,
+        h: 0.5,
+        fontSize,
+        color: safeColorFormat(theme.colors.text.primary),
+        align: 'left',
+        valign: 'top',
+        fontFace: 'Arial',
+        wrap: true
+      });
+    }
   });
 }
 
@@ -1038,101 +1723,105 @@ function addEnhancedParagraph(slide: pptxgen.Slide, text: string, theme: Profess
 }
 
 /**
- * Enhanced image with improved styling and border effects
+ * Enhanced image with AI-powered processing and professional styling
+ * Now uses the new ImageService for better quality and consistency
  */
-async function addEnhancedImage(slide: pptxgen.Slide, prompt: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  console.log(`🎨 Attempting to generate enhanced image with prompt: "${prompt.substring(0, 100)}..."`);
+async function addEnhancedImage(
+  slide: pptxgen.Slide,
+  prompt: string,
+  theme: ProfessionalTheme,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+) {
+  console.log(`🎨 Generating AI-enhanced image: "${prompt.substring(0, 100)}..."`);
 
   try {
-    const imageConfig = getImageModelConfig();
-    console.log(`   Using ${imageConfig.model} (${imageConfig.size})`);
+    // Import the image service
+    const { imageService } = await import('./services/imageService');
 
-    const response = await getOpenAI().images.generate({
-      model: imageConfig.model,
-      prompt: `${prompt}${imageConfig.promptSuffix}`,
-      n: 1,
-      size: imageConfig.size,
-      response_format: 'b64_json'
+    // Generate optimized prompt if image processor is available
+    let optimizedPrompt = prompt;
+    if (imageProcessor) {
+      optimizedPrompt = imageProcessor.generateOptimizedPrompt(prompt, slideContext);
+      console.log(`   🎯 Optimized prompt: "${optimizedPrompt.substring(0, 100)}..."`);
+    }
+
+    // Use the new image service with enhanced options
+    const imageResult = await imageService.generateImage(optimizedPrompt, {
+      style: 'professional',
+      quality: 'high',
+      aspectRatio: '16:9',
+      enhanceColors: true,
+      consistentStyling: true
     });
 
-    console.log(`   ✓ DALL-E API call successful`);
+    console.log(`   ✓ Image generated successfully with enhanced processing`);
 
-    if (response.data && response.data[0] && response.data[0].b64_json) {
-      const base64 = response.data[0].b64_json;
-      console.log(`   ✓ Image data received (${Math.round(base64.length / 1024)}KB base64)`);
+    if (imageResult && imageResult.url) {
+      const imageUrl = imageResult.url;
+      console.log(`   ✓ Enhanced image URL received: ${imageUrl}`);
+      console.log(`   📊 Generation metadata:`, imageResult.metadata);
 
-      // Add subtle shadow background
-      slide.addShape('rect', {
-        x: x + 0.05,
-        y: y + 0.05,
-        w,
-        h,
-        fill: {
-          color: safeColorFormat('#000000'),
-          transparency: 85
-        },
-        line: { width: 0 },
-        rectRadius: 0.1
-      });
+      let processedImageBuffer: Buffer;
+      let processingStats: any = {};
 
-      // Add the main image with rounded corners
+      // Apply AI image processing if processor is available
+      if (imageProcessor) {
+        console.log(`   🔧 Applying AI image enhancements...`);
+        const processingResult = await imageProcessor.processImage(imageUrl, optimizedPrompt, slideContext);
+        processedImageBuffer = processingResult.buffer;
+        processingStats = processingResult.metadata;
+
+        console.log(`   ✅ Image processing complete: ${processingStats.processingSteps.join(' → ')}`);
+        console.log(`   📊 Quality score: ${processingStats.qualityScore}%, Size: ${Math.round(processingStats.finalSize / 1024)}KB`);
+      } else {
+        // Fallback: download original image
+        const axios = require('axios');
+        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        processedImageBuffer = Buffer.from(response.data);
+        console.log(`   📥 Downloaded enhanced image: ${Math.round(processedImageBuffer.length / 1024)}KB`);
+      }
+
+      // Convert to base64 for PowerPoint
+      const base64 = processedImageBuffer.toString('base64');
+
+      // SIMPLIFIED IMAGE ADDITION - NO DECORATIVE ELEMENTS TO PREVENT CORRUPTION
       slide.addImage({
         data: `data:image/png;base64,${base64}`,
         x,
         y,
         w,
-        h,
-        rounding: true
+        h
+        // Removed: rounding, shadows, borders to prevent corruption
       });
 
-      // Add subtle border
-      slide.addShape('rect', {
-        x,
-        y,
-        w,
-        h,
-        fill: { transparency: 100 },
-        line: {
-          color: safeColorFormat(theme.colors.borders.medium),
-          width: 1
-        },
-        rectRadius: 0.1
-      });
+      console.log(`   ✅ AI-enhanced image added to slide at (${x}, ${y}) size ${w}x${h}`);
 
-      console.log(`   ✓ Enhanced image added to slide at position (${x}, ${y}) size ${w}x${h}`);
+      // Log processing statistics if available
+      if (processingStats.processingSteps) {
+        console.log(`   📈 Applied enhancements: ${processingStats.processingSteps.join(', ')}`);
+      }
+
     } else {
-      throw new Error('No image data returned from DALL-E');
+      throw new Error('No image URL returned from DALL-E');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`❌ Enhanced image generation failed: ${errorMessage}`);
+    console.error(`❌ AI-enhanced image generation failed: ${errorMessage}`);
 
-    // Enhanced placeholder with better styling
-    slide.addShape('rect', {
-      x,
-      y,
-      w,
-      h,
-      fill: {
-        color: safeColorFormat(theme.colors.surface),
-        transparency: 10
-      },
-      line: {
-        color: safeColorFormat(theme.colors.primary),
-        width: 2,
-        dashType: 'dash'
-      },
-      rectRadius: 0.1
-    });
-
-    slide.addText('🖼️ Image Generation Failed', {
+    // SIMPLIFIED ERROR PLACEHOLDER - NO COMPLEX SHAPES TO PREVENT CORRUPTION
+    slide.addText('Image Generation Failed', {
       x,
       y: y + h / 2 - 0.3,
       w,
       h: 0.6,
       align: 'center',
-      color: safeColorFormat(theme.colors.text.muted),
-      fontSize: Math.min(theme.typography.body.sizes.small, 12)
+      color: safeColorFormat('#666666'), // Simple gray color
+      fontSize: 12
     });
   }
 }
@@ -1140,8 +1829,18 @@ async function addEnhancedImage(slide: pptxgen.Slide, prompt: string, theme: Pro
 /**
  * Legacy image function for compatibility
  */
-async function addImage(slide: pptxgen.Slide, prompt: string, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  return addEnhancedImage(slide, prompt, theme, x, y, w, h);
+async function addImage(
+  slide: pptxgen.Slide,
+  prompt: string,
+  theme: ProfessionalTheme,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  imageProcessor?: ImageProcessor,
+  slideContext?: { title: string; layout: string; index: number; totalSlides: number }
+) {
+  return addEnhancedImage(slide, prompt, theme, x, y, w, h, imageProcessor, slideContext);
 }
 
 /**
@@ -1176,22 +1875,8 @@ export async function generateThemeShowcase(): Promise<Buffer> {
  * Enhanced chart rendering with modern styling
  */
 function addEnhancedChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['chart']>, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  // Add chart background
-  slide.addShape('rect', {
-    x: x - 0.1,
-    y: y - 0.1,
-    w: w + 0.2,
-    h: h + 0.2,
-    fill: {
-      color: safeColorFormat(theme.colors.surface),
-      transparency: 10
-    },
-    line: {
-      color: safeColorFormat(theme.colors.borders.light),
-      width: 1
-    },
-    rectRadius: 0.1
-  });
+  // SIMPLIFIED CHART - NO BACKGROUND SHAPES TO PREVENT CORRUPTION
+  console.log('📊 Adding simplified chart without decorative elements');
 
   // Map chart types to pptxgenjs format
   const chartTypeMap: Record<string, any> = {
@@ -1801,5 +2486,205 @@ function addMetricCard(slide: pptxgen.Slide, label: string, value: string, unit:
     });
   } catch (error) {
     console.warn('Failed to add metric card, skipping:', error);
+  }
+}
+
+/**
+ * Add page numbers and footer to slide (B-3: Page Numbers & Footer)
+ *
+ * @param slide - The slide to add page numbers to
+ * @param currentPage - Current slide number (1-based)
+ * @param totalPages - Total number of slides
+ * @param isTitleSlide - Whether this is a title slide (optional toggle)
+ */
+function addPageNumbersAndFooter(
+  slide: pptxgen.Slide,
+  currentPage: number,
+  totalPages: number,
+  isTitleSlide: boolean = false
+): void {
+  // Configuration for page numbers
+  const showPageNumbersOnTitleSlide = false; // Configurable toggle
+
+  // Skip page numbers on title slide if configured
+  if (isTitleSlide && !showPageNumbersOnTitleSlide) {
+    return;
+  }
+
+  // Page number positioning (bottom-right)
+  const pageNumberX = SLIDE_DIMENSIONS.WIDTH - 1.0; // 1 inch from right edge
+  const pageNumberY = SLIDE_DIMENSIONS.HEIGHT - 0.4; // 0.4 inches from bottom
+  const pageNumberWidth = 0.8;
+  const pageNumberHeight = 0.3;
+
+  // Add page number text
+  slide.addText(`${currentPage} / ${totalPages}`, {
+    x: pageNumberX,
+    y: pageNumberY,
+    w: pageNumberWidth,
+    h: pageNumberHeight,
+    fontSize: TYPOGRAPHY_CONSTANTS.CAPTION_SIZE,
+    color: '666666', // Gray color for subtle appearance
+    align: 'right',
+    fontFace: 'Arial', // Standard font for compatibility
+    bold: false
+  });
+
+  // Optional footer text (can be configured)
+  const includeFooter = false; // Configurable toggle
+  const footerText = 'AI-Generated Presentation';
+
+  if (includeFooter) {
+    const footerX = LAYOUT_CONSTANTS.CONTENT_PADDING;
+    const footerY = SLIDE_DIMENSIONS.HEIGHT - 0.4;
+    const footerWidth = SLIDE_DIMENSIONS.WIDTH - LAYOUT_CONSTANTS.CONTENT_PADDING - 1.5; // Leave space for page numbers
+
+    slide.addText(footerText, {
+      x: footerX,
+      y: footerY,
+      w: footerWidth,
+      h: pageNumberHeight,
+      fontSize: TYPOGRAPHY_CONSTANTS.CAPTION_SIZE,
+      color: '666666',
+      align: 'left',
+      fontFace: 'Arial',
+      bold: false
+    });
+  }
+}
+
+/**
+ * Validate chart data for rendering (B-4: Charts from Structured Spec)
+ *
+ * @param chart - Chart specification to validate
+ * @returns Validation result with errors if any
+ */
+function validateChartData(chart: NonNullable<SlideSpec['chart']>): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Validate chart type
+  const supportedTypes = ['bar', 'line', 'pie', 'doughnut', 'area', 'scatter', 'column'];
+  if (!supportedTypes.includes(chart.type)) {
+    errors.push(`Unsupported chart type: ${chart.type}. Supported types: ${supportedTypes.join(', ')}`);
+  }
+
+  // Validate categories
+  if (!chart.categories || chart.categories.length === 0) {
+    errors.push('Chart must have at least one category');
+  }
+
+  // Validate series data
+  if (!chart.series || chart.series.length === 0) {
+    errors.push('Chart must have at least one data series');
+  } else {
+    chart.series.forEach((series, index) => {
+      if (!series.name || series.name.trim() === '') {
+        errors.push(`Series ${index + 1} must have a name`);
+      }
+
+      if (!series.data || series.data.length === 0) {
+        errors.push(`Series ${index + 1} must have data points`);
+      } else if (series.data.length !== chart.categories.length) {
+        errors.push(`Series ${index + 1} data length (${series.data.length}) must match categories length (${chart.categories.length})`);
+      }
+
+      // Validate numeric data
+      const hasInvalidData = series.data.some(value => typeof value !== 'number' || isNaN(value));
+      if (hasInvalidData) {
+        errors.push(`Series ${index + 1} contains invalid numeric data`);
+      }
+    });
+  }
+
+  // Special validation for pie/doughnut charts
+  if ((chart.type === 'pie' || chart.type === 'doughnut') && chart.series.length > 1) {
+    errors.push(`${chart.type} charts support only one data series`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Render chart fallback when chart data is invalid (B-4: Charts from Structured Spec)
+ *
+ * @param slide - Slide to render fallback on
+ * @param chart - Chart specification
+ * @param theme - Theme for styling
+ * @param errors - Validation errors
+ */
+function renderChartFallback(
+  slide: pptxgen.Slide,
+  chart: NonNullable<SlideSpec['chart']>,
+  theme: ProfessionalTheme,
+  errors: string[]
+): void {
+  const fallbackX = 1.0;
+  const fallbackY = LAYOUT_CONSTANTS.CONTENT_Y;
+  const fallbackWidth = 8.0;
+
+  // Add chart title if available
+  if (chart.title) {
+    slide.addText(chart.title, {
+      x: fallbackX,
+      y: fallbackY,
+      w: fallbackWidth,
+      h: 0.6,
+      fontSize: TYPOGRAPHY_CONSTANTS.HEADING_SIZE,
+      color: safeColorFormat(theme.colors.text.primary),
+      fontFace: theme.typography.headings.fontFamily,
+      bold: true,
+      align: 'center'
+    });
+  }
+
+  // Add error message
+  slide.addText('📊 Chart Data Error', {
+    x: fallbackX,
+    y: fallbackY + 0.8,
+    w: fallbackWidth,
+    h: 0.5,
+    fontSize: TYPOGRAPHY_CONSTANTS.BODY_SIZE,
+    color: safeColorFormat(theme.colors.semantic?.error || '#DC2626'),
+    fontFace: theme.typography.body.fontFamily,
+    bold: true,
+    align: 'center'
+  });
+
+  // Add error details
+  const errorText = errors.join('\n• ');
+  slide.addText(`• ${errorText}`, {
+    x: fallbackX,
+    y: fallbackY + 1.5,
+    w: fallbackWidth,
+    h: 2.0,
+    fontSize: TYPOGRAPHY_CONSTANTS.SMALL_SIZE,
+    color: safeColorFormat(theme.colors.text.secondary),
+    fontFace: theme.typography.body.fontFamily,
+    align: 'left'
+  });
+
+  // Add data summary if available
+  if (chart.series && chart.series.length > 0) {
+    let summaryText = '\n\nData Summary:\n';
+    chart.series.forEach((series, index) => {
+      if (series.name && series.data) {
+        const validData = series.data.filter(val => typeof val === 'number' && !isNaN(val));
+        summaryText += `${series.name}: ${validData.length} valid data points\n`;
+      }
+    });
+
+    slide.addText(summaryText, {
+      x: fallbackX,
+      y: fallbackY + 3.8,
+      w: fallbackWidth,
+      h: 1.0,
+      fontSize: TYPOGRAPHY_CONSTANTS.SMALL_SIZE,
+      color: safeColorFormat(theme.colors.text.muted),
+      fontFace: theme.typography.body.fontFamily,
+      align: 'left'
+    });
   }
 }

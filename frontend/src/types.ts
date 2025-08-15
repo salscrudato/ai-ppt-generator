@@ -27,7 +27,7 @@ export interface SlideSpec {
   title: string;
 
   /** The layout type that determines how content is arranged on the slide */
-  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution' | 'mixed-content';
+  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'image-full' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution' | 'mixed-content' | 'agenda';
 
   /** Bullet points for scannable, list-based content */
   bullets?: string[];
@@ -35,11 +35,15 @@ export interface SlideSpec {
   /** Paragraph text for narrative or explanatory content */
   paragraph?: string;
 
+  /** Image prompt for AI-generated images */
+  imagePrompt?: string;
+
   /** Left column content for two-column layouts */
   left?: {
     heading?: string;
     bullets?: string[];
     paragraph?: string;
+    imagePrompt?: string;
     metrics?: Array<{
       value: string;
       label: string;
@@ -130,13 +134,19 @@ export interface GenerationParams {
   prompt: string;
 
   /** Target audience for content adaptation */
-  audience?: 'general' | 'executives' | 'technical' | 'sales' | 'investors' | 'students';
+  audience?: 'general' | 'executives' | 'technical' | 'sales' | 'investors' | 'students' | 'healthcare' | 'education' | 'marketing' | 'finance' | 'startup' | 'government';
 
   /** Tone and style for content generation */
-  tone?: 'professional' | 'casual' | 'persuasive' | 'educational' | 'inspiring';
+  tone?: 'professional' | 'casual' | 'persuasive' | 'educational' | 'inspiring' | 'authoritative' | 'friendly' | 'urgent' | 'confident' | 'analytical';
 
   /** Desired content length and detail level */
-  contentLength?: 'brief' | 'moderate' | 'detailed';
+  contentLength?: 'minimal' | 'brief' | 'moderate' | 'detailed' | 'comprehensive';
+
+  /** Presentation type for context-aware generation */
+  presentationType?: 'general' | 'pitch' | 'report' | 'training' | 'proposal' | 'update' | 'analysis' | 'comparison' | 'timeline' | 'process' | 'strategy';
+
+  /** Industry context for specialized content */
+  industry?: 'general' | 'technology' | 'healthcare' | 'finance' | 'education' | 'retail' | 'manufacturing' | 'consulting' | 'nonprofit' | 'government' | 'startup';
 
   /** Preferred layout type for the slide */
   layout?: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution';
@@ -144,8 +154,12 @@ export interface GenerationParams {
   /** Whether to generate an AI image using DALL-E */
   withImage?: boolean;
 
+  /** Image style for AI generation */
+  imageStyle?: 'realistic' | 'illustration' | 'abstract' | 'professional' | 'minimal';
+
   /** Design and layout preferences */
   design?: {
+    layout?: string;
     theme?: string;
     layoutName?: string;
     brand?: {
@@ -153,8 +167,19 @@ export interface GenerationParams {
       secondary?: string;
       accent?: string;
       fontFamily?: string;
+      logo?: string;
     };
+    customColors?: string[];
   };
+
+  /** Content quality and validation preferences */
+  qualityLevel?: 'standard' | 'high' | 'premium';
+
+  /** Whether to include speaker notes */
+  includeNotes?: boolean;
+
+  /** Whether to include source citations */
+  includeSources?: boolean;
 }
 
 /**
@@ -213,7 +238,7 @@ export interface SlideDragContext {
  */
 export interface AppState {
   /** Current step in the slide generation workflow */
-  step: 'input' | 'preview' | 'edit' | 'presentation';
+  step: 'input' | 'edit' | 'presentation';
 
   /** Current mode: single slide or multi-slide presentation */
   mode: 'single' | 'presentation';

@@ -16,7 +16,6 @@
  *
  * API ENDPOINTS:
  * - GET /health - Service health check
- * - POST /draft - Generate slide content draft for preview
  * - POST /generate - Create final PowerPoint file from slide specification
  * - POST /validate-content - Validate slide content quality
  * - POST /themes - Get theme recommendations based on content
@@ -44,14 +43,16 @@ import helmet from "helmet";
 import compression from "compression";
 
 // Import enhanced core modules with error types
-import { generateSlideSpec, AIGenerationError, ValidationError, TimeoutError } from "./llm";
-import { generatePpt } from "./pptGenerator";
-import { safeValidateGenerationParams, safeValidateSlideSpec, validateContentQuality, generateContentImprovements, type SlideSpec } from "./schema";
+import { AIGenerationError, ValidationError, TimeoutError, RateLimitError, ContentFilterError, NetworkError } from "./llm";
 import { PROFESSIONAL_THEMES, selectThemeForContent } from "./professionalThemes";
 import { debugLogger, DebugCategory } from "./utils/debugLogger";
-// Layout planning imports
-import { buildSlide, type SlideConfig, type SlideType } from './slides';
-import { getTheme as getCoreTheme } from './core/theme/themes';
+
+// Import new modular services
+import { aiService } from "./services/aiService";
+import { powerPointService } from "./services/powerPointService";
+import { validationService } from "./services/validationService";
+import { type SlideSpec, safeValidateSlideSpec } from "./schema";
+
 
 // Production-ready configuration constants
 const CONFIG = {
@@ -121,6 +122,8 @@ interface PerformanceMetrics {
   aiSteps?: number;
   averageScore?: number;
   averageGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
+  qualityScore?: number;
+  qualityGrade?: 'A' | 'B' | 'C' | 'D' | 'F';
 }
 
 const performanceMetrics: PerformanceMetrics[] = [];
@@ -281,39 +284,7 @@ app.get('/theme-presets', (_req, res) => {
   return res.json({ themes, count: themes.length });
 });
 
-/**
- * Render plan endpoint: returns a UI-friendly JSON plan per slide
- * Accepts: { slides: SlideConfig[], theme?: 'neutral'|'executive'|'colorPop' }
- */
-app.post('/render-plan', (req, res) => {
-  try {
-    const { slides, theme } = req.body || {};
-    if (!Array.isArray(slides) || slides.length === 0) {
-      return res.status(400).json({ error: 'slides array required' });
-    }
 
-    const coreTheme = getCoreTheme(theme || 'neutral');
-
-    const plans = slides.map((slide: SlideConfig, index: number) => {
-      try {
-        const result = buildSlide(slide.type as SlideType, slide, coreTheme);
-        return {
-          index,
-          type: slide.type,
-          title: (slide as any).title,
-          layout: result.layout,
-          metadata: result.metadata
-        };
-      } catch (e) {
-        return { index, error: e instanceof Error ? e.message : String(e) };
-      }
-    });
-
-    return res.json({ plans });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to build render plan' });
-  }
-});
 
 /**
  * Metrics endpoint (secured)
@@ -325,111 +296,119 @@ app.get('/metrics', (req, res) => {
   return res.json(performanceMetrics.slice(-100));
 });
 
+
+
 /**
- * Slide draft generation endpoint with AI image generation support
+ * Draft generation endpoint - Generate slide content from user parameters
  */
 app.post('/draft', async (req, res) => {
-  // Create request context for comprehensive debugging
-  const requestId = debugLogger.createRequestContext('/draft', {
-    userAgent: req.get('User-Agent'),
-    contentLength: req.get('Content-Length'),
-    ip: req.ip
-  });
-
   const performanceMetric = startPerformanceTracking('/draft', req);
-  const perfId = debugLogger.startPerformanceTracking('draft-generation', requestId);
 
   try {
-    const requestData = req.body;
-
-    // Handle both 'topic' and 'prompt' fields for backward compatibility
-    if (requestData.topic && !requestData.prompt) {
-      requestData.prompt = requestData.topic;
-    }
-
-    debugLogger.info('Draft generation request received', DebugCategory.API, requestId, {
-      promptLength: requestData.prompt?.length || 0,
-      audience: requestData.audience,
-      tone: requestData.tone,
-      contentLength: requestData.contentLength,
-      withImage: requestData.withImage
-    });
-
     logger.info('Draft generation request', {
-      requestId: performanceMetric.requestId,
-      promptLength: requestData.prompt?.length || 0,
-      audience: requestData.audience,
-      tone: requestData.tone,
-      contentLength: requestData.contentLength,
-      layout: requestData.layout,
-      withImage: requestData.withImage,
+      prompt: req.body.prompt?.substring(0, 100),
+      audience: req.body.audience,
+      tone: req.body.tone,
+      contentLength: req.body.contentLength,
+      withImage: req.body.withImage,
       timestamp: new Date().toISOString()
     });
 
-    const validationResult = safeValidateGenerationParams(requestData);
-    if (!validationResult.success) {
-      debugLogger.warn('Invalid generation parameters', DebugCategory.VALIDATION, requestId, {
-        errors: validationResult.errors,
-        receivedData: { ...requestData, prompt: '[REDACTED]' }
-      });
-
-      debugLogger.endPerformanceTracking(perfId, { validationFailed: true });
-      debugLogger.endRequestContext(requestId, false, { errorType: 'VALIDATION_ERROR' });
-
-      logger.warn('Invalid request parameters', {
-        errors: validationResult.errors,
-        requestBody: { ...requestData, prompt: '[REDACTED]' }
-      });
-
-      endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
+    // Validate generation parameters
+    const paramValidation = validationService.validateGenerationParams(req.body);
+    if (!paramValidation.success) {
+      logger.warn('Invalid generation parameters', { errors: paramValidation.errors });
+      endPerformanceTracking(performanceMetric, false, 'INVALID_PARAMS_ERROR');
       return res.status(400).json({
         error: 'Invalid generation parameters',
-        code: 'VALIDATION_ERROR',
-        details: validationResult.errors
+        code: 'INVALID_PARAMS_ERROR',
+        details: paramValidation.errors
       });
     }
 
-    // Use validated parameters directly
-    const enhancedParams = validationResult.data!;
+    // Use the AI service to generate slide content
+    const slideSpec = await aiService.generateSlideContent(req.body);
 
-    debugLogger.debug('Starting AI slide generation', DebugCategory.AI_MODEL, requestId, {
-      validatedParams: enhancedParams
+    // Validate the generated content
+    const contentValidation = validationService.validateSlideSpec(slideSpec);
+    if (!contentValidation.success) {
+      logger.warn('Generated content failed validation', { errors: contentValidation.errors });
+      endPerformanceTracking(performanceMetric, false, 'CONTENT_VALIDATION_ERROR');
+      return res.status(422).json({
+        error: 'Generated content failed validation',
+        code: 'CONTENT_VALIDATION_ERROR',
+        details: contentValidation.errors
+      });
+    }
+
+    // Assess content quality
+    const qualityAssessment = validationService.assessContentQuality(slideSpec);
+
+    endPerformanceTracking(performanceMetric, true, undefined, {
+      qualityScore: qualityAssessment.score,
+      qualityGrade: qualityAssessment.grade
     });
 
-    const draft = await generateSlideSpec(enhancedParams);
-
-    debugLogger.info('Draft generation successful', DebugCategory.API, requestId, {
-      title: draft.title,
-      layout: draft.layout,
-      contentLength: JSON.stringify(draft).length
+    return res.json({
+      spec: slideSpec,
+      quality: {
+        score: qualityAssessment.score,
+        grade: qualityAssessment.grade,
+        issues: qualityAssessment.issues,
+        strengths: qualityAssessment.strengths,
+        suggestions: qualityAssessment.suggestions
+      },
+      timestamp: new Date().toISOString()
     });
-
-    debugLogger.endPerformanceTracking(perfId, { slideGenerated: true });
-    debugLogger.endRequestContext(requestId, true, { slideCount: 1, aiSteps: 4 });
-
-    endPerformanceTracking(performanceMetric, true, undefined, { slideCount: 1, aiSteps: 4 });
-    return res.json(draft);
   } catch (error) {
-    const errorType = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
+    let status = 500;
+    let code = 'DRAFT_GENERATION_ERROR';
+    let message = 'Failed to generate slide draft. Please try again.';
 
-    debugLogger.error(`Draft generation failed: ${error instanceof Error ? error.message : String(error)}`, requestId, {
-      errorType,
-      stack: error instanceof Error ? error.stack : undefined,
-      errorDetails: error
-    });
+    if (error instanceof AIGenerationError) {
+      status = 503;
+      code = 'AI_SERVICE_ERROR';
+      message = 'AI service temporarily unavailable. Please try again in a moment.';
+      logger.error('AI service error during draft generation', {
+        message: error.message,
+        step: error.step,
+        attempt: error.attempt
+      });
+    } else if (error instanceof ValidationError) {
+      status = 422;
+      code = 'CONTENT_VALIDATION_ERROR';
+      message = 'Generated content failed validation. Please try different parameters.';
+      logger.error('Content validation failed during draft generation', {
+        message: error.message,
+        validationErrors: error.validationErrors
+      });
+    } else if (error instanceof TimeoutError) {
+      status = 504;
+      code = 'TIMEOUT_ERROR';
+      message = 'Request timed out. Please try again.';
+      logger.error('Timeout during draft generation', {
+        message: error.message,
+        timeoutMs: error.timeoutMs
+      });
+    } else if (error instanceof RateLimitError) {
+      status = 429;
+      code = 'RATE_LIMIT_ERROR';
+      message = error.message;
+      logger.warn('Rate limit exceeded during draft generation', {
+        message: error.message,
+        retryAfter: error.retryAfter
+      });
+    } else {
+      logger.error('Unexpected error during draft generation', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
 
-    debugLogger.endPerformanceTracking(perfId, { error: errorType });
-    debugLogger.endRequestContext(requestId, false, { errorType });
-
-    logger.error('Draft generation failed', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-
-    endPerformanceTracking(performanceMetric, false, errorType);
-    return res.status(500).json({
-      error: 'Failed to generate draft. Please try again.',
-      code: 'DRAFT_GENERATION_ERROR'
+    endPerformanceTracking(performanceMetric, false, code);
+    return res.status(status).json({
+      error: message,
+      code: code
     });
   }
 });
@@ -442,42 +421,38 @@ app.post('/validate-content', async (req, res) => {
   const specsToValidate = Array.isArray(req.body) ? req.body : [req.body];
 
   try {
-    const validationResults = [];
+    // Use the new validation service for comprehensive validation
+    const validationResult = validationService.validateSlideArray(specsToValidate);
 
-    for (const spec of specsToValidate) {
-      if (Array.isArray(spec)) {
-        endPerformanceTracking(performanceMetric, false, 'INVALID_INPUT');
-        return res.status(400).json({
-          error: 'Nested arrays not supported for individual specifications',
-          code: 'INVALID_INPUT'
-        });
-      }
+    if (!validationResult.success) {
+      logger.warn('Slide validation failed', {
+        errors: validationResult.errors,
+        warnings: validationResult.warnings
+      });
 
-      const paramValidation = safeValidateSlideSpec(spec);
-      if (!paramValidation.success) {
-        logger.warn('Invalid slide specification', {
-          errors: paramValidation.errors
-        });
-
-        endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
-        return res.status(400).json({
-          error: 'Invalid slide specification',
-          code: 'INVALID_SPEC_ERROR',
-          details: paramValidation.errors
-        });
-      }
-
-      const validatedSpec = paramValidation.data as SlideSpec;
-
-      const quality = validateContentQuality(validatedSpec);
-      const improvements = generateContentImprovements(validatedSpec, quality);
-
-      validationResults.push({
-        spec: validatedSpec,
-        quality,
-        improvements
+      endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
+      return res.status(400).json({
+        error: 'Slide validation failed',
+        code: 'VALIDATION_ERROR',
+        details: validationResult.errors,
+        warnings: validationResult.warnings
       });
     }
+
+    // Generate quality assessments for each validated slide
+    const validationResults = validationResult.data!.map(spec => {
+      const qualityAssessment = validationService.assessContentQuality(spec);
+      return {
+        spec,
+        quality: {
+          score: qualityAssessment.score,
+          grade: qualityAssessment.grade,
+          issues: qualityAssessment.issues,
+          strengths: qualityAssessment.strengths
+        },
+        improvements: qualityAssessment.suggestions
+      };
+    });
 
     endPerformanceTracking(performanceMetric, true, undefined, {
       slideCount: validationResults.length,
@@ -527,7 +502,36 @@ app.post('/generate', async (req, res) => {
     let slideCount = 1;
     let themeUsed = req.body.themeId || 'default';
 
-    if (Array.isArray(req.body.spec)) {
+    // Check if we need to generate slides from parameters
+    if (!req.body.spec && req.body.prompt) {
+      logger.info('Generating slides from parameters', { prompt: req.body.prompt });
+
+      // Validate generation parameters
+      const paramValidation = validationService.validateGenerationParams(req.body);
+      if (!paramValidation.success) {
+        logger.warn('Invalid generation parameters provided', { errors: paramValidation.errors });
+        endPerformanceTracking(performanceMetric, false, 'INVALID_PARAMS_ERROR');
+        return res.status(400).json({
+          error: 'Invalid generation parameters provided',
+          code: 'INVALID_PARAMS_ERROR',
+          details: paramValidation.errors
+        });
+      }
+
+      // Generate slide content using AI service
+      try {
+        spec = await aiService.generateSlideContent(paramValidation.data!);
+        logger.info('Successfully generated slide from parameters');
+      } catch (error) {
+        logger.error('Failed to generate slide from parameters', { error: error instanceof Error ? error.message : 'Unknown error' });
+        endPerformanceTracking(performanceMetric, false, 'AI_GENERATION_ERROR');
+        return res.status(500).json({
+          error: 'Failed to generate slide content',
+          code: 'AI_GENERATION_ERROR',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    } else if (Array.isArray(req.body.spec)) {
       const specArray = req.body.spec as unknown[]; // Safe cast from any
       const validatedSpecs: SlideSpec[] = [];
       const validationErrors: string[][] = [];
@@ -552,7 +556,7 @@ app.post('/generate', async (req, res) => {
       }
 
       spec = validatedSpecs;
-    } else {
+    } else if (req.body.spec) {
       const validation = safeValidateSlideSpec(req.body.spec);
       if (!validation.success) {
         logger.warn('Invalid slide specification provided', { errors: validation.errors });
@@ -565,6 +569,15 @@ app.post('/generate', async (req, res) => {
       }
 
       spec = validation.data as SlideSpec;
+    } else {
+      // Neither spec nor prompt provided
+      logger.warn('No slide specification or generation parameters provided');
+      endPerformanceTracking(performanceMetric, false, 'MISSING_INPUT_ERROR');
+      return res.status(400).json({
+        error: 'Either slide specification or generation parameters (prompt) must be provided',
+        code: 'MISSING_INPUT_ERROR',
+        details: ['Provide either "spec" with slide specifications or "prompt" with generation parameters']
+      });
     }
 
     slideCount = Array.isArray(spec) ? spec.length : 1;
@@ -587,8 +600,19 @@ app.post('/generate', async (req, res) => {
       logger.info(`Auto-selected theme: ${themeUsed}`);
     }
 
-    // Generate PowerPoint file
-    const pptBuffer = await generatePpt(Array.isArray(spec) ? spec : [spec], req.body.withValidation ?? true);
+    // Use the new PowerPoint service for generation
+    const slides = Array.isArray(spec) ? spec : [spec];
+    const theme = PROFESSIONAL_THEMES.find(t => t.id === themeUsed) || PROFESSIONAL_THEMES[0];
+
+    const powerPointResult = await powerPointService.generatePresentation(slides, {
+      theme,
+      includeImages: true,
+      includeNotes: true,
+      includeMetadata: true,
+      quality: 'standard'
+    });
+
+    const pptBuffer = powerPointResult.buffer;
 
     // Configure response headers
     const firstSpec = Array.isArray(spec) ? spec[0] : spec;
@@ -638,6 +662,30 @@ app.post('/generate', async (req, res) => {
       logger.error('Timeout during PPT generation', {
         message: error.message,
         timeoutMs: error.timeoutMs
+      });
+    } else if (error instanceof RateLimitError) {
+      status = 429;
+      code = 'RATE_LIMIT_ERROR';
+      message = 'Too many requests. Please wait a moment and try again.';
+      logger.warn('Rate limit exceeded during PPT generation', {
+        message: error.message,
+        retryAfter: error.retryAfter
+      });
+    } else if (error instanceof ContentFilterError) {
+      status = 400;
+      code = 'CONTENT_FILTER_ERROR';
+      message = 'Content was filtered due to policy violations. Please try different wording.';
+      logger.warn('Content filtered during PPT generation', {
+        message: error.message,
+        filteredContent: error.filteredContent
+      });
+    } else if (error instanceof NetworkError) {
+      status = 502;
+      code = 'NETWORK_ERROR';
+      message = 'Network error occurred. Please check your connection and try again.';
+      logger.error('Network error during PPT generation', {
+        message: error.message,
+        statusCode: error.statusCode
       });
     } else {
       logger.error('PowerPoint generation failed', {

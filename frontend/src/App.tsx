@@ -3,14 +3,13 @@
  *
  * CORE FUNCTIONALITY:
  * This is the root React component that orchestrates the complete AI-powered slide generation
- * workflow. It manages a three-step process: Input → Preview → Edit → Generate, providing
+ * workflow. It manages a two-step process: Input → Edit → Generate, providing
  * users with full control over their presentation creation.
  *
  * WORKFLOW STEPS:
  * 1. INPUT: User provides prompt, audience, tone, and content preferences
- * 2. PREVIEW: AI generates slide draft for user review and approval
- * 3. EDIT: User can modify title, content, layout, and styling before final generation
- * 4. GENERATE: Creates and downloads professional PowerPoint (.pptx) file
+ * 2. EDIT: User can modify title, content, layout, and styling before final generation
+ * 3. GENERATE: Creates and downloads professional PowerPoint (.pptx) file
  *
  * STATE MANAGEMENT:
  * - Uses React useState for centralized application state
@@ -19,7 +18,6 @@
  *
  * API INTEGRATION:
  * - Communicates with Firebase Cloud Functions backend
- * - POST /draft: Generates initial slide content using AI
  * - POST /generate: Creates final PowerPoint file from slide specification
  * - Includes comprehensive error handling and user feedback
  *
@@ -39,18 +37,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { AppState, GenerationParams, SlideSpec, Presentation } from './types';
 import { generateSlideId, createNewPresentation } from './types';
 import PromptInput from './components/PromptInput';
-import SlidePreview from './components/SlidePreview';
+
 import SlideEditor from './components/SlideEditor';
 import PresentationManager from './components/PresentationManager';
 import StepIndicator from './components/StepIndicator';
-import { LoadingOverlay } from './components/LoadingSpinner';
+// import { LoadingOverlay } from './components/LoadingSpinner';
+import StageProgressOverlay from './components/StageProgressOverlay';
+import { ToastContainer, useToasts } from './components/ToastNotification';
+import MobileNavigation, { MobileLayout, useMobileNavigation } from './components/MobileNavigation';
 import { useLoadingState, LOADING_STAGES } from './hooks/useLoadingState';
 import { AriaLiveRegion } from './utils/accessibility';
 import AccessibilityControls, { SkipLinks } from './components/AccessibilityControls';
 import { initializeAccessibilityTesting } from './utils/accessibilityTesting';
 import { HiPresentationChartLine, HiRectangleStack, HiDocumentText } from 'react-icons/hi2';
 import { API_ENDPOINTS, verifyApiConnection } from './config';
-import { api } from './utils/apiClient';
+import { NotificationProvider, useNotifications } from './components/NotificationSystem';
+import { themeManager } from './utils/themeManager';
+import { responsiveUtils } from './utils/responsiveUtils';
+
 import './App.css';
 
 /**
@@ -60,7 +64,11 @@ import './App.css';
  * and seamless user experience. Handles API communication, error states, and
  * provides real-time feedback throughout the generation process.
  */
-export default function App() {
+// Main App component (internal)
+function AppContent() {
+  const notifications = useNotifications();
+  const { toasts, showSuccess, showError, removeToast } = useToasts();
+  const { isVisible: showMobileNav } = useMobileNavigation();
   // Initialize application state with optimized default values
   const [state, setState] = useState<AppState>({
     step: 'input',
@@ -81,10 +89,20 @@ export default function App() {
     onComplete: () => {
       console.log('✅ Operation completed successfully');
       AriaLiveRegion.getInstance().announceSuccess('Slide generation completed successfully');
+      showSuccess('Success!', 'Your presentation has been generated successfully.');
     },
     onError: (error) => {
       console.error('❌ Operation failed:', error);
       AriaLiveRegion.getInstance().announceError(error);
+      showError('Generation Failed', error, {
+        action: {
+          label: 'Try Again',
+          onClick: () => {
+            updateState({ error: undefined });
+            loadingState.resetLoading();
+          }
+        }
+      });
       updateState({ error, loading: false });
     }
   });
@@ -101,6 +119,18 @@ export default function App() {
 
     checkApiConnection();
     initializeAccessibilityTesting();
+
+    // Initialize theme system
+    themeManager.initialize();
+
+    // Set up responsive breakpoint monitoring
+    responsiveUtils.onBreakpointChange('app', (deviceInfo) => {
+      console.log('📱 Breakpoint changed:', deviceInfo.currentBreakpoint);
+    });
+
+    return () => {
+      responsiveUtils.removeBreakpointListener('app');
+    };
   }, []);
 
   /**
@@ -118,7 +148,7 @@ export default function App() {
    *
    * Calls the AI backend to create an initial slide specification based on
    * user input. Handles loading states, error management, and automatic
-   * progression to the preview step upon success.
+   * progression to the edit step upon success.
    *
    * @param params - User input parameters for slide generation
    */
@@ -127,69 +157,66 @@ export default function App() {
     loadingState.startLoading(LOADING_STAGES.SLIDE_GENERATION);
 
     try {
-      // Prepare request data - keep layout at top level for backend compatibility
-      const requestData = {
-        ...params
-      };
-
       // Stage 1: Analyzing input
       loadingState.setStage('analyzing');
       AriaLiveRegion.getInstance().announceLoadingState('Analyzing your input');
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Stage 2: Generate content
+      // Stage 2: Generate content using AI
       loadingState.setStage('generating');
-      AriaLiveRegion.getInstance().announceLoadingState('Generating slide content');
-      const result = await api.generateDraft(requestData);
+      AriaLiveRegion.getInstance().announceLoadingState('Generating slide content with AI');
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to generate slide draft');
+      // Call the backend API to generate the slide content
+      const response = await fetch(API_ENDPOINTS.draft, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Stage 3: Format and style
-      loadingState.setStage('formatting');
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const result = await response.json();
+      const draft: SlideSpec = result.spec;
 
-      const draft = result.data;
-      // Add unique ID if not present
-      const draftWithId = {
-        ...draft,
-        id: draft.id || generateSlideId()
-      };
+      // Ensure the draft has an ID
+      if (!draft.id) {
+        draft.id = generateSlideId();
+      }
 
-      // Stage 4: Finalize
+      // Stage 3: Finalizing
       loadingState.setStage('finalizing');
+      AriaLiveRegion.getInstance().announceLoadingState('Finalizing your slide');
       await new Promise(resolve => setTimeout(resolve, 400));
 
       loadingState.completeLoading('Slide ready!');
 
+      // Show quality feedback if available
+      if (result.quality) {
+        const qualityMessage = `Content quality: ${result.quality.grade} (${result.quality.score}/100)`;
+        notifications.showSuccess('Draft Generated', qualityMessage);
+      }
+
       updateState({
-        draft: draftWithId,
-        editedSpec: { ...draftWithId }, // Create editable copy
-        step: 'preview',
+        draft: draft,
+        editedSpec: { ...draft }, // Create editable copy
+        step: 'edit', // Go directly to edit step
         loading: false
       });
     } catch (error) {
       console.error('Draft generation failed:', error);
 
-      // Enhanced error handling with specific error types
-      let errorMessage = 'Failed to generate slide draft. Please try again.';
+      // Use enhanced notification system for better user feedback
+      notifications.handleApiError(error, 'Draft Generation', () => {
+        // Retry function
+        generateDraft(state.params);
+      });
 
-      if (error instanceof Error) {
-        if (error.message.includes('validation')) {
-          errorMessage = 'Please check your input parameters and try again.';
-        } else if (error.message.includes('timeout')) {
-          errorMessage = 'Request timed out. Please try again with a shorter prompt.';
-        } else if (error.message.includes('rate limit')) {
-          errorMessage = 'Too many requests. Please wait a moment and try again.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      loadingState.failLoading(errorMessage);
+      loadingState.failLoading('Draft generation failed');
       updateState({
-        error: errorMessage,
+        error: error instanceof Error ? error.message : 'Draft generation failed',
         loading: false
       });
     }
@@ -207,9 +234,16 @@ export default function App() {
   const generateSlide = async (spec: SlideSpec) => {
     updateState({ loading: true, error: undefined });
 
+    // Start stage-based loading for PowerPoint generation
+    loadingState.startLoading(LOADING_STAGES.PRESENTATION_GENERATION, 45000);
+
     try {
       // Check if the original generation request included images
       const shouldIncludeImages = state.params.withImage || false;
+
+      // Stage 1: Preparing
+      loadingState.setStage('preparing');
+      AriaLiveRegion.getInstance().announceLoadingState('Preparing presentation');
 
       // For PowerPoint generation, we need to handle blob responses
       // Keep using fetch directly for now since our API client expects JSON
@@ -227,6 +261,10 @@ export default function App() {
         throw new Error('Failed to generate slide');
       }
 
+      // Stage 2: Building
+      loadingState.setStage('building');
+      AriaLiveRegion.getInstance().announceLoadingState('Building PowerPoint file');
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -235,27 +273,21 @@ export default function App() {
       a.click();
       URL.revokeObjectURL(url);
 
+      loadingState.completeLoading('PowerPoint generated successfully!');
+      showSuccess('Download Started', 'Your PowerPoint presentation is ready!');
       updateState({ loading: false });
     } catch (error) {
       console.error('PowerPoint generation failed:', error);
 
-      // Enhanced error handling for PowerPoint generation
-      let errorMessage = 'Failed to generate PowerPoint. Please try again.';
+      // Use enhanced notification system for better user feedback
+      notifications.handleApiError(error, 'PowerPoint Generation', () => {
+        // Retry function
+        generateSlide(spec);
+      });
 
-      if (error instanceof Error) {
-        if (error.message.includes('validation')) {
-          errorMessage = 'Slide specification is invalid. Please edit and try again.';
-        } else if (error.message.includes('timeout')) {
-          errorMessage = 'PowerPoint generation timed out. Please try again.';
-        } else if (error.message.includes('size')) {
-          errorMessage = 'Generated file is too large. Please simplify content.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
+      loadingState.failLoading('PowerPoint generation failed');
       updateState({
-        error: errorMessage,
+        error: error instanceof Error ? error.message : 'PowerPoint generation failed',
         loading: false
       });
     }
@@ -281,6 +313,58 @@ export default function App() {
       presentation,
       selectedSlideId: presentation.slides[0]?.id
     });
+  };
+
+
+
+  /**
+   * Mobile navigation handlers
+   */
+  const handleMobileNavigation = (action: 'back' | 'home' | 'switch-mode') => {
+    switch (action) {
+      case 'back':
+        if (state.step === 'edit') {
+          updateState({ step: 'input' });
+        } else if (state.step === 'presentation') {
+          updateState({ step: 'edit' });
+        }
+        break;
+      case 'home':
+        updateState({ step: 'input' });
+        break;
+      case 'switch-mode':
+        if (state.mode === 'single') {
+          switchToPresentationMode();
+        } else {
+          switchToSingleMode();
+        }
+        break;
+    }
+  };
+
+  const getMobilePrimaryAction = () => {
+    switch (state.step) {
+      case 'input':
+        return {
+          label: 'Generate',
+          action: () => generateDraft(state.params),
+          disabled: !state.params.prompt?.trim()
+        };
+      case 'edit':
+        return {
+          label: 'Create PPT',
+          action: () => generateSlide(state.editedSpec!),
+          disabled: !state.editedSpec
+        };
+      case 'presentation':
+        return {
+          label: 'Export',
+          action: () => generatePresentation(state.presentation!),
+          disabled: !state.presentation?.slides.length
+        };
+      default:
+        return { label: 'Continue', action: () => {}, disabled: true };
+    }
   };
 
   /**
@@ -375,18 +459,6 @@ export default function App() {
           />
         );
 
-      case 'preview':
-        return (
-          <SlidePreview
-            draft={state.draft!}
-            loading={state.loading}
-            error={state.error}
-            onEdit={() => updateState({ step: 'edit' })}
-            onGenerate={() => generateSlide(state.draft!)}
-            onBack={() => updateState({ step: 'input' })}
-          />
-        );
-
       case 'edit':
         return (
           <SlideEditor
@@ -395,7 +467,7 @@ export default function App() {
             error={state.error}
             onSpecChange={(editedSpec) => updateState({ editedSpec })}
             onGenerate={() => generateSlide(state.editedSpec!)}
-            onBack={() => updateState({ step: 'preview' })}
+            onBack={() => updateState({ step: 'input' })}
           />
         );
 
@@ -416,8 +488,11 @@ export default function App() {
     }
   };
 
+  const mobileAction = getMobilePrimaryAction();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-pink-50/20 relative overflow-hidden">
+    <MobileLayout hasNavigation={showMobileNav}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-pink-50/20 relative overflow-hidden">
       {/* Skip Links for Accessibility */}
       <SkipLinks />
 
@@ -442,7 +517,7 @@ export default function App() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 pt-16 pb-12 text-center"
+        className="relative z-10 pt-8 sm:pt-12 lg:pt-16 pb-6 sm:pb-8 lg:pb-12 text-center px-4"
       >
         <motion.div
           initial={{ scale: 0.9 }}
@@ -458,7 +533,7 @@ export default function App() {
           >
             <HiPresentationChartLine className="w-10 h-10 text-white" />
           </motion.div>
-          <h1 className="text-5xl md:text-6xl font-bold text-gradient tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gradient tracking-tight">
             AI PowerPoint Generator
           </h1>
         </motion.div>
@@ -467,7 +542,7 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="text-xl text-slate-600 max-w-3xl mx-auto px-4 leading-relaxed font-medium"
+          className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto px-4 leading-relaxed font-medium"
         >
           Transform your ideas into professional presentations with AI-powered design and content generation
         </motion.p>
@@ -531,11 +606,11 @@ export default function App() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.8 }}
-        className="relative z-10 max-w-7xl mx-auto px-4 pb-16"
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 safe-area-inset-bottom"
         role="main"
         aria-label="AI PowerPoint Generator Application"
       >
-        <div className="glass-strong rounded-4xl border border-white/40 shadow-2xl overflow-hidden">
+        <div className="glass-strong rounded-2xl sm:rounded-4xl border border-white/40 shadow-2xl overflow-hidden mobile-card">
           <div className="absolute inset-0 bg-gradient-to-br from-white/90 via-white/80 to-slate-50/90 backdrop-blur-2xl"></div>
           <div className="relative">
             <AnimatePresence mode="wait">
@@ -553,16 +628,53 @@ export default function App() {
         </div>
       </motion.main>
 
-      {/* Enhanced Loading Overlay */}
-      <LoadingOverlay
+      {/* Enhanced Stage Progress Overlay */}
+      <StageProgressOverlay
         visible={loadingState.isLoading}
-        message={loadingState.message}
+        currentStage={loadingState.currentStage}
+        stages={loadingState.stages}
+        currentStageIndex={loadingState.currentStageIndex}
         progress={loadingState.progress}
-        blur={true}
+        error={state.error}
+        showStageList={true}
+        onDismiss={() => {
+          updateState({ error: undefined });
+          loadingState.resetLoading();
+        }}
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer
+        toasts={toasts}
+        onDismiss={removeToast}
+        position="top-right"
       />
 
       {/* Accessibility Controls */}
       <AccessibilityControls />
-    </div>
+
+      {/* Mobile Navigation */}
+      {showMobileNav && (
+        <MobileNavigation
+          currentStep={state.step}
+          mode={state.mode}
+          loading={state.loading}
+          onNavigate={handleMobileNavigation}
+          onPrimaryAction={mobileAction.action}
+          primaryActionLabel={mobileAction.label}
+          primaryActionDisabled={mobileAction.disabled}
+        />
+      )}
+      </div>
+    </MobileLayout>
+  );
+}
+
+// Main App component with NotificationProvider wrapper
+export default function App() {
+  return (
+    <NotificationProvider>
+      <AppContent />
+    </NotificationProvider>
   );
 }
