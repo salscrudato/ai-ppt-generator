@@ -117,7 +117,10 @@ describe.skip('Enhanced Slide Generation Integration (skipped in unit CI)', () =
           tags: ['strategy', 'technology', 'transformation']
         },
         options: {
+          async: false,
           includeNotes: true,
+          generateImages: false,
+          optimizeForPrint: false,
           accessibilityMode: true
         }
       };
