@@ -15,6 +15,7 @@ import {
 
 import ThemeGallery from './ThemeGallery';
 import LoadingButton from './LoadingButton';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 // Import validation components
 // import { useFormValidation, useValidatedSubmit } from '../hooks/useFormValidation';
@@ -43,6 +44,7 @@ export default function PromptInput({
   onGenerate
 }: PromptInputProps) {
   const [localParams, setLocalParams] = useState(params);
+  const { setTheme } = useThemeContext();
 
   // Form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -347,7 +349,10 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
 
           <ThemeGallery
             selectedId={localParams.design?.theme}
-            onSelect={(themeId) => updateParam('design', { ...localParams.design, theme: themeId })}
+            onSelect={(themeId) => {
+              updateParam('design', { ...localParams.design, theme: themeId });
+              setTheme(themeId); // Also update the theme context
+            }}
             compact={true}
             showCategories={false}
             enablePreview={true}

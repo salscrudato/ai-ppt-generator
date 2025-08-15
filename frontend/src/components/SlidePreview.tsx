@@ -158,21 +158,21 @@ export function SlidePreview({
 
       {/* Slide Title */}
       <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-center"
+        className="absolute top-0 left-0 right-0 flex items-center justify-start"
         style={{
           height: `${PREVIEW_LAYOUT.contentY}%`,
           paddingLeft: `${PREVIEW_LAYOUT.contentPadding}%`,
           paddingRight: `${PREVIEW_LAYOUT.contentPadding}%`,
-          paddingTop: '8%',
+          paddingTop: '4%',
         }}
       >
         <h1
-          className="text-center font-bold leading-tight truncate"
+          className="font-bold leading-tight w-full"
           style={{
             fontSize: PREVIEW_TYPOGRAPHY.titleSize,
             fontFamily: 'var(--theme-heading-font)',
             color: 'var(--theme-text-primary)',
-            maxWidth: '100%',
+            lineHeight: '1.2',
           }}
         >
           {debouncedSpec.title || 'Slide Title'}
@@ -186,7 +186,8 @@ export function SlidePreview({
           top: `${PREVIEW_LAYOUT.contentY}%`,
           left: `${PREVIEW_LAYOUT.contentPadding}%`,
           right: `${PREVIEW_LAYOUT.contentPadding}%`,
-          bottom: '5%',
+          bottom: '3%',
+          height: `${100 - PREVIEW_LAYOUT.contentY - 3}%`,
         }}
       >
         {renderLayout()}

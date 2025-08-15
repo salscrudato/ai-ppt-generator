@@ -8,6 +8,12 @@
  * @author AI PowerPoint Generator Team (enhanced by expert co-pilot)
  */
 
+import {
+  validateThemeAccessibility,
+  getAccessibleColorRecommendations,
+  type ColorAccessibilityConfig
+} from './core/theme/colorAccessibility';
+
 export interface ProfessionalTheme {
   /** Unique theme identifier */
   id: string;
@@ -249,7 +255,7 @@ function createModernTypography(
 
 /**
  * Helper function to create complete theme objects with all required properties
- * Enhanced with modern typography, improved visual hierarchy, and 2024 color trends
+ * Enhanced with modern typography, improved visual hierarchy, 2024 color trends, and accessibility validation
  */
 function createTheme(
   id: string,
@@ -274,7 +280,12 @@ function createTheme(
   const baseBackground = colors.background || '#FFFFFF';
   const baseSurface = colors.surface || '#F8FAFC';
 
-  return {
+  // Get accessible color recommendations if not provided
+  const accessibleColors = getAccessibleColorRecommendations(baseBackground);
+  const textPrimary = colors.textPrimary || accessibleColors.text;
+  const textSecondary = colors.textSecondary || accessibleColors.secondary;
+
+  const theme = {
     id,
     name,
     category,
@@ -285,8 +296,8 @@ function createTheme(
       background: baseBackground,
       surface: baseSurface,
       text: {
-        primary: colors.textPrimary || '#1F2937',
-        secondary: colors.textSecondary || '#6B7280',
+        primary: textPrimary,
+        secondary: textSecondary,
         inverse: '#FFFFFF',
         muted: colors.textMuted || '#9CA3AF'
       },
@@ -345,6 +356,24 @@ function createTheme(
       }
     }
   };
+
+  // Validate accessibility and log any issues
+  const accessibilityResult = validateThemeAccessibility(theme, {
+    targetLevel: 'AA',
+    considerColorBlindness: true,
+    adjustColors: false, // Don't auto-adjust, just validate
+    fallbackColors: {
+      text: '#1F2937',
+      background: '#FFFFFF',
+      accent: '#3B82F6'
+    }
+  });
+
+  if (!accessibilityResult.isAccessible) {
+    console.warn(`⚠️ Theme "${name}" has accessibility issues:`, accessibilityResult.issues);
+  }
+
+  return theme;
 }
 
 /**

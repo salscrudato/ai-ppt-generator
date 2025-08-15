@@ -15,18 +15,18 @@ export function ImageLeftLayout({ spec, theme }: LayoutProps) {
   const hasContent = spec.paragraph || (spec.bullets && spec.bullets.length > 0);
 
   return (
-    <div className="flex h-full" style={{ gap: `${PREVIEW_LAYOUT.columnGap}%` }}>
+    <div className="flex h-full w-full" style={{ gap: `${PREVIEW_LAYOUT.columnGap}%` }}>
       {/* Left Column - Image */}
-      <Column width={`${PREVIEW_LAYOUT.columnWidth}%`}>
+      <div style={{ width: `${PREVIEW_LAYOUT.columnWidth}%` }} className="h-full">
         <ImagePlaceholder
           prompt={imagePrompt}
           height="100%"
-          className="h-full"
+          className="h-full w-full"
         />
-      </Column>
-      
+      </div>
+
       {/* Right Column - Content */}
-      <Column width={`${PREVIEW_LAYOUT.columnWidth}%`}>
+      <div style={{ width: `${PREVIEW_LAYOUT.columnWidth}%` }} className="h-full">
         {!hasContent ? (
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
@@ -35,15 +35,15 @@ export function ImageLeftLayout({ spec, theme }: LayoutProps) {
             </div>
           </div>
         ) : (
-          <div className="space-y-3 h-full">
+          <div className="h-full flex flex-col justify-start space-y-2 overflow-hidden">
             {spec.paragraph && (
               <Text variant="small" className="leading-relaxed">
                 {spec.paragraph}
               </Text>
             )}
-            
+
             {spec.bullets && spec.bullets.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1 flex-1">
                 {spec.bullets.slice(0, 5).map((bullet, index) => (
                   <Bullet
                     key={index}
@@ -62,7 +62,7 @@ export function ImageLeftLayout({ spec, theme }: LayoutProps) {
             )}
           </div>
         )}
-      </Column>
+      </div>
     </div>
   );
 }

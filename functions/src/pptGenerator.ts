@@ -48,6 +48,17 @@ import {
   generateFileName,
   type MetadataConfig
 } from './core/documentMetadata';
+import { applyEnhancedBackground } from './core/theme/enhancedBackgrounds';
+import {
+  createTextStyle,
+  textStyleToPptOptions,
+  getTypographyRecommendations
+} from './core/theme/enhancedTypography';
+import {
+  createEnhancedChart,
+  createEnhancedTable,
+  createMetricsCard
+} from './core/theme/enhancedCharts';
 import {
   addNativeChart,
   extractDataFromSlide,
@@ -1103,22 +1114,20 @@ async function renderSlideLayout(
     hasLeftImage: !!spec.left?.imagePrompt
   });
 
+  // Apply enhanced slide background with theme styling
+  const backgroundStyle = theme.category === 'creative' ? 'creative' :
+                         theme.category === 'modern' ? 'modern' :
+                         theme.category === 'corporate' ? 'professional' :
+                         'professional';
+  const slideType = spec.layout === 'title' || spec.layout === 'hero' ? 'title' : 'content';
+  await applyEnhancedBackground(slide, theme, backgroundStyle, slideType);
+
   // Use unified layout constants for exact preview alignment
   const { CONTENT_Y, COLUMN_WIDTH, COLUMN_GAP } = LAYOUT_CONSTANTS;
 
-  // Add title to all slides with improved visibility
+  // Add title to all slides with enhanced theme styling
   if (spec.title) {
-    slide.addText(spec.title, {
-      x: 0.75,
-      y: 0.4,
-      w: 8.5,
-      h: 0.8,
-      fontSize: spec.layout === 'title' ? 36 : 28,
-      bold: true,
-      color: '000000', // Use black for maximum visibility
-      align: spec.layout === 'title' ? 'center' : 'left'
-      // fontFace removed to prevent corruption
-    });
+    await addEnhancedTitle(slide, spec.title, theme, spec.layout);
   }
 
   switch (spec.layout) {
@@ -1146,31 +1155,52 @@ async function renderSlideLayout(
       break;
 
     case 'two-column':
-      // Enhanced two-column layout with better spacing and fallback content
+      // Enhanced two-column layout with modern styling and better spacing
       const leftX = LAYOUT_CONSTANTS.CONTENT_PADDING;
       const rightX = LAYOUT_CONSTANTS.CONTENT_PADDING + COLUMN_WIDTH + COLUMN_GAP;
       const columnY = CONTENT_Y + 0.6; // Add extra space below title
 
+      // Add column separators for visual clarity
+      try {
+        slide.addShape('rect', {
+          x: leftX + COLUMN_WIDTH + (COLUMN_GAP / 2) - 0.025,
+          y: columnY - 0.2,
+          w: 0.05,
+          h: 3.5,
+          fill: {
+            color: safeColorFormat(theme.colors.borders?.light || theme.colors.accent),
+            transparency: 70
+          },
+          line: { width: 0 }
+        });
+      } catch (error) {
+        console.warn('⚠️ Failed to add column separator:', error);
+      }
+
+      // Add column backgrounds for better visual separation
+      await addColumnBackground(slide, theme, leftX, columnY, COLUMN_WIDTH);
+      await addColumnBackground(slide, theme, rightX, columnY, COLUMN_WIDTH);
+
       if (spec.left) {
         await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, leftX, columnY, COLUMN_WIDTH, false, imageProcessor, slideContext);
       } else {
-        // Add default left content if missing
+        // Add default left content with enhanced styling
         addEnhancedBullets(slide, [
           'Cost effective solution',
           'Easy to implement',
           'Scalable architecture'
-        ], theme, leftX, columnY, COLUMN_WIDTH);
+        ], theme, leftX + 0.1, columnY + 0.1, COLUMN_WIDTH - 0.2);
       }
 
       if (spec.right) {
         await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, rightX, columnY, COLUMN_WIDTH, true, imageProcessor, slideContext);
       } else {
-        // Add default right content if missing
+        // Add default right content with enhanced styling
         addEnhancedBullets(slide, [
           'Initial setup complexity',
           'Training requirements',
           'Migration timeline'
-        ], theme, rightX, columnY, COLUMN_WIDTH);
+        ], theme, rightX + 0.1, columnY + 0.1, COLUMN_WIDTH - 0.2);
       }
       break;
 
@@ -1201,23 +1231,29 @@ async function renderSlideLayout(
           const isValidChart = validateChartData(spec.chart);
 
           if (isValidChart.valid) {
-            // Use new native chart system with enhanced error handling
-            const chartConfig: ChartConfig = {
-              type: spec.chart.type as ChartConfig['type'],
-              title: spec.chart.title,
+            // Use enhanced chart system with professional styling
+            const chartData = {
+              type: spec.chart.type,
               data: spec.chart.series.map(series => ({
                 name: series.name,
                 labels: spec.chart!.categories,
-                values: series.data,
-                color: series.color
-              })),
-              position: { x: 1.0, y: CONTENT_Y, w: 8.0, h: 4.0 },
-              theme,
-              showLegend: spec.chart.showLegend,
-              showDataLabels: spec.chart.showDataLabels,
-              showTitle: true
+                values: series.data
+              }))
             };
-            addNativeChart(slide, chartConfig);
+
+            createEnhancedChart(
+              slide,
+              chartData,
+              { x: 1.0, y: CONTENT_Y, w: 8.0, h: 4.0 },
+              theme,
+              {
+                colorScheme: 'theme',
+                showDataLabels: spec.chart.showDataLabels ?? true,
+                showLegend: spec.chart.showLegend ?? true,
+                showGridlines: true,
+                shadowIntensity: 'subtle'
+              }
+            );
           } else {
             // Graceful fallback: render chart description as text
             console.warn('Invalid chart data, falling back to text description:', isValidChart.errors);
@@ -1232,19 +1268,23 @@ async function renderSlideLayout(
 
     case 'comparison-table':
       if (spec.comparisonTable) {
-        // Use new native table system
-        const tableConfig: TableConfig = {
-          headers: spec.comparisonTable.headers,
-          rows: spec.comparisonTable.rows,
-          position: { x: 1.0, y: CONTENT_Y, w: 8.0, h: 3.5 },
+        // Use enhanced table system with professional styling
+        createEnhancedTable(
+          slide,
+          {
+            headers: spec.comparisonTable.headers,
+            rows: spec.comparisonTable.rows
+          },
+          { x: 1.0, y: CONTENT_Y, w: 8.0, h: 3.5 },
           theme,
-          title: `${spec.title} - Comparison`,
-          showHeaders: true,
-          alternateRowColors: true,
-          borderStyle: 'medium',
-          headerStyle: 'primary'
-        };
-        addNativeTable(slide, tableConfig);
+          {
+            headerStyle: 'colored',
+            alternatingRows: true,
+            borderStyle: 'minimal',
+            fontSize: 12,
+            colorScheme: 'theme'
+          }
+        );
       }
       break;
 
@@ -1367,7 +1407,7 @@ async function renderMixedContent(
     console.log('🔸 Adding bullets:', spec.bullets);
     addBullets(slide, spec.bullets, theme, 0.5, currentY, 4.5);
   }
-  if (spec.right?.imagePrompt) {
+  if (spec.right?.imagePrompt && spec.right?.generateImage) {
     console.log('🖼️ Adding image:', spec.right.imagePrompt);
     await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
@@ -1406,16 +1446,16 @@ async function renderImageRight(
     }
   }
 
-  // Image goes on the RIGHT side - check multiple locations
-  if (spec.right?.imagePrompt) {
+  // Image goes on the RIGHT side - check multiple locations - only generate if explicitly requested
+  if (spec.right?.imagePrompt && spec.right?.generateImage) {
     await addImage(slide, spec.right.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check left column for backward compatibility
-  else if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt) {
+  else if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt && spec.left.generateImage) {
     await addImage(slide, spec.left.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check root imagePrompt
-  else if (spec.imagePrompt) {
+  else if (spec.imagePrompt && spec.generateImage) {
     await addImage(slide, spec.imagePrompt, theme, 5.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
 }
@@ -1434,16 +1474,16 @@ async function renderImageLeft(
 ): Promise<void> {
   let currentY = contentY;
 
-  // Check for image in LEFT column (image-left layout)
-  if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt) {
+  // Check for image in LEFT column (image-left layout) - only generate if explicitly requested
+  if (spec.left && 'imagePrompt' in spec.left && spec.left.imagePrompt && spec.left.generateImage) {
     await addImage(slide, spec.left.imagePrompt, theme, 0.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check right column for backward compatibility
-  else if (spec.right && 'imagePrompt' in spec.right && spec.right.imagePrompt) {
+  else if (spec.right && 'imagePrompt' in spec.right && spec.right.imagePrompt && spec.right.generateImage) {
     await addImage(slide, spec.right.imagePrompt, theme, 0.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
   // Fallback: check root imagePrompt
-  else if (spec.imagePrompt) {
+  else if (spec.imagePrompt && spec.generateImage) {
     await addImage(slide, spec.imagePrompt, theme, 0.5, contentY, 4.0, 4.0, imageProcessor, slideContext);
   }
 
@@ -1471,22 +1511,50 @@ async function renderImageFull(
   imageProcessor?: ImageProcessor,
   slideContext?: { title: string; layout: string; index: number; totalSlides: number }
 ): Promise<void> {
-  const prompt = spec.right?.imagePrompt || 'default placeholder image';
-  await addImage(slide, prompt, theme, 0.5, 1.5, 9.0, 5.0, imageProcessor, slideContext);
+  // Only generate image if explicitly requested
+  if (spec.right?.imagePrompt && spec.right?.generateImage) {
+    await addImage(slide, spec.right.imagePrompt, theme, 0.5, 1.5, 9.0, 5.0, imageProcessor, slideContext);
+  } else if (spec.imagePrompt && spec.generateImage) {
+    await addImage(slide, spec.imagePrompt, theme, 0.5, 1.5, 9.0, 5.0, imageProcessor, slideContext);
+  }
 }
 
 /**
  * Render comparison table
  */
 function renderComparisonTable(slide: pptxgen.Slide, table: NonNullable<SlideSpec['comparisonTable']>, theme: ProfessionalTheme, contentY: number): void {
+  // Add table background for better visual separation
+  try {
+    slide.addShape('rect', {
+      x: 0.4,
+      y: contentY - 0.1,
+      w: 9.2,
+      h: (table.rows.length + 1) * 0.5 + 0.2,
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 95
+      },
+      line: {
+        color: safeColorFormat(theme.colors.borders?.light || theme.colors.accent),
+        width: 1
+      },
+      rectRadius: 0.1
+    });
+  } catch (error) {
+    console.warn('⚠️ Failed to add table background:', error);
+  }
+
   const rows = [table.headers, ...table.rows];
   slide.addTable(rows.map(row => row.map(cell => ({ text: cell }))), {
     x: 0.5,
     y: contentY,
     w: 9.0,
-    fontSize: Math.min(theme.typography.body.sizes.small, 12),
-    color: safeColorFormat(theme.colors.text.primary)
-    // Removed: fill, border (can cause corruption)
+    fontSize: Math.min(theme.typography?.body?.sizes?.small || 12, 12),
+    color: safeColorFormat(theme.colors.text.primary),
+    fill: {
+      color: safeColorFormat(theme.colors.background)
+    }
+    // Border styling removed to prevent compatibility issues
   });
 }
 
@@ -1718,7 +1786,7 @@ async function addColumnContent(
   }
 
   // Enhanced image support for both left and right columns (B-5: Two-Column + Image Support)
-  if (content.imagePrompt) {
+  if (content.imagePrompt && content.generateImage) {
     await addImage(slide, content.imagePrompt, theme, x, currentY, w, 3.0, imageProcessor, slideContext);
     currentY += 3.2; // Add space after image
   }
@@ -1738,6 +1806,118 @@ async function addColumnContent(
  */
 
 /**
+ * Enhanced slide background with theme-appropriate styling
+ * Applies gradients, patterns, and visual effects based on theme
+ */
+async function applyEnhancedSlideBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  layout: string
+): Promise<void> {
+  try {
+    // Apply base background color
+    const bgColor = safeColorFormat(theme.colors.background);
+    if (bgColor !== 'FFFFFF') {
+      slide.background = { color: bgColor };
+    }
+
+    // Add sophisticated gradient overlay for modern themes
+    if (theme.category === 'modern' || theme.category === 'creative') {
+      await addGradientBackground(slide, theme);
+    }
+
+    // Add subtle texture for professional themes
+    if (theme.category === 'corporate' || theme.category === 'consulting' || theme.category === 'finance') {
+      await addTextureBackground(slide, theme);
+    }
+
+    // Add accent elements for title slides
+    if (layout === 'title' || layout === 'hero') {
+      await addTitleSlideAccents(slide, theme);
+    }
+
+    // Add subtle brand accent for content slides
+    if (layout !== 'title' && layout !== 'hero') {
+      await addContentSlideAccents(slide, theme);
+    }
+
+    console.log('✅ Enhanced slide background applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to apply enhanced background:', error);
+    // Fallback to simple background
+    addSlideBackground(slide, theme);
+  }
+}
+
+/**
+ * Enhanced title rendering with theme styling and visual effects
+ */
+async function addEnhancedTitle(
+  slide: pptxgen.Slide,
+  title: string,
+  theme: ProfessionalTheme,
+  layout: string
+): Promise<void> {
+  try {
+    const isTitleSlide = layout === 'title' || layout === 'hero';
+
+    // Use enhanced typography system
+    const titleType = isTitleSlide ? 'hero' : 'title';
+    const textStyle = createTextStyle(titleType, undefined, {
+      color: theme.colors.text.primary,
+      contentLength: title.length
+    });
+
+    const pptOptions = textStyleToPptOptions(textStyle);
+
+    // Add title with enhanced styling
+    slide.addText(title, {
+      x: 0.75,
+      y: 0.4,
+      w: 8.5,
+      h: 0.8,
+      ...pptOptions,
+      align: isTitleSlide ? 'center' : 'left',
+      shadow: {
+        type: 'outer',
+        color: '000000',
+        blur: 3,
+        offset: 1,
+        angle: 45,
+        transparency: 90 // Fixed: use transparency instead of opacity
+      }
+    });
+
+    // Add accent underline for content slides
+    if (!isTitleSlide) {
+      slide.addShape('rect', {
+        x: 0.75,
+        y: 1.1,
+        w: 2.0,
+        h: 0.05,
+        fill: { color: safeColorFormat(theme.colors.accent) },
+        line: { width: 0 }
+      });
+    }
+
+    console.log('✅ Enhanced title applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to apply enhanced title, using fallback:', error);
+    // Fallback to basic title
+    slide.addText(title, {
+      x: 0.75,
+      y: 0.4,
+      w: 8.5,
+      h: 0.8,
+      fontSize: layout === 'title' ? 36 : 28,
+      bold: true,
+      color: '000000',
+      align: layout === 'title' ? 'center' : 'left'
+    });
+  }
+}
+
+/**
  * Add subtle slide background enhancement - SAFELY IMPLEMENTED
  */
 function addSlideBackground(slide: pptxgen.Slide, theme: ProfessionalTheme) {
@@ -1750,6 +1930,159 @@ function addSlideBackground(slide: pptxgen.Slide, theme: ProfessionalTheme) {
     console.log('✅ Safe slide background applied');
   } catch (error) {
     console.warn('⚠️ Failed to apply slide background:', error);
+  }
+}
+
+/**
+ * Add accent elements for title slides
+ */
+async function addTitleSlideAccents(slide: pptxgen.Slide, theme: ProfessionalTheme): Promise<void> {
+  try {
+    const accentColor = safeColorFormat(theme.colors.accent || theme.colors.primary);
+
+    // Add decorative accent shapes for title slides
+    slide.addShape('rect', {
+      x: 4.0, y: 3.5, w: 2.0, h: 0.1,
+      fill: { color: accentColor },
+      line: { width: 0 }
+    });
+
+    // Add corner accent elements
+    slide.addShape('ellipse', {
+      x: 9.2, y: 0.2, w: 0.6, h: 0.6,
+      fill: {
+        color: accentColor,
+        transparency: 80
+      },
+      line: { width: 0 }
+    });
+
+    console.log('✅ Title slide accents applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to add title slide accents:', error);
+  }
+}
+
+/**
+ * Add accent elements for content slides
+ */
+async function addContentSlideAccents(slide: pptxgen.Slide, theme: ProfessionalTheme): Promise<void> {
+  try {
+    const accentColor = safeColorFormat(theme.colors.accent || theme.colors.primary);
+
+    // Add subtle side accent
+    slide.addShape('rect', {
+      x: 0, y: 0, w: 0.05, h: 5.625,
+      fill: {
+        color: accentColor,
+        transparency: 70
+      },
+      line: { width: 0 }
+    });
+
+    // Add bottom accent line
+    slide.addShape('rect', {
+      x: 0, y: 5.525, w: 10.0, h: 0.1,
+      fill: {
+        color: accentColor,
+        transparency: 60
+      },
+      line: { width: 0 }
+    });
+
+    console.log('✅ Content slide accents applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to add content slide accents:', error);
+  }
+}
+
+/**
+ * Add gradient background for modern themes
+ */
+async function addGradientBackground(slide: pptxgen.Slide, theme: ProfessionalTheme): Promise<void> {
+  try {
+    const primaryColor = safeColorFormat(theme.colors.primary);
+    const surfaceColor = safeColorFormat(theme.colors.surface);
+
+    // Add gradient overlay using multiple transparent rectangles
+    slide.addShape('rect', {
+      x: 0, y: 0, w: 10.0, h: 2.0,
+      fill: {
+        color: primaryColor,
+        transparency: 95
+      },
+      line: { width: 0 }
+    });
+
+    slide.addShape('rect', {
+      x: 0, y: 3.625, w: 10.0, h: 2.0,
+      fill: {
+        color: surfaceColor,
+        transparency: 97
+      },
+      line: { width: 0 }
+    });
+
+    console.log('✅ Gradient background applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to add gradient background:', error);
+  }
+}
+
+/**
+ * Add texture background for professional themes
+ */
+async function addTextureBackground(slide: pptxgen.Slide, theme: ProfessionalTheme): Promise<void> {
+  try {
+    const surfaceColor = safeColorFormat(theme.colors.surface);
+
+    // Add subtle texture using small shapes
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 10;
+      const y = Math.random() * 5.625;
+
+      slide.addShape('ellipse', {
+        x, y, w: 0.05, h: 0.05,
+        fill: {
+          color: surfaceColor,
+          transparency: 98
+        },
+        line: { width: 0 }
+      });
+    }
+
+    console.log('✅ Texture background applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to add texture background:', error);
+  }
+}
+
+/**
+ * Add column background for enhanced visual separation
+ */
+async function addColumnBackground(
+  slide: pptxgen.Slide,
+  theme: ProfessionalTheme,
+  x: number,
+  y: number,
+  width: number
+): Promise<void> {
+  try {
+    slide.addShape('rect', {
+      x: x - 0.05,
+      y: y - 0.1,
+      w: width + 0.1,
+      h: 3.5,
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 95
+      },
+      line: { width: 0 },
+      rectRadius: 0.1
+    });
+    console.log('✅ Column background applied');
+  } catch (error) {
+    console.warn('⚠️ Failed to add column background:', error);
   }
 }
 
@@ -1856,29 +2189,22 @@ function addModernCard(
   });
 }
 
-/**
- * Add enhanced column background with subtle styling
- */
-function addColumnBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: number, y: number, w: number, h: number, side: 'left' | 'right') {
-  // TEMPORARILY DISABLED - Complex shapes can cause PowerPoint corruption
-  console.log('⚠️ Column background disabled to prevent corruption');
-  return;
-}
+
 
 /**
  * Enhanced bullet points with improved visual hierarchy (B-6: Modern Theme Rendering)
  * Supports both traditional and modern theme styling
  */
 function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
-  // Use larger, more readable font sizes
-  const fontSize = Math.max(16, 14); // Ensure minimum readable size
+  // Enhanced typography with theme-based sizing
+  const fontSize = Math.max(theme.typography?.body?.sizes?.normal || 16, 14);
   const lineHeight = 0.8; // Increased spacing to prevent overlap
   const bulletHeight = 0.7; // Increased height for better text wrapping
   const maxHeight = 3.5; // Maximum content height for 16:9 format
 
-  // Use consistent, visible colors
-  const bulletColor = '333333'; // Dark gray for bullet symbols
-  const textColor = '000000'; // Black for text
+  // Use theme colors for better visual hierarchy
+  const textColor = safeColorFormat(theme.colors.text.primary);
+  const accentColor = safeColorFormat(theme.colors.accent || theme.colors.primary);
 
   bullets.forEach((bullet, i) => {
     const bulletY = y + i * lineHeight;
@@ -1886,20 +2212,39 @@ function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: Prof
     // Ensure bullets don't exceed slide boundaries (leave more margin)
     if (bulletY + bulletHeight > 5.2) return;
 
-    // Use simple, consistent bullet points for all themes
-    slide.addText(`• ${bullet}`, {
+    // Add bullet symbol with accent color
+    slide.addText('●', {
       x: x,
       y: bulletY,
-      w: w,
-      h: bulletHeight, // Use increased height for better wrapping
-      fontSize,
-      color: textColor, // Use the consistent black color
+      w: 0.3,
+      h: bulletHeight,
+      fontSize: fontSize - 2,
+      color: accentColor,
       align: 'left',
       valign: 'top',
-      // fontFace removed to prevent corruption
+      bold: true
+    });
+
+    // Add bullet text with enhanced styling
+    slide.addText(bullet, {
+      x: x + 0.4,
+      y: bulletY,
+      w: w - 0.4,
+      h: bulletHeight,
+      fontSize,
+      color: textColor,
+      align: 'left',
+      valign: 'top',
       wrap: true,
-      bold: false, // Make text more readable
-      lineSpacing: 110 // Add line spacing for better readability
+      lineSpacing: 120, // Improved line spacing for readability
+      shadow: {
+        type: 'outer',
+        color: '000000',
+        blur: 1,
+        offset: 0.5,
+        angle: 45,
+        opacity: 5
+      }
     });
   });
 }
@@ -1915,30 +2260,62 @@ function addBullets(slide: pptxgen.Slide, bullets: string[], theme: Professional
  * Enhanced paragraph with improved typography and visual appeal
  */
 function addEnhancedParagraph(slide: pptxgen.Slide, text: string, theme: ProfessionalTheme, x: number, y: number, w: number, isQuote: boolean = false) {
-  // Use larger, more visible font sizes
-  const fontSize = Math.max(isQuote ? 18 : 16, 14); // Ensure minimum readable size
-  // Use darker, more visible colors
-  const textColor = isQuote ? '666666' : '000000'; // Dark gray for quotes, black for regular text
+  // Enhanced typography with theme-based sizing
+  const baseFontSize = theme.typography?.body?.sizes?.normal || 16;
+  const fontSize = Math.max(isQuote ? baseFontSize + 2 : baseFontSize, 14);
+
+  // Use theme colors for better visual hierarchy
+  const textColor = isQuote
+    ? safeColorFormat(theme.colors.text.secondary)
+    : safeColorFormat(theme.colors.text.primary);
+
   const maxHeight = 3.2; // Reduced height to prevent overflow
 
   // Calculate proper height based on content length and available space
   const availableHeight = 5.2 - y; // Leave margin at bottom
   const actualHeight = Math.min(maxHeight, availableHeight);
 
+  // Add background for quotes
+  if (isQuote) {
+    try {
+      slide.addShape('rect', {
+        x: x - 0.1,
+        y: y - 0.1,
+        w: w + 0.2,
+        h: actualHeight + 0.2,
+        fill: {
+          color: safeColorFormat(theme.colors.surface),
+          transparency: 90
+        },
+        line: { width: 0 },
+        rectRadius: 0.1
+      });
+    } catch (error) {
+      console.warn('⚠️ Failed to add quote background:', error);
+    }
+  }
+
   slide.addText(text, {
     x,
     y,
     w,
-    h: actualHeight, // Use calculated height to prevent overflow
+    h: actualHeight,
     fontSize,
     color: textColor,
     align: isQuote ? 'center' : 'left',
     valign: 'top',
     italic: isQuote,
-    lineSpacing: 130, // Improved line spacing for readability
-    // fontFace removed to prevent corruption
-    wrap: true, // Enable text wrapping
-    breakLine: true // Ensure proper line breaks
+    lineSpacing: 140, // Enhanced line spacing for readability
+    wrap: true,
+    breakLine: true,
+    shadow: isQuote ? {
+      type: 'outer',
+      color: '000000',
+      blur: 2,
+      offset: 1,
+      angle: 45,
+      opacity: 8
+    } : undefined
   });
 }
 
@@ -2117,8 +2494,28 @@ export async function generateThemeShowcase(): Promise<Buffer> {
  * Enhanced chart rendering with modern styling
  */
 function addEnhancedChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['chart']>, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  // SIMPLIFIED CHART - NO BACKGROUND SHAPES TO PREVENT CORRUPTION
-  console.log('📊 Adding simplified chart without decorative elements');
+  console.log('📊 Adding enhanced chart with modern styling');
+
+  // Add chart background with subtle styling
+  try {
+    slide.addShape('rect', {
+      x: x - 0.1,
+      y: y - 0.1,
+      w: w + 0.2,
+      h: h + 0.2,
+      fill: {
+        color: safeColorFormat(theme.colors.surface),
+        transparency: 95
+      },
+      line: {
+        color: safeColorFormat(theme.colors.borders?.light || theme.colors.accent),
+        width: 1
+      },
+      rectRadius: 0.1
+    });
+  } catch (error) {
+    console.warn('⚠️ Failed to add chart background:', error);
+  }
 
   // Map chart types to pptxgenjs format
   const chartTypeMap: Record<string, any> = {
@@ -2139,16 +2536,24 @@ function addEnhancedChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['ch
     values: s.data
   }));
 
+  // Enhanced color palette using theme colors
+  const chartColors = [
+    safeColorFormat(theme.colors.primary),
+    safeColorFormat(theme.colors.secondary),
+    safeColorFormat(theme.colors.accent),
+    safeColorFormat(theme.colors.semantic?.success || '#10b981'),
+    safeColorFormat(theme.colors.semantic?.warning || '#f59e0b'),
+    safeColorFormat(theme.colors.semantic?.error || '#ef4444')
+  ];
+
   slide.addChart(pptxChartType, chartData, {
     x, y, w, h,
     title: chart.title,
     showLegend: chart.showLegend,
     showDataTable: chart.showDataLabels,
-    chartColors: [
-      safeColorFormat(theme.colors.primary),
-      safeColorFormat(theme.colors.secondary),
-      safeColorFormat(theme.colors.accent)
-    ]
+    chartColors,
+    titleColor: safeColorFormat(theme.colors.text.primary),
+    titleFontSize: 16
   });
 }
 

@@ -141,6 +141,7 @@ export const MODERN_GRADIENTS = {
 
 /**
  * Professional shadow presets for depth and elevation
+ * All opacity values are constrained to 0-1 range for PowerPoint compatibility
  */
 export const SHADOW_PRESETS = {
   // Subtle shadows for cards and elements
@@ -150,27 +151,27 @@ export const SHADOW_PRESETS = {
     blur: 0.04,
     spread: 0,
     color: '#000000',
-    opacity: 0.1
+    opacity: 0.08 // Reduced for better compatibility
   },
-  
+
   CARD_MEDIUM: {
     offsetX: 0,
     offsetY: 0.04,
     blur: 0.08,
     spread: 0,
     color: '#000000',
-    opacity: 0.15
+    opacity: 0.12 // Reduced for better compatibility
   },
-  
+
   CARD_STRONG: {
     offsetX: 0,
     offsetY: 0.06,
     blur: 0.12,
     spread: 0,
     color: '#000000',
-    opacity: 0.2
+    opacity: 0.18 // Reduced for better compatibility
   },
-  
+
   // Floating element shadows
   FLOATING_LIGHT: {
     offsetX: 0,
@@ -178,18 +179,18 @@ export const SHADOW_PRESETS = {
     blur: 0.16,
     spread: 0,
     color: '#000000',
-    opacity: 0.12
+    opacity: 0.10 // Reduced for better compatibility
   },
-  
+
   FLOATING_MEDIUM: {
     offsetX: 0,
     offsetY: 0.12,
     blur: 0.24,
     spread: 0,
     color: '#000000',
-    opacity: 0.15
+    opacity: 0.14 // Reduced for better compatibility
   },
-  
+
   // Inset shadows for depth
   INSET_SUBTLE: {
     offsetX: 0,
@@ -197,7 +198,7 @@ export const SHADOW_PRESETS = {
     blur: 0.04,
     spread: -0.01,
     color: '#000000',
-    opacity: 0.08
+    opacity: 0.06 // Reduced for better compatibility
   }
 } as const;
 
@@ -245,15 +246,27 @@ export function createGradientFill(gradient: GradientConfig): any {
 
 /**
  * Create shadow configuration for PowerPoint elements
+ * Enhanced with proper validation and error handling
  */
 export function createShadowEffect(shadow: ShadowConfig): any {
+  // Validate and constrain opacity to 0-1 range
+  const opacity = Math.max(0, Math.min(1, shadow.opacity || 0.1));
+
+  // Validate blur and offset values
+  const blur = Math.max(shadow.blur * 72, 0.5); // Convert to points, minimum 0.5
+  const offsetX = Math.max(-72, Math.min(72, shadow.offsetX * 72)); // Constrain offset
+  const offsetY = Math.max(-72, Math.min(72, shadow.offsetY * 72)); // Constrain offset
+
+  // Calculate transparency (PowerPoint uses 0-100 scale where 0 = opaque, 100 = transparent)
+  const transparency = Math.round((1 - opacity) * 100);
+
   return {
     type: 'outer',
-    blur: Math.max(shadow.blur * 72, 1), // Convert to points
-    offsetX: shadow.offsetX * 72, // Convert to points
-    offsetY: shadow.offsetY * 72, // Convert to points
+    blur: blur,
+    offsetX: offsetX,
+    offsetY: offsetY,
     color: safeColorFormat(shadow.color),
-    transparency: Math.round((1 - (shadow.opacity || 1)) * 100)
+    transparency: Math.max(0, Math.min(100, transparency)) // Ensure 0-100 range
   };
 }
 

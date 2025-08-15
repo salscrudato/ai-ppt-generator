@@ -38,12 +38,16 @@ export interface SlideSpec {
   /** Image prompt for AI-generated images */
   imagePrompt?: string;
 
+  /** Whether to generate the image (explicit user request) */
+  generateImage?: boolean;
+
   /** Left column content for two-column layouts */
   left?: {
     heading?: string;
     bullets?: string[];
     paragraph?: string;
     imagePrompt?: string;
+    generateImage?: boolean;
     metrics?: Array<{
       value: string;
       label: string;
@@ -57,6 +61,7 @@ export interface SlideSpec {
     bullets?: string[];
     paragraph?: string;
     imagePrompt?: string;
+    generateImage?: boolean;
     metrics?: Array<{
       value: string;
       label: string;

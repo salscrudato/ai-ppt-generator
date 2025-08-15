@@ -51,16 +51,21 @@ export const LAYOUT_CONSTANTS = {
 } as const;
 
 /**
- * Typography constants for consistent text sizing
+ * Enhanced Typography constants for professional text hierarchy
  * Font sizes in points (pt) as used by pptxgenjs
+ * Follows modern typography scale principles for better readability
  */
 export const TYPOGRAPHY_CONSTANTS = {
-  /** Title font size */
+  /** Hero title font size for title slides */
+  HERO_SIZE: 36,
+  /** Main title font size */
   TITLE_SIZE: 28,
   /** Subtitle font size */
-  SUBTITLE_SIZE: 20,
-  /** Heading font size */
+  SUBTITLE_SIZE: 22,
+  /** Section heading font size */
   HEADING_SIZE: 18,
+  /** Subheading font size */
+  SUBHEADING_SIZE: 16,
   /** Body text font size */
   BODY_SIZE: 14,
   /** Small text font size */
@@ -69,6 +74,31 @@ export const TYPOGRAPHY_CONSTANTS = {
   TINY_SIZE: 10,
   /** Caption font size */
   CAPTION_SIZE: 9,
+
+  /** Line height multipliers for better readability */
+  LINE_HEIGHTS: {
+    TIGHT: 1.2,
+    NORMAL: 1.4,
+    RELAXED: 1.6,
+    LOOSE: 1.8
+  },
+
+  /** Font weights for hierarchy */
+  FONT_WEIGHTS: {
+    LIGHT: 300,
+    NORMAL: 400,
+    MEDIUM: 500,
+    SEMIBOLD: 600,
+    BOLD: 700,
+    EXTRABOLD: 800
+  },
+
+  /** Professional font families */
+  FONT_FAMILIES: {
+    HEADING: 'Segoe UI, Arial, sans-serif',
+    BODY: 'Segoe UI, Arial, sans-serif',
+    MONOSPACE: 'Consolas, Monaco, monospace'
+  }
 } as const;
 
 /**

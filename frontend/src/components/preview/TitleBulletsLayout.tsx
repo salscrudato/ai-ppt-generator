@@ -25,7 +25,7 @@ export function TitleBulletsLayout({ spec, theme }: LayoutProps) {
   }
 
   return (
-    <div className="space-y-3 h-full overflow-hidden">
+    <div className="h-full flex flex-col justify-start space-y-2 overflow-hidden">
       {bullets.slice(0, maxBullets).map((bullet, index) => (
         <Bullet
           key={index}
@@ -36,7 +36,7 @@ export function TitleBulletsLayout({ spec, theme }: LayoutProps) {
         </Bullet>
       ))}
       {bullets.length > maxBullets && (
-        <div className="text-xs text-gray-500 italic mt-2">
+        <div className="text-xs text-gray-500 italic mt-1">
           +{bullets.length - maxBullets} more items...
         </div>
       )}

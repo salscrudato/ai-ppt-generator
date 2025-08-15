@@ -313,6 +313,20 @@ export default function SlideEditor({
                       })}
                       placeholder="Describe the image to generate"
                     />
+                    <button
+                      onClick={() => updateSpec({
+                        right: { ...localSpec.right, generateImage: !localSpec.right?.generateImage }
+                      })}
+                      className={`mt-2 px-3 py-1 text-sm rounded-lg border transition-colors ${
+                        localSpec.right?.generateImage
+                          ? 'bg-primary-100 border-primary-300 text-primary-700'
+                          : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      type="button"
+                    >
+                      <HiSparkles className="w-4 h-4 inline mr-1" />
+                      {localSpec.right?.generateImage ? 'Image Enabled' : 'Generate Image'}
+                    </button>
                   </div>
                 )}
               </div>

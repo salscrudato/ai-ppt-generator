@@ -112,7 +112,8 @@ export const SlideSpecSchema = z.object({
       value: z.string().max(20, 'Metric value too long'),
       unit: z.string().max(10, 'Unit too long').optional()
     })).max(5, 'Maximum 5 metrics per column').optional(),
-    imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional() // New: Support for images in left column
+    imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(), // New: Support for images in left column
+    generateImage: z.boolean().optional() // Whether to generate the image
   }).optional(),
 
   /** Two-column layout support - right column content with enhanced image and metrics support */
@@ -123,6 +124,7 @@ export const SlideSpecSchema = z.object({
       .optional(),
     paragraph: VALIDATION_PATTERNS.longText.optional(),
     imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
+    generateImage: z.boolean().optional(), // Whether to generate the image
     metrics: z.array(z.object({
       label: VALIDATION_PATTERNS.shortText,
       value: z.string().max(20, 'Metric value too long'),
@@ -213,7 +215,10 @@ export const SlideSpecSchema = z.object({
     .optional(),
 
   /** New: Image prompt for full-image layouts */
-  imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional()
+  imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
+
+  /** Whether to generate the image (explicit user request) */
+  generateImage: z.boolean().optional()
 });
 
 /** TypeScript type inferred from the slide specification schema */
