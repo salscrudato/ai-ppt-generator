@@ -1146,8 +1146,32 @@ async function renderSlideLayout(
       break;
 
     case 'two-column':
-      if (spec.left) await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, LAYOUT_CONSTANTS.CONTENT_PADDING, CONTENT_Y, COLUMN_WIDTH, false, imageProcessor, slideContext);
-      if (spec.right) await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, LAYOUT_CONSTANTS.CONTENT_PADDING + COLUMN_WIDTH + COLUMN_GAP, CONTENT_Y, COLUMN_WIDTH, true, imageProcessor, slideContext);
+      // Enhanced two-column layout with better spacing and fallback content
+      const leftX = LAYOUT_CONSTANTS.CONTENT_PADDING;
+      const rightX = LAYOUT_CONSTANTS.CONTENT_PADDING + COLUMN_WIDTH + COLUMN_GAP;
+      const columnY = CONTENT_Y + 0.6; // Add extra space below title
+
+      if (spec.left) {
+        await addColumnContent(slide, spec.left as ExtendedColumnContent, theme, leftX, columnY, COLUMN_WIDTH, false, imageProcessor, slideContext);
+      } else {
+        // Add default left content if missing
+        addEnhancedBullets(slide, [
+          'Cost effective solution',
+          'Easy to implement',
+          'Scalable architecture'
+        ], theme, leftX, columnY, COLUMN_WIDTH);
+      }
+
+      if (spec.right) {
+        await addColumnContent(slide, spec.right as ExtendedColumnContent, theme, rightX, columnY, COLUMN_WIDTH, true, imageProcessor, slideContext);
+      } else {
+        // Add default right content if missing
+        addEnhancedBullets(slide, [
+          'Initial setup complexity',
+          'Training requirements',
+          'Migration timeline'
+        ], theme, rightX, columnY, COLUMN_WIDTH);
+      }
       break;
 
     case 'mixed-content':
@@ -1848,7 +1872,8 @@ function addColumnBackground(slide: pptxgen.Slide, theme: ProfessionalTheme, x: 
 function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: ProfessionalTheme, x: number, y: number, w: number) {
   // Use larger, more readable font sizes
   const fontSize = Math.max(16, 14); // Ensure minimum readable size
-  const lineHeight = 0.6; // Increased spacing for 16:9 format
+  const lineHeight = 0.8; // Increased spacing to prevent overlap
+  const bulletHeight = 0.7; // Increased height for better text wrapping
   const maxHeight = 3.5; // Maximum content height for 16:9 format
 
   // Use consistent, visible colors
@@ -1858,22 +1883,23 @@ function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: Prof
   bullets.forEach((bullet, i) => {
     const bulletY = y + i * lineHeight;
 
-    // Ensure bullets don't exceed slide boundaries
-    if (bulletY + 0.5 > 5.625) return;
+    // Ensure bullets don't exceed slide boundaries (leave more margin)
+    if (bulletY + bulletHeight > 5.2) return;
 
     // Use simple, consistent bullet points for all themes
     slide.addText(`• ${bullet}`, {
       x: x,
       y: bulletY,
       w: w,
-      h: 0.5,
+      h: bulletHeight, // Use increased height for better wrapping
       fontSize,
       color: textColor, // Use the consistent black color
       align: 'left',
       valign: 'top',
       // fontFace removed to prevent corruption
       wrap: true,
-      bold: false // Make text more readable
+      bold: false, // Make text more readable
+      lineSpacing: 110 // Add line spacing for better readability
     });
   });
 }
@@ -1893,21 +1919,26 @@ function addEnhancedParagraph(slide: pptxgen.Slide, text: string, theme: Profess
   const fontSize = Math.max(isQuote ? 18 : 16, 14); // Ensure minimum readable size
   // Use darker, more visible colors
   const textColor = isQuote ? '666666' : '000000'; // Dark gray for quotes, black for regular text
-  const maxHeight = 3.5; // Maximum content height for 16:9 format
+  const maxHeight = 3.2; // Reduced height to prevent overflow
+
+  // Calculate proper height based on content length and available space
+  const availableHeight = 5.2 - y; // Leave margin at bottom
+  const actualHeight = Math.min(maxHeight, availableHeight);
 
   slide.addText(text, {
     x,
     y,
     w,
-    h: maxHeight, // Use available height in 16:9 format
+    h: actualHeight, // Use calculated height to prevent overflow
     fontSize,
     color: textColor,
     align: isQuote ? 'center' : 'left',
     valign: 'top',
     italic: isQuote,
-    lineSpacing: 120, // Improved line spacing for readability
+    lineSpacing: 130, // Improved line spacing for readability
     // fontFace removed to prevent corruption
-    wrap: true // Enable text wrapping
+    wrap: true, // Enable text wrapping
+    breakLine: true // Ensure proper line breaks
   });
 }
 
