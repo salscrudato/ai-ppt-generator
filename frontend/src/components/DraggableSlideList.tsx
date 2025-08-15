@@ -10,7 +10,7 @@
  * - Auto-scroll during drag
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -37,6 +37,7 @@ import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifier
 import { motion, AnimatePresence } from 'framer-motion';
 import SlideThumbnail from './SlideThumbnail';
 import type { SlideSpec, SlideDragContext } from '../types';
+import { ANIMATION_CONSTANTS } from '../constants/slideConstants';
 
 
 interface DraggableSlideListProps {
@@ -89,6 +90,7 @@ export default function DraggableSlideList({
     activeIndex: null,
     overIndex: null
   });
+  const [focusedSlideIndex, setFocusedSlideIndex] = useState<number>(-1);
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -101,6 +103,53 @@ export default function DraggableSlideList({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Keyboard shortcuts for slide reordering
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (focusedSlideIndex === -1) return;
+
+    const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+
+    if (isCtrlOrCmd && event.key === 'ArrowUp') {
+      event.preventDefault();
+      // Move slide up
+      if (focusedSlideIndex > 0) {
+        const newSlides = arrayMove(slides, focusedSlideIndex, focusedSlideIndex - 1);
+        onSlidesReorder(newSlides);
+        setFocusedSlideIndex(focusedSlideIndex - 1);
+      }
+    } else if (isCtrlOrCmd && event.key === 'ArrowDown') {
+      event.preventDefault();
+      // Move slide down
+      if (focusedSlideIndex < slides.length - 1) {
+        const newSlides = arrayMove(slides, focusedSlideIndex, focusedSlideIndex + 1);
+        onSlidesReorder(newSlides);
+        setFocusedSlideIndex(focusedSlideIndex + 1);
+      }
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      // Select/edit slide
+      const slide = slides[focusedSlideIndex];
+      if (slide) {
+        onSlideSelect(slide);
+      }
+    } else if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      // Delete slide
+      const slide = slides[focusedSlideIndex];
+      if (slide && slides.length > 1) {
+        onSlideDelete(slide);
+        // Adjust focus after deletion
+        setFocusedSlideIndex(Math.min(focusedSlideIndex, slides.length - 2));
+      }
+    }
+  }, [focusedSlideIndex, slides, onSlidesReorder, onSlideSelect, onSlideDelete]);
+
+  // Add keyboard event listeners
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;

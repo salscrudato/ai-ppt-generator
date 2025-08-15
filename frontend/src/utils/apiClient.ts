@@ -299,6 +299,63 @@ export const api = {
   // Health check
   healthCheck: () => apiClient.healthCheck(),
 
+  // Enhanced generation with progress tracking
+  generateWithProgress: async (
+    spec: any,
+    options: {
+      themeId?: string;
+      withValidation?: boolean;
+      onProgress?: (stage: string, progress: number) => void
+    } = {}
+  ) => {
+    const { themeId = 'corporate-blue', withValidation = true, onProgress } = options;
+
+    try {
+      // Stage 1: Preparing
+      onProgress?.('preparing', 10);
+
+      // Stage 2: Processing
+      onProgress?.('generating', 30);
+
+      const response = await fetch(API_ENDPOINTS.generate, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spec,
+          themeId,
+          withValidation
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Generation failed: ${response.statusText}`);
+      }
+
+      // Stage 3: Building
+      onProgress?.('building', 90);
+
+      // Handle blob response for PowerPoint files
+      const blob = await response.blob();
+
+      // Stage 4: Complete
+      onProgress?.('complete', 100);
+
+      return {
+        success: true,
+        data: blob,
+        headers: {
+          contentType: response.headers.get('content-type'),
+          contentDisposition: response.headers.get('content-disposition')
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Generation failed'
+      };
+    }
+  },
+
   // Draft generation with enhanced error context
   generateDraft: async (params: any) => {
     try {

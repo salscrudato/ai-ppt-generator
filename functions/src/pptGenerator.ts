@@ -318,9 +318,11 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
       valign: 'middle'
     });
 
-    // Add notes and sources (enhanced with formatting)
-    let notesText = spec.notes || '';
-    if (spec.sources?.length) notesText += `\n\nSources:\n${spec.sources.join('\n')}`;
+    // Enhanced speaker notes generation
+    let notesText = generateSpeakerNotes(spec);
+    if (spec.sources?.length) {
+      notesText += `\n\nSources:\n${spec.sources.map((source, index) => `${index + 1}. ${source}`).join('\n')}`;
+    }
     slide.addNotes(notesText);
   }
 
@@ -1169,6 +1171,143 @@ export async function generateThemeShowcase(): Promise<Buffer> {
 }
 
 /**
+ * Generate comprehensive speaker notes from slide content
+ */
+function generateSpeakerNotes(spec: SlideSpec): string {
+  // Use existing notes if provided
+  if (spec.notes && spec.notes.trim().length > 0) {
+    return spec.notes;
+  }
+
+  // Auto-generate notes based on slide content
+  let notes = '';
+
+  // Add title context
+  notes += `Slide Title: ${spec.title}\n\n`;
+
+  // Add layout-specific guidance
+  switch (spec.layout) {
+    case 'title':
+      notes += 'This is a title slide. Use it to introduce the presentation topic and set the stage for your audience.\n\n';
+      if (spec.paragraph) {
+        notes += `Key Message: ${spec.paragraph}\n\n`;
+      }
+      break;
+
+    case 'title-bullets':
+      notes += 'This slide presents key points in a structured format. Elaborate on each bullet point:\n\n';
+      if (spec.bullets && spec.bullets.length > 0) {
+        spec.bullets.forEach((bullet, index) => {
+          notes += `${index + 1}. ${bullet}\n   - Expand on this point with examples or supporting details\n\n`;
+        });
+      }
+      break;
+
+    case 'title-paragraph':
+      notes += 'This slide contains detailed information. Present the content clearly and allow time for questions.\n\n';
+      if (spec.paragraph) {
+        notes += `Main Content: ${spec.paragraph}\n\n`;
+        notes += 'Speaking Tips:\n- Break down complex concepts into digestible parts\n- Use examples to illustrate key points\n- Check audience understanding\n\n';
+      }
+      break;
+
+    case 'two-column':
+      notes += 'This slide compares or contrasts two concepts. Present each side clearly:\n\n';
+      if (spec.left?.bullets) {
+        notes += 'Left Column Points:\n';
+        spec.left.bullets.forEach((bullet, index) => {
+          notes += `- ${bullet}\n`;
+        });
+        notes += '\n';
+      }
+      if (spec.right?.bullets) {
+        notes += 'Right Column Points:\n';
+        spec.right.bullets.forEach((bullet, index) => {
+          notes += `- ${bullet}\n`;
+        });
+        notes += '\n';
+      }
+      notes += 'Highlight the relationship between the two columns and draw conclusions.\n\n';
+      break;
+
+    case 'chart':
+      notes += 'This slide presents data visualization. Guide the audience through the chart:\n\n';
+      if (spec.chart) {
+        notes += `Chart Type: ${spec.chart.type}\n`;
+        notes += `Data Categories: ${spec.chart.categories.join(', ')}\n\n`;
+        notes += 'Speaking Tips:\n';
+        notes += '- Start with the main insight or trend\n';
+        notes += '- Point out significant data points\n';
+        notes += '- Explain what the data means for your audience\n';
+        notes += '- Be prepared to answer questions about methodology\n\n';
+      }
+      break;
+
+    case 'quote':
+      notes += 'This slide features a quote. Use it to emphasize a key message:\n\n';
+      if (spec.paragraph) {
+        notes += `Quote: "${spec.paragraph}"\n\n`;
+        notes += 'Speaking Tips:\n';
+        notes += '- Pause before and after reading the quote\n';
+        notes += '- Explain why this quote is relevant\n';
+        notes += '- Connect it to your main message\n\n';
+      }
+      break;
+
+    case 'timeline':
+      notes += 'This slide shows a sequence of events or process steps. Walk through each item chronologically:\n\n';
+      if (spec.timeline) {
+        spec.timeline.forEach((item, index) => {
+          notes += `${index + 1}. ${item.date || `Step ${index + 1}`}: ${item.title}\n`;
+          if (item.description) {
+            notes += `   ${item.description}\n`;
+          }
+          notes += '\n';
+        });
+      }
+      notes += 'Emphasize the progression and key milestones.\n\n';
+      break;
+
+    case 'process-flow':
+      notes += 'This slide outlines a process or workflow. Explain each step clearly:\n\n';
+      if (spec.processFlow) {
+        spec.processFlow.forEach((step, index) => {
+          notes += `Step ${index + 1}: ${step.title}\n`;
+          if (step.description) {
+            notes += `   ${step.description}\n`;
+          }
+          notes += '\n';
+        });
+      }
+      notes += 'Show how each step connects to the next and the overall outcome.\n\n';
+      break;
+
+    default:
+      notes += 'Present this slide content clearly and engage with your audience.\n\n';
+      if (spec.paragraph) {
+        notes += `Content: ${spec.paragraph}\n\n`;
+      }
+      if (spec.bullets && spec.bullets.length > 0) {
+        notes += 'Key Points:\n';
+        spec.bullets.forEach(bullet => {
+          notes += `- ${bullet}\n`;
+        });
+        notes += '\n';
+      }
+  }
+
+  // Add general presentation tips
+  notes += 'General Tips:\n';
+  notes += '- Maintain eye contact with your audience\n';
+  notes += '- Speak clearly and at an appropriate pace\n';
+  notes += '- Use gestures to emphasize key points\n';
+  notes += '- Be prepared for questions\n';
+  notes += '- Transition smoothly to the next slide\n';
+
+  return notes.trim();
+}
+
+/**
  * Additional enhanced layout functions
  */
 
@@ -1176,53 +1315,143 @@ export async function generateThemeShowcase(): Promise<Buffer> {
  * Enhanced chart rendering with modern styling
  */
 function addEnhancedChart(slide: pptxgen.Slide, chart: NonNullable<SlideSpec['chart']>, theme: ProfessionalTheme, x: number, y: number, w: number, h: number) {
-  // Add chart background
-  slide.addShape('rect', {
-    x: x - 0.1,
-    y: y - 0.1,
-    w: w + 0.2,
-    h: h + 0.2,
-    fill: {
-      color: safeColorFormat(theme.colors.surface),
-      transparency: 10
-    },
-    line: {
-      color: safeColorFormat(theme.colors.borders.light),
-      width: 1
-    },
-    rectRadius: 0.1
-  });
+  try {
+    // Validate chart data
+    if (!chart.categories || chart.categories.length === 0) {
+      console.warn('Chart has no categories, skipping chart rendering');
+      return;
+    }
 
-  // Map chart types to pptxgenjs format
-  const chartTypeMap: Record<string, any> = {
-    'bar': 'bar',
-    'column': 'column',
-    'line': 'line',
-    'pie': 'pie',
-    'doughnut': 'doughnut',
-    'area': 'area',
-    'scatter': 'scatter'
-  };
+    if (!chart.series || chart.series.length === 0) {
+      console.warn('Chart has no data series, skipping chart rendering');
+      return;
+    }
 
-  const pptxChartType = chartTypeMap[chart.type] || 'bar';
+    // Add chart background with subtle styling
+    slide.addShape('rect', {
+      x: x - 0.1,
+      y: y - 0.1,
+      w: w + 0.2,
+      h: h + 0.2,
+      fill: {
+        color: safeColorFormat(theme.colors.surface || theme.colors.background || '#FFFFFF'),
+        transparency: 10
+      },
+      line: {
+        color: safeColorFormat(theme.colors.borders?.light || theme.colors.text?.secondary || '#E5E7EB'),
+        width: 1
+      },
+      rectRadius: 0.1,
+      shadow: {
+        type: 'outer',
+        blur: 3,
+        offset: 2,
+        angle: 45,
+        color: '00000015'
+      }
+    });
 
-  const chartData = chart.series.map((s) => ({
-    name: s.name,
-    labels: chart.categories,
-    values: s.data
-  }));
+    // Enhanced chart type mapping with validation
+    const chartTypeMap: Record<string, any> = {
+      'bar': 'bar',
+      'column': 'column',
+      'line': 'line',
+      'pie': 'pie',
+      'doughnut': 'doughnut',
+      'area': 'area',
+      'scatter': 'scatter'
+    };
 
-  slide.addChart(pptxChartType, chartData, {
-    x, y, w, h,
-    title: chart.title,
-    showLegend: chart.showLegend,
-    showDataTable: chart.showDataLabels,
-    chartColors: [
+    const pptxChartType = chartTypeMap[chart.type] || 'column';
+
+    // Prepare chart data with validation
+    const chartData = chart.series.map((series, index) => {
+      // Ensure data array matches categories length
+      const normalizedData = chart.categories.map((_, catIndex) =>
+        series.data[catIndex] !== undefined ? series.data[catIndex] : 0
+      );
+
+      return {
+        name: series.name || `Series ${index + 1}`,
+        labels: chart.categories,
+        values: normalizedData
+      };
+    });
+
+    // Enhanced color palette for multiple series
+    const chartColors = [
       safeColorFormat(theme.colors.primary),
       safeColorFormat(theme.colors.secondary),
-      safeColorFormat(theme.colors.accent)
-    ]
-  });
+      safeColorFormat(theme.colors.accent),
+      safeColorFormat('#10B981'), // Green
+      safeColorFormat('#F59E0B'), // Amber
+      safeColorFormat('#EF4444'), // Red
+      safeColorFormat('#8B5CF6'), // Purple
+      safeColorFormat('#06B6D4')  // Cyan
+    ];
+
+    // Chart configuration with enhanced styling
+    const chartOptions: any = {
+      x, y, w, h,
+      title: chart.title || '',
+      titleFontSize: 14,
+      titleColor: safeColorFormat(theme.colors.text?.primary || theme.colors.primary),
+      showLegend: chart.showLegend !== false,
+      legendPos: 'r',
+      showDataTable: chart.showDataLabels === true,
+      chartColors: chartColors.slice(0, chart.series.length),
+      border: {
+        pt: 1,
+        color: safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary)
+      }
+    };
+
+    // Type-specific enhancements
+    if (chart.type === 'pie' || chart.type === 'doughnut') {
+      chartOptions.showPercent = true;
+      chartOptions.showValue = false;
+      chartOptions.showLegend = true;
+      chartOptions.legendPos = 'r';
+    } else {
+      chartOptions.catAxisLabelFontSize = 10;
+      chartOptions.valAxisLabelFontSize = 10;
+      chartOptions.showValue = chart.showDataLabels === true;
+    }
+
+    // Add subtitle if provided
+    if (chart.subtitle) {
+      slide.addText(chart.subtitle, {
+        x: x,
+        y: y - 0.4,
+        w: w,
+        h: 0.3,
+        fontSize: 11,
+        color: safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
+        align: 'center',
+        fontFace: theme.typography?.fontFamilies?.body || 'Arial'
+      });
+    }
+
+    // Render the chart
+    slide.addChart(pptxChartType, chartData, chartOptions);
+
+    console.log(`✅ Successfully added ${chart.type} chart with ${chart.series.length} series and ${chart.categories.length} categories`);
+
+  } catch (error) {
+    console.error('❌ Error rendering chart:', error);
+
+    // Fallback: Add error message
+    slide.addText('Chart data could not be displayed', {
+      x: x,
+      y: y + h/2 - 0.2,
+      w: w,
+      h: 0.4,
+      fontSize: 12,
+      color: safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
+      align: 'center',
+      italic: true
+    });
+  }
 }
 
 /**

@@ -38,14 +38,16 @@ interface PreviewState {
 
 /**
  * LiveSlidePreview Component
- * 
+ *
  * Provides real-time slide preview as users type and modify their input.
  * Features:
- * - Real-time draft generation with debouncing
- * - 16:9 aspect ratio slide preview
- * - Theme-based styling
- * - Optional editable content
- * - Smooth loading states and error handling
+ * - Real-time draft generation with <200ms debouncing for optimal performance
+ * - 16:9 aspect ratio slide preview with precise spacing constants
+ * - Theme-based styling with instant re-skinning
+ * - Support for all layout types (timeline, process-flow, comparison-table, etc.)
+ * - Optional editable content with live updates
+ * - Smooth loading states and comprehensive error handling
+ * - Accessibility-compliant with ARIA labels and keyboard navigation
  */
 export default function LiveSlidePreview({
   params,
