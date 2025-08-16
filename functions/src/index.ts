@@ -41,6 +41,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import compression from "compression";
+import { apiKeyValidator } from "./config/apiKeyValidator";
 
 // Import enhanced core modules with error types
 import { AIGenerationError, ValidationError, TimeoutError, RateLimitError, ContentFilterError, NetworkError } from "./llm";
@@ -178,6 +179,9 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 // Configure Firebase Functions for optimal performance
 setGlobalOptions({ maxInstances: CONFIG.maxInstances });
 
+// Note: API key validation will be performed at runtime, not during deployment
+// Firebase secrets are only available when the function is actually invoked
+
 // Create Express application with production-ready middleware
 const app = express();
 
@@ -230,16 +234,86 @@ app.use((_req, _res, next) => {
 });
 
 /**
- * Health check endpoint
+ * Health check endpoint with API key validation
  */
 app.get('/health', (_req, res) => {
+  // Perform runtime API key validation
+  let apiKeyStatus = 'unknown';
+  try {
+    const validation = apiKeyValidator.validateConfiguration();
+    apiKeyStatus = validation.isValid ? 'configured' : 'missing';
+
+    if (!validation.isValid) {
+      logger.warn('⚠️ OpenAI API key not properly configured', {
+        source: validation.source,
+        environment: validation.environment
+      });
+    }
+  } catch (error) {
+    logger.error('API key validation error:', error);
+    apiKeyStatus = 'error';
+  }
+
   return res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     version: '3.3.2-enhanced-fixed',
     service: 'AI PowerPoint Generator',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    apiKeyStatus
   });
+});
+
+/**
+ * Configuration status endpoint (admin only)
+ */
+app.get('/config/status', (req, res) => {
+  // Simple admin authentication
+  if (req.query.adminKey !== 'config-check-2024') {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const validation = apiKeyValidator.validateConfiguration();
+    const statusReport = apiKeyValidator.generateStatusReport();
+
+    return res.json({
+      validation,
+      statusReport,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Configuration status check failed:', error);
+    return res.status(500).json({
+      error: 'Configuration check failed',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * API key test endpoint (admin only)
+ */
+app.post('/config/test-api-key', async (req, res) => {
+  // Simple admin authentication
+  if (req.query.adminKey !== 'config-check-2024') {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const testResult = await apiKeyValidator.testAPIKey();
+
+    return res.json({
+      ...testResult,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('API key test failed:', error);
+    return res.status(500).json({
+      error: 'API key test failed',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
 });
 
 /**

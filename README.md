@@ -140,7 +140,7 @@ cd ai-ppt-generator
 cp functions/.env.example functions/.env
 
 # Edit the file and add your OpenAI API key
-OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=your-openai-api-key-here
 ```
 
 #### **4. Start Development Environment**
