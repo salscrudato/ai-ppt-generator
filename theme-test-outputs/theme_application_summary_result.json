@@ -1,0 +1,296 @@
+{
+  "timestamp": "2025-08-16T19:21:31.686Z",
+  "totalDuration": 10426,
+  "results": [
+    {
+      "theme": "Corporate Professional",
+      "themeId": "corporate-blue",
+      "category": "corporate",
+      "layout": "Title Slide",
+      "layoutType": "title",
+      "success": true,
+      "filename": "theme-test-pptx/corporate-blue_title_slide.pptx",
+      "fileSize": 48527,
+      "fileSizeKB": 47,
+      "duration": 6
+    },
+    {
+      "theme": "Corporate Professional",
+      "themeId": "corporate-blue",
+      "category": "corporate",
+      "layout": "Bullet Points",
+      "layoutType": "title-bullets",
+      "success": true,
+      "filename": "theme-test-pptx/corporate-blue_bullet_points.pptx",
+      "fileSize": 54344,
+      "fileSizeKB": 53,
+      "duration": 21
+    },
+    {
+      "theme": "Corporate Professional",
+      "themeId": "corporate-blue",
+      "category": "corporate",
+      "layout": "Two Column Layout",
+      "layoutType": "two-column",
+      "success": true,
+      "filename": "theme-test-pptx/corporate-blue_two_column_layout.pptx",
+      "fileSize": 55011,
+      "fileSizeKB": 54,
+      "duration": 7
+    },
+    {
+      "theme": "Corporate Professional",
+      "themeId": "corporate-blue",
+      "category": "corporate",
+      "layout": "Paragraph Content",
+      "layoutType": "title-paragraph",
+      "success": true,
+      "filename": "theme-test-pptx/corporate-blue_paragraph_content.pptx",
+      "fileSize": 49650,
+      "fileSizeKB": 48,
+      "duration": 23
+    },
+    {
+      "theme": "Creative Studio",
+      "themeId": "creative-purple",
+      "category": "creative",
+      "layout": "Title Slide",
+      "layoutType": "title",
+      "success": true,
+      "filename": "theme-test-pptx/creative-purple_title_slide.pptx",
+      "fileSize": 49406,
+      "fileSizeKB": 48,
+      "duration": 26
+    },
+    {
+      "theme": "Creative Studio",
+      "themeId": "creative-purple",
+      "category": "creative",
+      "layout": "Bullet Points",
+      "layoutType": "title-bullets",
+      "success": true,
+      "filename": "theme-test-pptx/creative-purple_bullet_points.pptx",
+      "fileSize": 55633,
+      "fileSizeKB": 54,
+      "duration": 18
+    },
+    {
+      "theme": "Creative Studio",
+      "themeId": "creative-purple",
+      "category": "creative",
+      "layout": "Two Column Layout",
+      "layoutType": "two-column",
+      "success": true,
+      "filename": "theme-test-pptx/creative-purple_two_column_layout.pptx",
+      "fileSize": 56300,
+      "fileSizeKB": 55,
+      "duration": 22
+    },
+    {
+      "theme": "Creative Studio",
+      "themeId": "creative-purple",
+      "category": "creative",
+      "layout": "Paragraph Content",
+      "layoutType": "title-paragraph",
+      "success": true,
+      "filename": "theme-test-pptx/creative-purple_paragraph_content.pptx",
+      "fileSize": 50934,
+      "fileSizeKB": 50,
+      "duration": 25
+    },
+    {
+      "theme": "Technology Forward",
+      "themeId": "tech-gradient",
+      "category": "technology",
+      "layout": "Title Slide",
+      "layoutType": "title",
+      "success": true,
+      "filename": "theme-test-pptx/tech-gradient_title_slide.pptx",
+      "fileSize": 48946,
+      "fileSizeKB": 48,
+      "duration": 20
+    },
+    {
+      "theme": "Technology Forward",
+      "themeId": "tech-gradient",
+      "category": "technology",
+      "layout": "Bullet Points",
+      "layoutType": "title-bullets",
+      "success": true,
+      "filename": "theme-test-pptx/tech-gradient_bullet_points.pptx",
+      "fileSize": 54789,
+      "fileSizeKB": 54,
+      "duration": 20
+    },
+    {
+      "theme": "Technology Forward",
+      "themeId": "tech-gradient",
+      "category": "technology",
+      "layout": "Two Column Layout",
+      "layoutType": "two-column",
+      "success": true,
+      "filename": "theme-test-pptx/tech-gradient_two_column_layout.pptx",
+      "fileSize": 55456,
+      "fileSizeKB": 54,
+      "duration": 18
+    },
+    {
+      "theme": "Technology Forward",
+      "themeId": "tech-gradient",
+      "category": "technology",
+      "layout": "Paragraph Content",
+      "layoutType": "title-paragraph",
+      "success": true,
+      "filename": "theme-test-pptx/tech-gradient_paragraph_content.pptx",
+      "fileSize": 50093,
+      "fileSizeKB": 49,
+      "duration": 19
+    },
+    {
+      "theme": "Financial Growth",
+      "themeId": "finance-green",
+      "category": "finance",
+      "layout": "Title Slide",
+      "layoutType": "title",
+      "success": true,
+      "filename": "theme-test-pptx/finance-green_title_slide.pptx",
+      "fileSize": 48527,
+      "fileSizeKB": 47,
+      "duration": 19
+    },
+    {
+      "theme": "Financial Growth",
+      "themeId": "finance-green",
+      "category": "finance",
+      "layout": "Bullet Points",
+      "layoutType": "title-bullets",
+      "success": true,
+      "filename": "theme-test-pptx/finance-green_bullet_points.pptx",
+      "fileSize": 54344,
+      "fileSizeKB": 53,
+      "duration": 18
+    },
+    {
+      "theme": "Financial Growth",
+      "themeId": "finance-green",
+      "category": "finance",
+      "layout": "Two Column Layout",
+      "layoutType": "two-column",
+      "success": true,
+      "filename": "theme-test-pptx/finance-green_two_column_layout.pptx",
+      "fileSize": 55011,
+      "fileSizeKB": 54,
+      "duration": 17
+    },
+    {
+      "theme": "Financial Growth",
+      "themeId": "finance-green",
+      "category": "finance",
+      "layout": "Paragraph Content",
+      "layoutType": "title-paragraph",
+      "success": true,
+      "filename": "theme-test-pptx/finance-green_paragraph_content.pptx",
+      "fileSize": 49650,
+      "fileSizeKB": 48,
+      "duration": 17
+    },
+    {
+      "theme": "Ocean Breeze (2024)",
+      "themeId": "ocean-breeze",
+      "category": "modern",
+      "layout": "Title Slide",
+      "layoutType": "title",
+      "success": true,
+      "filename": "theme-test-pptx/ocean-breeze_title_slide.pptx",
+      "fileSize": 48946,
+      "fileSizeKB": 48,
+      "duration": 20
+    },
+    {
+      "theme": "Ocean Breeze (2024)",
+      "themeId": "ocean-breeze",
+      "category": "modern",
+      "layout": "Bullet Points",
+      "layoutType": "title-bullets",
+      "success": true,
+      "filename": "theme-test-pptx/ocean-breeze_bullet_points.pptx",
+      "fileSize": 54789,
+      "fileSizeKB": 54,
+      "duration": 19
+    },
+    {
+      "theme": "Ocean Breeze (2024)",
+      "themeId": "ocean-breeze",
+      "category": "modern",
+      "layout": "Two Column Layout",
+      "layoutType": "two-column",
+      "success": true,
+      "filename": "theme-test-pptx/ocean-breeze_two_column_layout.pptx",
+      "fileSize": 55456,
+      "fileSizeKB": 54,
+      "duration": 20
+    },
+    {
+      "theme": "Ocean Breeze (2024)",
+      "themeId": "ocean-breeze",
+      "category": "modern",
+      "layout": "Paragraph Content",
+      "layoutType": "title-paragraph",
+      "success": true,
+      "filename": "theme-test-pptx/ocean-breeze_paragraph_content.pptx",
+      "fileSize": 50093,
+      "fileSizeKB": 49,
+      "duration": 17
+    }
+  ],
+  "analysis": {
+    "summary": {
+      "totalTests": 20,
+      "successful": 20,
+      "failed": 0,
+      "successRate": 100,
+      "avgFileSize": 51,
+      "avgDuration": 19
+    },
+    "byCategory": {
+      "corporate": {
+        "total": 4,
+        "successful": 4
+      },
+      "creative": {
+        "total": 4,
+        "successful": 4
+      },
+      "technology": {
+        "total": 4,
+        "successful": 4
+      },
+      "finance": {
+        "total": 4,
+        "successful": 4
+      },
+      "modern": {
+        "total": 4,
+        "successful": 4
+      }
+    },
+    "byLayout": {
+      "title": {
+        "total": 5,
+        "successful": 5
+      },
+      "title-bullets": {
+        "total": 5,
+        "successful": 5
+      },
+      "two-column": {
+        "total": 5,
+        "successful": 5
+      },
+      "title-paragraph": {
+        "total": 5,
+        "successful": 5
+      }
+    }
+  }
+}

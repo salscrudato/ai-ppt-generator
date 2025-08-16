@@ -56,15 +56,16 @@ export interface SlideBuilderOptions {
   contentY?: number;
   contentPadding?: number;
   maxContentWidth?: number;
-  
+  titleX?: number;
+
   /** Slide dimensions */
   slideWidth?: number;
   slideHeight?: number;
-  
+
   /** Additional styling options */
   useModernStyling?: boolean;
   enableAnimations?: boolean;
-  
+
   /** Debug mode */
   debug?: boolean;
 }

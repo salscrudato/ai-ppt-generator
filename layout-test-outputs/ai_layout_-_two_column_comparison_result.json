@@ -1,0 +1,38 @@
+{
+  "content": {
+    "spec": {
+      "title": "Time-to-Market Reduced by 30% with Modern Development",
+      "layout": "title-bullets",
+      "bullets": [
+        "Traditional methods average 6-12 months for deployment; modern approaches cut this to 4-8 months.",
+        "Agile practices enhance responsiveness, increasing project success rates by 25% year-over-year.",
+        "Continuous integration and delivery reduce bugs by 40%, leading to faster releases and improved quality.",
+        "Real-time customer feedback boosts user satisfaction scores by 15% post-launch.",
+        "Cross-functional teams enhance collaboration, increasing operational efficiency by 20% across departments."
+      ],
+      "notes": "Begin with the impactful time-to-market statistic to capture attention. Follow with success rates and quality improvements, emphasizing their direct impact on customer satisfaction. Conclude with the benefits of collaboration to demonstrate a comprehensive transformation.",
+      "sources": [
+        "2023 State of Agile Report",
+        "McKinsey & Company Insights on Software Development",
+        "Gartner Research on IT Transformation"
+      ]
+    },
+    "quality": {
+      "score": 100,
+      "grade": "A",
+      "issues": [],
+      "strengths": [],
+      "suggestions": []
+    },
+    "timestamp": "2025-08-16T19:29:47.396Z"
+  },
+  "analysis": {
+    "selectedLayout": "title-bullets",
+    "isAppropriate": false,
+    "expectedLayouts": [
+      "two-column",
+      "comparison-table",
+      "before-after"
+    ]
+  }
+}

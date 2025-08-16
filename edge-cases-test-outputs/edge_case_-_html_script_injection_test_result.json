@@ -1,0 +1,12 @@
+{
+  "scenario": "HTML/Script Injection Test",
+  "result": {
+    "success": false,
+    "status": 503,
+    "data": {
+      "error": "AI service temporarily unavailable. Please try again in a moment.",
+      "code": "AI_SERVICE_ERROR"
+    }
+  },
+  "expectedBehavior": "Should sanitize HTML/script content"
+}

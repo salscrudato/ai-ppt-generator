@@ -116,17 +116,19 @@ function AppContent() {
   // Enhanced theme synchronization with the new hook
   const themeSync = useThemeSync({
     mode: state.mode,
-    debug: process.env.NODE_ENV === 'development',
+    debug: false, // Disabled to reduce console spam
     persistTheme: true
   });
 
-  // Debug logging for theme synchronization
+  // Debug logging for theme synchronization (only in development)
   React.useEffect(() => {
-    console.log('🎨 App: Theme state', {
-      contextThemeId,
-      formThemeId: state.params.design?.theme,
-      step: state.step
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎨 App: Theme state', {
+        contextThemeId,
+        formThemeId: state.params.design?.theme,
+        step: state.step
+      });
+    }
   }, [contextThemeId, state.params.design?.theme, state.step]);
 
   // Verify API connection on component mount for debugging

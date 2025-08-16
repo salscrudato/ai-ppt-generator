@@ -49,7 +49,7 @@ export default function SlideEditor({
   // Enhanced theme synchronization for slide editor
   const themeSync = useThemeSync({
     mode: 'presentation', // SlideEditor is typically used in presentation mode
-    debug: process.env.NODE_ENV === 'development'
+    debug: false // Disabled to reduce console spam
   });
 
   // Use provided theme, synchronized theme, or fall back to context theme

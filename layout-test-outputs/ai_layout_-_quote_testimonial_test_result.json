@@ -1,0 +1,43 @@
+{
+  "content": {
+    "spec": {
+      "title": "300% Efficiency Gain: Transformative Customer Testimonial",
+      "layout": "two-column",
+      "left": {
+        "bullets": [
+          "Before implementing our solution, operations faced significant inefficiencies with a 60% delay in project timelines.",
+          "Streamlined workflows resulted in a 40% reduction in processing time, enhancing overall operational capacity."
+        ]
+      },
+      "right": {
+        "bullets": [
+          "Post-deployment, customer productivity surged by 300%, significantly minimizing operational bottlenecks.",
+          "Enhanced collaboration tools led to a 25% increase in team output and employee satisfaction.",
+          "This transformation has empowered the customer to seize new business opportunities, accelerating growth by 15% in the first quarter."
+        ]
+      },
+      "notes": "Emphasize the dramatic efficiency increase first. Use the testimonial to validate the solution's impact, and encourage the audience to envision similar results in their operations.",
+      "sources": [
+        "Customer Feedback Survey",
+        "Operational Performance Metrics Report"
+      ]
+    },
+    "quality": {
+      "score": 78,
+      "grade": "C",
+      "issues": [],
+      "strengths": [],
+      "suggestions": []
+    },
+    "timestamp": "2025-08-16T19:30:24.810Z"
+  },
+  "analysis": {
+    "selectedLayout": "two-column",
+    "isAppropriate": false,
+    "expectedLayouts": [
+      "quote",
+      "testimonial",
+      "accent-quote"
+    ]
+  }
+}

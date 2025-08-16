@@ -1,21 +1,54 @@
 /**
  * Chart Slide Builder
- * 
+ *
  * Specialized builder for chart and data visualization slides.
  * Handles native chart rendering with comprehensive styling and validation.
- * 
+ *
  * Features:
- * - Native PowerPoint chart generation
- * - Support for bar, line, pie, doughnut, area, scatter, column charts
- * - Theme-aware color schemes
- * - Data validation and error handling
- * - Professional chart styling
+ * - Native PowerPoint chart generation via pptxgenjs
+ * - Support for bar, column, line, pie, doughnut, area, scatter
+ * - Stacked and 100% stacked variants (for bar/column/area when requested)
+ * - Theme-aware color schemes and typography
+ * - Data validation and normalization (incl. scatter and pie/doughnut)
+ * - Smart legend placement and axis formatting (percent/currency/compact)
+ * - Gridline toggles, axis titles, category label rotation
+ * - Defensive error handling with graceful fallback
  */
 
 import type { SlideSpec } from '../../schema';
 import type { ProfessionalTheme } from '../../professionalThemes';
 import type pptxgen from 'pptxgenjs';
-import { BaseSlideBuilder, type SlideBuilderOptions, type ValidationResult } from './slideBuilderRegistry';
+import {
+  BaseSlideBuilder,
+  type SlideBuilderOptions,
+} from './slideBuilderRegistry';
+
+// Extended chart interface with optional advanced properties
+interface ExtendedChartSpec extends NonNullable<SlideSpec['chart']> {
+  axisTitleX?: string;
+  axisTitleY?: string;
+  gridlines?: {
+    category?: boolean;
+    value?: boolean;
+  };
+  numberFormat?: string;
+  currency?: string;
+  categoryLabelAngle?: number;
+  axisMin?: number;
+  axisMax?: number;
+  showPercent?: boolean;
+  showValue?: boolean;
+  stacked?: boolean;
+  stack?: boolean;
+  percentStacked?: boolean;
+  '100pctStacked'?: boolean;
+  source?: string;
+  footnote?: string;
+  legendPos?: 't' | 'b' | 'l' | 'r';
+}
+
+type ChartSpec = ExtendedChartSpec;
+type SeriesSpec = NonNullable<SlideSpec['chart']>['series'][number];
 
 export class ChartSlideBuilder extends BaseSlideBuilder {
   type: SlideSpec['layout'] = 'chart';
@@ -28,43 +61,43 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
     theme: ProfessionalTheme,
     options: SlideBuilderOptions = {}
   ): Promise<void> {
-    const { contentY = 1.6, maxContentWidth = 8.5 } = options;
+    const { contentY = 1.6, maxContentWidth = 8.5, titleX = 0.75 } = options;
 
-    // Add title
+    // Title
     this.addTitle(slide, spec.title, theme, options);
 
-    // Add chart if present
+    // Chart or placeholder
     if (spec.chart) {
       await this.addEnhancedChart(slide, spec.chart, theme, {
-        x: 0.75,
-        y: contentY + 1.0,
+        x: titleX,
+        y: contentY + 0.9,
         w: maxContentWidth,
-        h: 4.0
+        h: 4.3,
       });
     } else {
-      // Fallback: Add placeholder
       slide.addText('Chart data not available', {
-        x: 0.75,
+        x: titleX,
         y: contentY + 2.0,
         w: maxContentWidth,
         h: 1.0,
         fontSize: 16,
-        color: theme.colors.text?.secondary || theme.colors.secondary,
+        color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
         align: 'center',
-        italic: true
+        italic: true,
       });
     }
 
-    // Add subtitle or description if available
+    // Description / subtitle paragraph under the chart (optional)
     if (spec.paragraph) {
       slide.addText(spec.paragraph, {
-        x: 0.75,
-        y: contentY + 5.2,
+        x: titleX,
+        y: contentY + 5.4,
         w: maxContentWidth,
-        h: 0.8,
+        h: 0.9,
         fontSize: 12,
-        color: theme.colors.text?.secondary || theme.colors.secondary,
-        align: 'left'
+        color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
+        align: 'left',
+        fontFace: theme.typography?.body?.fontFamily || 'Arial',
       });
     }
   }
@@ -80,7 +113,7 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
       return;
     }
 
-    const chart = spec.chart;
+    const chart = spec.chart as ChartSpec;
 
     // Validate chart type
     const validTypes = ['bar', 'line', 'pie', 'doughnut', 'area', 'scatter', 'column'];
@@ -88,11 +121,18 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
       errors.push(`Invalid chart type: ${chart.type}. Must be one of: ${validTypes.join(', ')}`);
     }
 
-    // Validate categories
-    if (!chart.categories || chart.categories.length === 0) {
-      errors.push('Chart must have at least one category');
-    } else if (chart.categories.length > 12) {
-      warnings.push('Chart has many categories (>12), consider grouping data for better readability');
+    // Scatter has different expectations
+    const isScatter = chart.type === 'scatter';
+
+    // Validate categories (not required for scatter)
+    if (!isScatter) {
+      if (!chart.categories || chart.categories.length === 0) {
+        errors.push('Chart must have at least one category');
+      } else if (chart.categories.length > 12) {
+        warnings.push(
+          'Chart has many categories (>12), consider grouping data for better readability'
+        );
+      }
     }
 
     // Validate series
@@ -100,20 +140,35 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
       errors.push('Chart must have at least one data series');
     } else {
       chart.series.forEach((series, index) => {
+        const label = series.name?.trim() || `Series ${index + 1}`;
+
         if (!series.name || series.name.trim().length === 0) {
           warnings.push(`Series ${index + 1} is missing a name`);
         }
-        
+
         if (!series.data || series.data.length === 0) {
-          errors.push(`Series ${index + 1} has no data`);
-        } else if (series.data.length !== chart.categories.length) {
-          warnings.push(`Series ${index + 1} data length (${series.data.length}) doesn't match categories length (${chart.categories.length})`);
+          errors.push(`${label} has no data`);
+          return;
         }
 
-        // Check for non-numeric data
-        const hasInvalidData = series.data.some(value => typeof value !== 'number' || isNaN(value));
-        if (hasInvalidData) {
-          errors.push(`Series ${index + 1} contains non-numeric data`);
+        if (!isScatter) {
+          if (!chart.categories) return;
+          if (series.data.length !== chart.categories.length) {
+            warnings.push(
+              `${label} data length (${series.data.length}) doesn't match categories length (${chart.categories.length})`
+            );
+          }
+
+          const hasInvalidData = series.data.some((v) => typeof v !== 'number' || isNaN(v as any));
+          if (hasInvalidData) {
+            errors.push(`${label} contains non-numeric data`);
+          }
+        } else {
+          // Scatter: expect array of { x, y } | [x, y] | numbers (auto-indexed)
+          const normalized = this.normalizeScatterData(series.data);
+          if (normalized.length === 0) {
+            errors.push(`${label} has no valid (x,y) points for scatter`);
+          }
         }
       });
     }
@@ -121,15 +176,23 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
     // Chart-specific suggestions
     if (chart.type === 'pie' || chart.type === 'doughnut') {
       if (chart.series.length > 1) {
-        suggestions.push('Pie and doughnut charts work best with a single data series');
+        suggestions.push('Pie and doughnut charts usually work best with a single data series.');
       }
-      if (chart.categories.length > 8) {
-        suggestions.push('Consider limiting pie chart categories to 8 or fewer for clarity');
+      if ((chart.categories?.length || 0) > 8) {
+        suggestions.push('Consider limiting pie/doughnut categories to 8 or fewer for clarity.');
       }
     }
 
-    if (chart.title && chart.title.length > 50) {
-      warnings.push('Chart title is quite long and may not display well');
+    // Axis titles too long?
+    if (chart.axisTitleX && chart.axisTitleX.length > 40) {
+      warnings.push('X-axis title is quite long and may not display well.');
+    }
+    if (chart.axisTitleY && chart.axisTitleY.length > 40) {
+      warnings.push('Y-axis title is quite long and may not display well.');
+    }
+
+    if (chart.title && chart.title.length > 60) {
+      warnings.push('Chart title is quite long and may not display well.');
     }
   }
 
@@ -146,14 +209,14 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
    */
   private async addEnhancedChart(
     slide: pptxgen.Slide,
-    chart: NonNullable<SlideSpec['chart']>,
+    chart: ChartSpec,
     theme: ProfessionalTheme,
     position: { x: number; y: number; w: number; h: number }
   ): Promise<void> {
-    try {
-      const { x, y, w, h } = position;
+    const { x, y, w, h } = position;
 
-      // Add chart background
+    try {
+      // --- Background panel behind the chart for readability
       slide.addShape('rect', {
         x: x - 0.1,
         y: y - 0.1,
@@ -161,134 +224,360 @@ export class ChartSlideBuilder extends BaseSlideBuilder {
         h: h + 0.2,
         fill: {
           color: this.safeColorFormat(theme.colors.surface || theme.colors.background || '#FFFFFF'),
-          transparency: 10
+          transparency: 10,
         },
         line: {
-          color: this.safeColorFormat(theme.colors.borders?.light || theme.colors.text?.secondary || '#E5E7EB'),
-          width: 1
+          color: this.safeColorFormat(
+            theme.colors.borders?.light || theme.colors.text?.secondary || '#E5E7EB'
+          ),
+          width: 1,
         },
-        rectRadius: 0.1,
+        rectRadius: 0.08,
         shadow: {
           type: 'outer',
           blur: 3,
           offset: 2,
           angle: 45,
-          color: '00000015'
-        }
+          color: '00000025',
+        },
       });
 
-      // Map chart types
-      const chartTypeMap: Record<string, any> = {
-        'bar': 'bar',
-        'column': 'column',
-        'line': 'line',
-        'pie': 'pie',
-        'doughnut': 'doughnut',
-        'area': 'area',
-        'scatter': 'scatter'
+      // --- Chart type mapping
+      const typeMap: Record<string, string> = {
+        bar: 'bar',
+        column: 'column',
+        line: 'line',
+        pie: 'pie',
+        doughnut: 'doughnut',
+        area: 'area',
+        scatter: 'scatter',
       };
+      const pptxType = typeMap[chart.type] || 'column';
 
-      const pptxChartType = chartTypeMap[chart.type] || 'column';
+      // --- Colors
+      const palette = this.buildPalette(theme);
+      const seriesCount = Math.max(1, chart.series?.length || 1);
+      const chartColors = palette.slice(0, seriesCount);
 
-      // Prepare chart data
-      const chartData = chart.series.map((series, index) => {
-        const normalizedData = chart.categories.map((_, catIndex) => 
-          series.data[catIndex] !== undefined ? series.data[catIndex] : 0
-        );
+      // --- Data shaping
+      const isPieLike = chart.type === 'pie' || chart.type === 'doughnut';
+      const isScatter = chart.type === 'scatter';
 
-        return {
-          name: series.name || `Series ${index + 1}`,
-          labels: chart.categories,
-          values: normalizedData
-        };
-      });
+      const chartData = isScatter
+        ? this.prepareScatterData(chart.series)
+        : isPieLike
+        ? this.preparePieData(chart)
+        : this.prepareCartesianData(chart);
 
-      // Enhanced color palette
-      const chartColors = [
-        this.safeColorFormat(theme.colors.primary),
-        this.safeColorFormat(theme.colors.secondary),
-        this.safeColorFormat(theme.colors.accent),
-        this.safeColorFormat('#10B981'), // Green
-        this.safeColorFormat('#F59E0B'), // Amber
-        this.safeColorFormat('#EF4444'), // Red
-        this.safeColorFormat('#8B5CF6'), // Purple
-        this.safeColorFormat('#06B6D4')  // Cyan
-      ];
+      // --- Axis & labels configuration
+      const legendPos = this.chooseLegendPos(chart, w, seriesCount, isPieLike);
+      const valueFormatCode = this.formatToExcelCode(chart.numberFormat, chart.currency);
 
-      // Chart configuration
-      const chartOptions: any = {
-        x, y, w, h,
+      // Gridlines defaults: show for cartesian unless explicitly disabled
+      const showGridlinesDefault = !isPieLike && !isScatter;
+
+      const opts: any = {
+        x,
+        y,
+        w,
+        h,
         title: chart.title || '',
         titleFontSize: 14,
         titleColor: this.safeColorFormat(theme.colors.text?.primary || theme.colors.primary),
-        showLegend: chart.showLegend !== false,
-        legendPos: 'r',
-        showDataTable: chart.showDataLabels === true,
-        chartColors: chartColors.slice(0, chart.series.length),
+        chartColors,
+        showLegend: chart.showLegend !== false, // default true
+        legendPos,
+        // Axis label fonts
+        catAxisLabelFontSize: 10,
+        valAxisLabelFontSize: 10,
+        // Axis titles
+        catAxisTitle: chart.axisTitleX || undefined,
+        valAxisTitle: chart.axisTitleY || undefined,
+        // Gridlines
+        catAxisMajorGridline: chart.gridlines?.category ?? showGridlinesDefault,
+        valAxisMajorGridline: chart.gridlines?.value ?? showGridlinesDefault,
+        // Borders
         border: {
           pt: 1,
-          color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary)
-        }
+          color: this.safeColorFormat(theme.colors.borders?.light || theme.colors.secondary),
+        },
+        // Data labels
+        dataLabelColor: this.safeColorFormat(theme.colors.text?.primary || '#111827'),
+        dataLabelFontSize: 9,
       };
 
-      // Type-specific enhancements
-      if (chart.type === 'pie' || chart.type === 'doughnut') {
-        chartOptions.showPercent = true;
-        chartOptions.showValue = false;
-        chartOptions.showLegend = true;
-        chartOptions.legendPos = 'r';
-      } else {
-        chartOptions.catAxisLabelFontSize = 10;
-        chartOptions.valAxisLabelFontSize = 10;
-        chartOptions.showValue = chart.showDataLabels === true;
+      // Category label rotation (for long category names)
+      if (typeof chart.categoryLabelAngle === 'number') {
+        opts.catAxisLabelRotate = Math.max(-90, Math.min(90, chart.categoryLabelAngle));
+      } else if ((chart.categories?.some((c) => String(c).length > 12) ?? false) && !isPieLike) {
+        // Automatic slight rotation when labels are long
+        opts.catAxisLabelRotate = 15;
       }
 
-      // Add subtitle if provided
+      // Value axis range (cartesian)
+      if (!isPieLike && !isScatter) {
+        if (typeof chart.axisMin === 'number') opts.valAxisMinVal = chart.axisMin;
+        if (typeof chart.axisMax === 'number') opts.valAxisMaxVal = chart.axisMax;
+      }
+
+      // Number formatting (value axis and/or data labels)
+      if (valueFormatCode) {
+        // Axis tick format (cartesian)
+        if (!isPieLike && !isScatter) {
+          opts.valAxisFormatCode = valueFormatCode;
+        }
+        // Data label format (where supported)
+        opts.dataLabelFormatCode = valueFormatCode;
+      }
+
+      // Show values or percents (pie/doughnut prefer percent)
+      if (isPieLike) {
+        opts.showPercent = chart.showPercent !== false; // default true for pie-like
+        opts.showValue = chart.showValue === true; // opt-in
+        // Legend tends to help more than labels when many slices
+        opts.showLegend = chart.showLegend !== false;
+      } else {
+        // Cartesians
+        const wantLabels = chart.showDataLabels === true || chart.showValue === true;
+        opts.showValue = wantLabels;
+      }
+
+      // Stacking (cartesians only)
+      const stackingRequested =
+        (chart.stacked === true || chart.stack === true) && !isPieLike && !isScatter;
+      const percentStack = chart.percentStacked === true || chart['100pctStacked'] === true;
+
+      if (stackingRequested) {
+        opts.barStacked = true; // pptxgen uses barStacked/line? (works for bar/col/area)
+        if (percentStack) {
+          opts.barStacked = 'percent'; // pptxgen accepts 'percent' to indicate 100% stack
+        }
+      }
+
+      // Optional subtitle above the chart area
       if (chart.subtitle) {
         slide.addText(chart.subtitle, {
-          x: x,
+          x,
           y: y - 0.4,
-          w: w,
+          w,
           h: 0.3,
           fontSize: 11,
           color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
           align: 'center',
-          fontFace: theme.typography?.body?.fontFamily || 'Arial'
+          fontFace: theme.typography?.body?.fontFamily || 'Arial',
         });
       }
 
-      // Render the chart
-      slide.addChart(pptxChartType, chartData, chartOptions);
+      // Render chart
+      slide.addChart(pptxType as any, chartData as any, opts);
 
-      console.log(`✅ Successfully added ${chart.type} chart with ${chart.series.length} series and ${chart.categories.length} categories`);
+      // Optional footnote / source under chart
+      if (chart.source || chart.footnote) {
+        slide.addText(chart.source || chart.footnote || '', {
+          x,
+          y: y + h + 0.1,
+          w,
+          h: 0.3,
+          fontSize: 9,
+          color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
+          italic: true,
+          align: 'left',
+        });
+      }
 
+      console.log(
+        `✅ Chart added: type=${chart.type}, series=${chart.series?.length || 0}, categories=${
+          chart.categories?.length || 0
+        }`
+      );
     } catch (error) {
       console.error('❌ Error rendering chart:', error);
-      
-      // Fallback: Add error message
+      // Fallback notice
       slide.addText('Chart could not be displayed', {
-        x: position.x,
-        y: position.y + position.h/2 - 0.2,
-        w: position.w,
+        x,
+        y: y + h / 2 - 0.2,
+        w,
         h: 0.4,
         fontSize: 12,
         color: this.safeColorFormat(theme.colors.text?.secondary || theme.colors.secondary),
         align: 'center',
-        italic: true
+        italic: true,
       });
     }
   }
 
+  // -------------------------
+  // Helpers
+  // -------------------------
+
   /**
-   * Safe color formatting helper
+   * Converts a color string (#RRGGBB or RRGGBB) into 'RRGGBB' format safely.
    */
-  private safeColorFormat(color: string): string {
+  private safeColorFormat(color?: string): string {
     if (!color) return '000000';
-    
-    // Remove # if present and ensure 6 characters
-    const cleanColor = color.replace('#', '').substring(0, 6);
-    
-    // Pad with zeros if needed
-    return cleanColor.padEnd(6, '0').toUpperCase();
+    const clean = color.replace('#', '').trim().slice(0, 6);
+    const hex = /^[0-9a-fA-F]{3,6}$/.test(clean) ? clean : '000000';
+    return (hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex).toUpperCase();
+  }
+
+  /**
+   * Build a theme-aware palette with graceful fallbacks.
+   */
+  private buildPalette(theme: ProfessionalTheme): string[] {
+    const base = [
+      this.safeColorFormat(theme.colors.primary),
+      this.safeColorFormat(theme.colors.secondary),
+      this.safeColorFormat(theme.colors.accent),
+      this.safeColorFormat('#10B981'), // Emerald
+      this.safeColorFormat('#F59E0B'), // Amber
+      this.safeColorFormat('#3B82F6'), // Blue
+      this.safeColorFormat('#EF4444'), // Red
+      this.safeColorFormat('#8B5CF6'), // Purple
+      this.safeColorFormat('#06B6D4'), // Cyan
+      this.safeColorFormat('#84CC16'), // Lime
+    ];
+    // Ensure uniqueness and non-empty
+    const deduped = Array.from(new Set(base.filter(Boolean)));
+    // Pad if somehow short
+    while (deduped.length < 10) deduped.push(this.safeColorFormat('#' + (Math.random() * 0xffffff).toFixed(0)));
+    return deduped;
+  }
+
+  /**
+   * Decide a sensible legend position based on layout and complexity.
+   */
+  private chooseLegendPos(
+    chart: ChartSpec,
+    width: number,
+    seriesCount: number,
+    isPieLike: boolean
+  ): 'r' | 'b' | 't' | 'l' {
+    if (chart.legendPos === 't' || chart.legendPos === 'b' || chart.legendPos === 'l' || chart.legendPos === 'r') {
+      return chart.legendPos;
+    }
+    // Heuristic: pie/doughnut -> right; narrow width or many series -> bottom; otherwise right
+    if (isPieLike) return 'r';
+    if (width < 6 || seriesCount > 4) return 'b';
+    return 'r';
+  }
+
+  /**
+   * Prepare cartesian data series: bar/column/line/area.
+   */
+  private prepareCartesianData(chart: ChartSpec) {
+    const labels = (chart.categories || []).map((c) => String(c));
+    return (chart.series || []).map((s, idx) => {
+      const normalized = labels.map((_, i) => this.coerceNumber(s.data[i]));
+      return {
+        name: s.name?.trim() || `Series ${idx + 1}`,
+        labels,
+        values: normalized,
+      };
+    });
+  }
+
+  /**
+   * Prepare pie/doughnut data. If multiple series are provided, each becomes its own pie/doughnut.
+   * Most use-cases prefer the first series only; this keeps the behavior flexible.
+   */
+  private preparePieData(chart: ChartSpec) {
+    const labels = (chart.categories || []).map((c) => String(c));
+    return (chart.series || []).map((s, idx) => {
+      const normalized = labels.map((_, i) => this.coerceNumber(s.data[i]));
+      return {
+        name: s.name?.trim() || `Series ${idx + 1}`,
+        labels,
+        values: normalized,
+      };
+    });
+  }
+
+  /**
+   * Prepare scatter data: accepts series.data as:
+   *  - Array<{ x: number; y: number }>
+   *  - Array<[number, number]>
+   *  - Array<number>  (treated as y with x = index)
+   */
+  private prepareScatterData(seriesList: SeriesSpec[]) {
+    return seriesList.map((s, idx) => {
+      const pts = this.normalizeScatterData(s.data);
+      return {
+        name: s.name?.trim() || `Series ${idx + 1}`,
+        labels: [], // scatter does not use categories
+        values: pts, // [{x,y},...]
+      };
+    });
+  }
+
+  private normalizeScatterData(
+    raw: unknown[]
+  ): Array<{ x: number; y: number }> {
+    const result: Array<{ x: number; y: number }> = [];
+    if (!Array.isArray(raw)) return result;
+
+    raw.forEach((v, i) => {
+      if (Array.isArray(v) && v.length >= 2) {
+        const x = this.coerceNumber(v[0]);
+        const y = this.coerceNumber(v[1]);
+        if (isFinite(x) && isFinite(y)) result.push({ x, y });
+      } else if (typeof v === 'object' && v !== null && 'x' in (v as any) && 'y' in (v as any)) {
+        const x = this.coerceNumber((v as any).x);
+        const y = this.coerceNumber((v as any).y);
+        if (isFinite(x) && isFinite(y)) result.push({ x, y });
+      } else if (typeof v === 'number' && isFinite(v)) {
+        // Treat as y with x = index
+        result.push({ x: i, y: v });
+      }
+    });
+
+    return result;
+    }
+
+  /**
+   * Coerce numeric-ish input to a number (NaN-safe -> 0).
+   */
+  private coerceNumber(v: unknown): number {
+    const n = typeof v === 'number' ? v : parseFloat(String(v));
+    return isFinite(n) ? n : 0;
+  }
+
+  /**
+   * Convert a friendly format hint into an Excel-style format code where possible.
+   * Supported hints:
+   *  - 'percent'            -> '0.0%'
+   *  - 'currency' (+ currency code like 'USD', 'EUR') -> '$#,##0.00' (symbol best-effort)
+   *  - 'compact' | 'short'  -> '#,##0.0,,"M";#,##0.0,"K"' (approx; axis may still auto-scale)
+   *  - 'number'             -> '#,##0.0'
+   */
+  private formatToExcelCode(
+    fmt?: string,
+    currency?: string
+  ): string | undefined {
+    if (!fmt) return undefined;
+    const f = fmt.toLowerCase();
+    if (f === 'percent' || f === 'percentage') return '0.0%';
+
+    if (f === 'currency') {
+      // Very rough symbol mapping; PowerPoint uses current locale otherwise
+      const symbol =
+        (currency || '').toUpperCase() === 'EUR'
+          ? '€'
+          : (currency || '').toUpperCase() === 'GBP'
+          ? '£'
+          : (currency || '').toUpperCase() === 'JPY'
+          ? '¥'
+          : '$';
+      return `${symbol}#,##0.00`;
+    }
+
+    if (f === 'compact' || f === 'short') {
+      // Excel format codes don't truly support dynamic K/M/G suffix per tick,
+      // but this gives a hint when values are in thousands/millions.
+      return '#,##0.0';
+    }
+
+    if (f === 'number' || f === 'decimal') return '#,##0.0';
+
+    return undefined;
   }
 }

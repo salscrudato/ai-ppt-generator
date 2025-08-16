@@ -87,31 +87,36 @@ export class AIService implements IAIService {
     try {
       // Step 1: Generate core content
       let partialSpec = await this.executeAIStep(
-        generateContentPrompt(input), 
-        'Content Generation'
+        generateContentPrompt(input),
+        'Content Generation',
+        undefined,
+        input
       );
 
       // Step 2: Refine layout
       partialSpec = await this.executeAIStep(
-        generateLayoutPrompt(input, partialSpec), 
-        'Layout Refinement', 
-        partialSpec
+        generateLayoutPrompt(input, partialSpec),
+        'Layout Refinement',
+        partialSpec,
+        input
       );
 
       // Step 3: Generate image prompt if enabled
       if (input.withImage) {
         partialSpec = await this.executeAIStep(
-          generateImagePrompt(input, partialSpec), 
-          'Image Prompt Generation', 
-          partialSpec
+          generateImagePrompt(input, partialSpec),
+          'Image Prompt Generation',
+          partialSpec,
+          input
         );
       }
 
       // Step 4: Final refinement
       const finalSpec = await this.executeAIStep(
-        generateRefinementPrompt(input, partialSpec), 
-        'Final Refinement', 
-        partialSpec
+        generateRefinementPrompt(input, partialSpec),
+        'Final Refinement',
+        partialSpec,
+        input
       );
 
       const generationTime = Date.now() - startTime;
@@ -153,14 +158,17 @@ export class AIService implements IAIService {
         };
 
         let partialSpec = await this.executeAIStep(
-          generateContentPrompt(slideInput), 
-          `Content Generation (Slide ${i + 1})`
+          generateContentPrompt(slideInput),
+          `Content Generation (Slide ${i + 1})`,
+          undefined,
+          slideInput
         );
 
         partialSpec = await this.executeAIStep(
-          generateLayoutPrompt(slideInput, partialSpec), 
-          `Layout Refinement (Slide ${i + 1})`, 
-          partialSpec
+          generateLayoutPrompt(slideInput, partialSpec),
+          `Layout Refinement (Slide ${i + 1})`,
+          partialSpec,
+          slideInput
         );
 
         slides.push(partialSpec);
@@ -190,7 +198,7 @@ export class AIService implements IAIService {
 
     try {
       const batchPrompt = generateBatchImagePrompts(input, slides);
-      const response = await this.executeAIStep(batchPrompt, 'Batch Image Processing');
+      const response = await this.executeAIStep(batchPrompt, 'Batch Image Processing', undefined, input);
       
       // Parse batch response (implementation depends on response format)
       // This is a simplified version - actual implementation would parse the JSON array
@@ -203,9 +211,10 @@ export class AIService implements IAIService {
       for (let i = 0; i < slides.length; i++) {
         try {
           const slideWithImage = await this.executeAIStep(
-            generateImagePrompt(input, slides[i]), 
-            `Image Prompt (Slide ${i + 1})`, 
-            slides[i]
+            generateImagePrompt(input, slides[i]),
+            `Image Prompt (Slide ${i + 1})`,
+            slides[i],
+            input
           );
           imagePrompts.push(slideWithImage.imagePrompt || '');
         } catch (imageError) {
@@ -234,9 +243,10 @@ export class AIService implements IAIService {
    * Execute a single AI step with retry logic and error handling
    */
   private async executeAIStep(
-    prompt: string, 
-    stepName: string, 
-    previousSpec?: Partial<SlideSpec>
+    prompt: string,
+    stepName: string,
+    previousSpec?: Partial<SlideSpec>,
+    originalInput?: GenerationParams
   ): Promise<SlideSpec> {
     let lastError: Error | null = null;
 
@@ -244,7 +254,7 @@ export class AIService implements IAIService {
     for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
       try {
         console.log(`${stepName} attempt ${attempt}/${this.config.maxRetries}`);
-        const result = await this.makeAICall(prompt, stepName, previousSpec, attempt);
+        const result = await this.makeAICall(prompt, stepName, previousSpec, attempt, originalInput);
         return result;
       } catch (error) {
         lastError = error as Error;
@@ -289,7 +299,8 @@ export class AIService implements IAIService {
     prompt: string,
     stepName: string,
     previousSpec: Partial<SlideSpec> | undefined,
-    attempt: number
+    attempt: number,
+    originalInput?: GenerationParams
   ): Promise<SlideSpec> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeoutMs);
@@ -355,7 +366,17 @@ export class AIService implements IAIService {
         }
       }
 
-      return validationResult.data as SlideSpec;
+      const finalSpec = validationResult.data as SlideSpec;
+
+      // Preserve design information from original input if available
+      if (originalInput?.design) {
+        finalSpec.design = {
+          ...finalSpec.design,
+          ...originalInput.design
+        };
+      }
+
+      return finalSpec;
     } catch (error) {
       this.handleAIError(error, stepName, attempt);
       throw error; // This line won't be reached due to handleAIError throwing

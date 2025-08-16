@@ -1,0 +1,15 @@
+{
+  "scenario": "Empty Prompt",
+  "result": {
+    "success": false,
+    "status": 400,
+    "data": {
+      "error": "Invalid generation parameters",
+      "code": "INVALID_PARAMS_ERROR",
+      "details": [
+        "prompt: Prompt must be at least 10 characters for meaningful content generation"
+      ]
+    }
+  },
+  "expectedBehavior": "Should handle gracefully or provide default content"
+}

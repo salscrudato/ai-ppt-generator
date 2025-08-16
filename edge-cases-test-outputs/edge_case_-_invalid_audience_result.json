@@ -1,0 +1,15 @@
+{
+  "scenario": "Invalid Audience",
+  "result": {
+    "success": false,
+    "status": 400,
+    "data": {
+      "error": "Invalid generation parameters",
+      "code": "INVALID_PARAMS_ERROR",
+      "details": [
+        "audience: Invalid audience type. Must be one of the supported audience categories."
+      ]
+    }
+  },
+  "expectedBehavior": "Should use default audience or handle gracefully"
+}

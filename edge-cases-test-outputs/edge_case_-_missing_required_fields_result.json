@@ -1,0 +1,15 @@
+{
+  "scenario": "Missing Required Fields",
+  "result": {
+    "success": false,
+    "status": 400,
+    "data": {
+      "error": "Invalid generation parameters",
+      "code": "INVALID_PARAMS_ERROR",
+      "details": [
+        "prompt: Required"
+      ]
+    }
+  },
+  "expectedBehavior": "Should return appropriate error message"
+}

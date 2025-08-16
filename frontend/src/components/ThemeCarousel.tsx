@@ -213,8 +213,8 @@ export default function ThemeCarousel({
     const themeIndex = filteredThemes.findIndex(theme => theme.id === themeId);
 
     if (selectedId === themeId) {
-      // Allow deselection
-      onSelect?.('');
+      // For deselection, use default theme instead of empty string
+      onSelect?.('corporate-blue');
     } else {
       onSelect?.(themeId);
 

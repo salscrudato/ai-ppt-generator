@@ -1,0 +1,60 @@
+{
+  "content": {
+    "spec": {
+      "title": "Unlock $2.5B Market with FinTech Innovation",
+      "layout": "mixed-content",
+      "left": {
+        "bullets": [
+          "Targeting a $2.5B market gap in financial advisory, focusing on underserved demographics.",
+          "AI-driven platform improves decision-making speed by 40%, enhancing client satisfaction.",
+          "Projected revenue of $5M in Year 1, with an annual growth rate of 150% as we scale."
+        ]
+      },
+      "right": {
+        "bullets": [
+          "Strategic partnerships with 3 leading financial institutions to establish market credibility.",
+          "Seeking $1M in Series A funding to accelerate product development and marketing efforts."
+        ],
+        "imagePrompt": "Professional image of a diverse team of business executives analyzing market expansion data on digital devices in a sleek, modern office, highlighting growth opportunities and collaboration."
+      },
+      "notes": "Begin with the $2.5B market opportunity. Highlight the efficiency of the AI platform and the anticipated growth. Emphasize the role of partnerships in building trust. End with a compelling funding request.",
+      "sources": [
+        "Market Research Report by FinTech Insights 2023",
+        "Industry Analysis from Deloitte on Financial Trends"
+      ]
+    },
+    "quality": {
+      "score": 80,
+      "grade": "B",
+      "issues": [
+        "Add altText to describe images for screen readers."
+      ],
+      "strengths": [],
+      "suggestions": []
+    },
+    "timestamp": "2025-08-16T19:20:43.182Z"
+  },
+  "analysis": {
+    "score": 88,
+    "strengths": [
+      "Has meaningful title",
+      "Layout selected: mixed-content",
+      "Has content body",
+      "5 bullet points (two-column)",
+      "Includes speaker notes",
+      "2 source citations",
+      "Found 3/5 expected elements",
+      "AI quality score: 80%"
+    ],
+    "issues": [
+      "Layout mixed-content not in expected: title-bullets, chart, two-column"
+    ],
+    "foundElements": [
+      "market",
+      "revenue",
+      "funding"
+    ],
+    "contentLength": 1118,
+    "aiQualityScore": 80
+  }
+}

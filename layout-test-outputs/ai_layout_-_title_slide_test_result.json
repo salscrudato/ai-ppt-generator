@@ -1,0 +1,45 @@
+{
+  "content": {
+    "spec": {
+      "title": "2024 Digital Transformation Strategy: 30% Efficiency Gains",
+      "layout": "mixed-content",
+      "left": {
+        "bullets": [
+          "Identify key operational bottlenecks to reduce costs by 20% within 12 months.",
+          "Integrate AI-driven analytics to enhance decision-making speed by 40%.",
+          "Implement cloud solutions to improve collaboration and remote access by 50%."
+        ]
+      },
+      "right": {
+        "bullets": [
+          "Launch a customer engagement platform targeting a 25% increase in satisfaction scores.",
+          "Establish continuous training programs to equip teams with evolving digital tools."
+        ]
+      },
+      "notes": "Start by highlighting the urgency of digital transformation in today’s market. Emphasize how each initiative contributes to overall efficiency and competitive advantage.",
+      "sources": [
+        "Gartner Digital Transformation Report 2023",
+        "McKinsey & Company - The Future of Work"
+      ],
+      "imagePrompt": "An infographic illustrating digital transformation with efficiency metrics."
+    },
+    "quality": {
+      "score": 78,
+      "grade": "C",
+      "issues": [
+        "Add altText to describe images for screen readers."
+      ],
+      "strengths": [],
+      "suggestions": []
+    },
+    "timestamp": "2025-08-16T19:29:19.455Z"
+  },
+  "analysis": {
+    "selectedLayout": "mixed-content",
+    "isAppropriate": false,
+    "expectedLayouts": [
+      "title",
+      "hero"
+    ]
+  }
+}

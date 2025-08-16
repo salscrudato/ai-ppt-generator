@@ -92,7 +92,7 @@ export default function PresentationManager({
   const themeSync = useThemeSync({
     mode: 'presentation',
     initialThemeId: presentation.settings.theme,
-    debug: process.env.NODE_ENV === 'development'
+    debug: false // Disabled to reduce console spam
   });
 
   // Get current theme using the enhanced system
@@ -201,7 +201,7 @@ export default function PresentationManager({
   const handleThemeSelect = (themeId: string) => {
     // Ensure only one theme is selected at a time
     // If empty string is passed (deselection), use default theme
-    const selectedThemeId = themeId || 'corporate-blue';
+    const selectedThemeId = themeId && themeId.trim() !== '' ? themeId : 'corporate-blue';
 
     // Update presentation settings
     updatePresentation({

@@ -1,0 +1,46 @@
+{
+  "content": {
+    "spec": {
+      "title": "5 Key Benefits of Cloud Computing for Business Growth",
+      "layout": "mixed-content",
+      "left": {
+        "bullets": [
+          "Achieved 30% cost reduction in IT infrastructure by migrating to cloud solutions within 12 months.",
+          "Enabled 50% faster scalability, supporting business growth and market expansion on demand.",
+          "Enhanced operational flexibility, allowing teams to work remotely and adapt to changing market conditions."
+        ]
+      },
+      "right": {
+        "bullets": [
+          "Increased data security measures, reducing breach incidents by 60% with advanced cloud encryption technologies.",
+          "Fostered innovation by reducing deployment time for new applications from months to weeks."
+        ],
+        "imagePrompt": "A sleek infographic showcasing the benefits of cloud computing, highlighting cost savings, scalability, flexibility, security, and innovation."
+      },
+      "notes": "Start by highlighting the cost reduction as a primary concern for businesses. Then, discuss how scalability and flexibility address operational challenges. Emphasize security improvements, followed by the impact on innovation. Encourage executives to consider these benefits in their strategic planning.",
+      "sources": [
+        "Gartner: Cloud Cost Efficiency Report 2023",
+        "Forrester: The Cloud Impact on Business Growth",
+        "McKinsey: Cloud Security Best Practices"
+      ]
+    },
+    "quality": {
+      "score": 78,
+      "grade": "C",
+      "issues": [
+        "Add altText to describe images for screen readers."
+      ],
+      "strengths": [],
+      "suggestions": []
+    },
+    "timestamp": "2025-08-16T19:29:33.743Z"
+  },
+  "analysis": {
+    "selectedLayout": "mixed-content",
+    "isAppropriate": false,
+    "expectedLayouts": [
+      "title-bullets",
+      "modern-bullets"
+    ]
+  }
+}

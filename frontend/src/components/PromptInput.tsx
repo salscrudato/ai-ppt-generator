@@ -49,7 +49,7 @@ export default function PromptInput({
   const themeSync = useThemeSync({
     mode: 'single',
     initialThemeId: params.design?.theme,
-    debug: process.env.NODE_ENV === 'development'
+    debug: false // Disabled to reduce console spam
   });
 
   // Form validation state
@@ -69,6 +69,11 @@ export default function PromptInput({
     const formThemeId = localParams.design?.theme;
     const syncedThemeId = themeSync.themeId;
 
+    // Skip if either theme is empty/invalid
+    if (!formThemeId && !syncedThemeId) {
+      return;
+    }
+
     // If form has no theme, initialize with synced theme
     if (!formThemeId && syncedThemeId) {
       const updatedParams = {
@@ -77,16 +82,22 @@ export default function PromptInput({
       };
       setLocalParams(updatedParams);
       onParamsChange(updatedParams);
-      console.log('🔄 PromptInput: Initialized form theme from sync', {
-        theme: syncedThemeId
-      });
+      // Reduced logging to prevent console spam
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 PromptInput: Initialized form theme from sync', {
+          theme: syncedThemeId
+        });
+      }
     }
-    // If form has theme but sync doesn't match, update sync
-    else if (formThemeId && syncedThemeId !== formThemeId) {
+    // If form has theme but sync doesn't match, update sync (but only if form theme is valid)
+    else if (formThemeId && formThemeId.trim() !== '' && syncedThemeId !== formThemeId) {
       themeSync.setTheme(formThemeId, 'form-update');
-      console.log('🔄 PromptInput: Updated synced theme from form', {
-        theme: formThemeId
-      });
+      // Reduced logging to prevent console spam
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 PromptInput: Updated synced theme from form', {
+          theme: formThemeId
+        });
+      }
     }
   }, [localParams.design?.theme, themeSync.themeId, themeSync, onParamsChange]);
 
@@ -177,7 +188,11 @@ export default function PromptInput({
       imageStyle: localParams.imageStyle || 'professional',
       qualityLevel: localParams.qualityLevel || 'standard',
       includeNotes: localParams.includeNotes || false,
-      includeSources: localParams.includeSources || false
+      includeSources: localParams.includeSources || false,
+      design: {
+        ...localParams.design,
+        theme: localParams.design?.theme || themeSync.themeId || 'corporate-blue'
+      }
     };
 
     // Validate the form before submission
@@ -535,7 +550,7 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               }
 
               // If empty string is passed (deselection), use default theme
-              const selectedThemeId = themeId || 'corporate-blue';
+              const selectedThemeId = themeId && themeId.trim() !== '' ? themeId : 'corporate-blue';
 
               // Update form state
               const updatedDesign = { ...localParams.design, theme: selectedThemeId };

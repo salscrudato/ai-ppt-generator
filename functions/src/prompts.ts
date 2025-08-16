@@ -75,7 +75,8 @@ export const SYSTEM_PROMPT = `You are an elite PowerPoint presentation architect
 Remember: You're creating content for high-stakes presentations where careers and millions of dollars are on the line. Mediocrity is not acceptable.
 
 SCHEMA REFERENCE:
-${JSON.stringify(SlideSpecSchema.shape, null, 2)}`;
+For the complete schema structure, refer to the SlideSpec TypeScript type definition.
+Key fields include: title, layout, bullets, paragraph, left/right columns, chart, timeline, comparisonTable, processSteps, design, notes, sources, imagePrompt, generateImage.`;
 
 /**
  * Enhanced content length specifications with cognitive load optimization and 2024 minimalism focus

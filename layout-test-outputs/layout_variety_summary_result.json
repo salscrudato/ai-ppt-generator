@@ -1,0 +1,450 @@
+{
+  "timestamp": "2025-08-16T19:31:19.332Z",
+  "totalDuration": 131394,
+  "aiResults": [
+    {
+      "scenario": "Title Slide Test",
+      "contentType": "title",
+      "expectedLayouts": [
+        "title",
+        "hero"
+      ],
+      "selectedLayout": "mixed-content",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "2024 Digital Transformation Strategy: 30% Efficiency Gains",
+        "layout": "mixed-content",
+        "left": {
+          "bullets": [
+            "Identify key operational bottlenecks to reduce costs by 20% within 12 months.",
+            "Integrate AI-driven analytics to enhance decision-making speed by 40%.",
+            "Implement cloud solutions to improve collaboration and remote access by 50%."
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Launch a customer engagement platform targeting a 25% increase in satisfaction scores.",
+            "Establish continuous training programs to equip teams with evolving digital tools."
+          ]
+        },
+        "notes": "Start by highlighting the urgency of digital transformation in today’s market. Emphasize how each initiative contributes to overall efficiency and competitive advantage.",
+        "sources": [
+          "Gartner Digital Transformation Report 2023",
+          "McKinsey & Company - The Future of Work"
+        ],
+        "imagePrompt": "An infographic illustrating digital transformation with efficiency metrics."
+      },
+      "duration": 11530,
+      "success": true
+    },
+    {
+      "scenario": "Bullet Points Test",
+      "contentType": "list",
+      "expectedLayouts": [
+        "title-bullets",
+        "modern-bullets"
+      ],
+      "selectedLayout": "mixed-content",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "5 Key Benefits of Cloud Computing for Business Growth",
+        "layout": "mixed-content",
+        "left": {
+          "bullets": [
+            "Achieved 30% cost reduction in IT infrastructure by migrating to cloud solutions within 12 months.",
+            "Enabled 50% faster scalability, supporting business growth and market expansion on demand.",
+            "Enhanced operational flexibility, allowing teams to work remotely and adapt to changing market conditions."
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Increased data security measures, reducing breach incidents by 60% with advanced cloud encryption technologies.",
+            "Fostered innovation by reducing deployment time for new applications from months to weeks."
+          ],
+          "imagePrompt": "A sleek infographic showcasing the benefits of cloud computing, highlighting cost savings, scalability, flexibility, security, and innovation."
+        },
+        "notes": "Start by highlighting the cost reduction as a primary concern for businesses. Then, discuss how scalability and flexibility address operational challenges. Emphasize security improvements, followed by the impact on innovation. Encourage executives to consider these benefits in their strategic planning.",
+        "sources": [
+          "Gartner: Cloud Cost Efficiency Report 2023",
+          "Forrester: The Cloud Impact on Business Growth",
+          "McKinsey: Cloud Security Best Practices"
+        ]
+      },
+      "duration": 13277,
+      "success": true
+    },
+    {
+      "scenario": "Two Column Comparison",
+      "contentType": "comparison",
+      "expectedLayouts": [
+        "two-column",
+        "comparison-table",
+        "before-after"
+      ],
+      "selectedLayout": "title-bullets",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "Time-to-Market Reduced by 30% with Modern Development",
+        "layout": "title-bullets",
+        "bullets": [
+          "Traditional methods average 6-12 months for deployment; modern approaches cut this to 4-8 months.",
+          "Agile practices enhance responsiveness, increasing project success rates by 25% year-over-year.",
+          "Continuous integration and delivery reduce bugs by 40%, leading to faster releases and improved quality.",
+          "Real-time customer feedback boosts user satisfaction scores by 15% post-launch.",
+          "Cross-functional teams enhance collaboration, increasing operational efficiency by 20% across departments."
+        ],
+        "notes": "Begin with the impactful time-to-market statistic to capture attention. Follow with success rates and quality improvements, emphasizing their direct impact on customer satisfaction. Conclude with the benefits of collaboration to demonstrate a comprehensive transformation.",
+        "sources": [
+          "2023 State of Agile Report",
+          "McKinsey & Company Insights on Software Development",
+          "Gartner Research on IT Transformation"
+        ]
+      },
+      "duration": 12649,
+      "success": true
+    },
+    {
+      "scenario": "Process Flow Test",
+      "contentType": "process",
+      "expectedLayouts": [
+        "process-flow",
+        "timeline",
+        "agenda"
+      ],
+      "selectedLayout": "mixed-content",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "Streamlined Customer Onboarding: Boost Engagement by 30%",
+        "layout": "mixed-content",
+        "left": {
+          "bullets": [
+            "Enhanced registration process reduced sign-up time from 10 minutes to 3 minutes, increasing completions by 25%.",
+            "Implemented automated verification, cutting verification time by 50%, leading to a 20% decrease in drop-offs.",
+            "Setup phase was streamlined, resulting in a 40% faster onboarding experience for new customers."
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Comprehensive training sessions increased customer product knowledge by 35%, boosting initial engagement metrics.",
+            "Activation rates surged to 85% within 30 days post-launch, compared to 65% previously, driving higher retention."
+          ],
+          "imagePrompt": "An infographic depicting the onboarding process with key metrics displayed prominently."
+        },
+        "notes": "Focus on the quantifiable improvements in each phase of the onboarding process. Highlight how each change directly addresses customer pain points and enhances engagement. Encourage discussion on potential future enhancements.",
+        "sources": [
+          "Customer Onboarding Best Practices Report, 2023",
+          "Internal Customer Feedback Surveys, Q1 2024"
+        ]
+      },
+      "duration": 11836,
+      "success": true
+    },
+    {
+      "scenario": "Data Visualization Test",
+      "contentType": "data",
+      "expectedLayouts": [
+        "chart",
+        "data-visualization",
+        "metrics-dashboard"
+      ],
+      "selectedLayout": "mixed-content",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "Q3 Performance: 25% Revenue Growth, 40% Customer Acquisition Surge",
+        "layout": "mixed-content",
+        "left": {
+          "bullets": [
+            "Achieved 25% revenue growth, surpassing target by $300K, driven by strong market demand.",
+            "Customer acquisition surged by 40%, utilizing targeted digital campaigns and strategic referrals.",
+            "Market share expanded to 15%, enhancing our competitive position in key sectors."
+          ],
+          "paragraph": "These results highlight our robust performance in a competitive landscape, fueled by strategic initiatives and effective marketing efforts."
+        },
+        "right": {
+          "bullets": [
+            "Sales training improvements led to a 30% increase in closing rates compared to last quarter.",
+            "Repeat customer rate increased to 60%, reflecting enhanced loyalty and satisfaction."
+          ],
+          "imagePrompt": "Graph illustrating Q3 revenue growth and customer acquisition trends."
+        },
+        "notes": "Begin with the compelling revenue growth metrics, then outline successful customer acquisition strategies. Conclude with insights into market share to emphasize our competitive advantage.",
+        "sources": [
+          "Q3 Financial Report",
+          "Customer Acquisition Strategy Overview",
+          "Market Share Analysis"
+        ]
+      },
+      "duration": 12721,
+      "success": true
+    },
+    {
+      "scenario": "Quote/Testimonial Test",
+      "contentType": "quote",
+      "expectedLayouts": [
+        "quote",
+        "testimonial",
+        "accent-quote"
+      ],
+      "selectedLayout": "two-column",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "300% Efficiency Gain: Transformative Customer Testimonial",
+        "layout": "two-column",
+        "left": {
+          "bullets": [
+            "Before implementing our solution, operations faced significant inefficiencies with a 60% delay in project timelines.",
+            "Streamlined workflows resulted in a 40% reduction in processing time, enhancing overall operational capacity."
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Post-deployment, customer productivity surged by 300%, significantly minimizing operational bottlenecks.",
+            "Enhanced collaboration tools led to a 25% increase in team output and employee satisfaction.",
+            "This transformation has empowered the customer to seize new business opportunities, accelerating growth by 15% in the first quarter."
+          ]
+        },
+        "notes": "Emphasize the dramatic efficiency increase first. Use the testimonial to validate the solution's impact, and encourage the audience to envision similar results in their operations.",
+        "sources": [
+          "Customer Feedback Survey",
+          "Operational Performance Metrics Report"
+        ]
+      },
+      "duration": 9850,
+      "success": true
+    },
+    {
+      "scenario": "Problem-Solution Test",
+      "contentType": "problem-solution",
+      "expectedLayouts": [
+        "problem-solution",
+        "before-after",
+        "two-column"
+      ],
+      "selectedLayout": "mixed-content",
+      "isAppropriate": false,
+      "appropriatenessScore": 50,
+      "content": {
+        "title": "Remote Work Challenge: Boost Collaboration by 30%",
+        "layout": "mixed-content",
+        "left": {
+          "bullets": [
+            "70% of remote teams cite communication barriers as a key obstacle (Source: Remote Work Study 2023)",
+            "Integrated collaboration tools increased real-time communication efficiency by 40%",
+            "Streamlined workflows reduced project turnaround time by 25%"
+          ],
+          "paragraph": "Address the communication challenges faced by remote teams and how integrated tools effectively resolve these issues."
+        },
+        "right": {
+          "bullets": [
+            "30% increase in employee engagement scores following tool implementation, fostering collaboration",
+            "Projected annual savings of $300K by reducing meeting times and enhancing information sharing"
+          ],
+          "paragraph": "Highlight the quantifiable improvements in engagement and efficiency to demonstrate the solution's effectiveness."
+        },
+        "notes": "This layout balances concise bullet points with a narrative explanation, suitable for a professional audience. The mixed-content format enhances both quick scanning and detailed reading, ensuring maximum comprehension and impact.",
+        "sources": [
+          "Remote Work Study 2023",
+          "Company Internal Survey Data",
+          "Efficiency Metrics Report Q1 2024"
+        ]
+      },
+      "duration": 11703,
+      "success": true
+    },
+    {
+      "scenario": "Timeline Test",
+      "contentType": "timeline",
+      "expectedLayouts": [
+        "timeline",
+        "process-flow",
+        "agenda"
+      ],
+      "selectedLayout": "timeline",
+      "isAppropriate": true,
+      "appropriatenessScore": 100,
+      "content": {
+        "title": "Strategic Milestones: Accelerating from Startup to IPO in Four Years",
+        "layout": "timeline",
+        "timeline": [
+          {
+            "date": "2020",
+            "title": "Company Founded",
+            "description": "Launched to disrupt inefficiencies in the tech industry, positioning ourselves as innovators.",
+            "milestone": true
+          },
+          {
+            "date": "2021",
+            "title": "First Product Launch",
+            "description": "Achieved $1M in sales within 6 months, validating product-market fit and customer demand.",
+            "milestone": true
+          },
+          {
+            "date": "2022",
+            "title": "Series A Funding Secured",
+            "description": "Successfully raised $5M to fuel product development and market expansion initiatives.",
+            "milestone": true
+          },
+          {
+            "date": "2023",
+            "title": "International Expansion",
+            "description": "Entered three new markets, resulting in $2M in new revenue and enhanced brand presence.",
+            "milestone": true
+          },
+          {
+            "date": "2024",
+            "title": "Projected IPO",
+            "description": "On track for a $100M valuation, leveraging rapid growth to attract investors and stakeholders.",
+            "milestone": true
+          }
+        ],
+        "notes": "This timeline illustrates our strategic journey, emphasizing the impact of each milestone on our growth trajectory. Prepare to discuss future strategic initiatives leading up to the IPO.",
+        "sources": [
+          "Company Financial Reports",
+          "Industry Market Analysis"
+        ]
+      },
+      "duration": 11692,
+      "success": true
+    },
+    {
+      "scenario": "Mixed Content Test",
+      "contentType": "mixed",
+      "expectedLayouts": [
+        "mixed-content",
+        "two-column",
+        "title-paragraph"
+      ],
+      "selectedLayout": "mixed-content",
+      "isAppropriate": true,
+      "appropriatenessScore": 100,
+      "content": {
+        "title": "Unlock Operational Efficiency: Streamlined Features Enhance Performance",
+        "layout": "mixed-content",
+        "left": {
+          "bullets": [
+            "Automated reporting reduces administrative hours by 50%, allowing teams to focus on strategic initiatives.",
+            "Real-time analytics dashboard accelerates decision-making, leading to 20% faster project completions."
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Integrated communication tools improve cross-departmental collaboration, cutting project delays by 30%.",
+            "Customizable workflows enhance productivity by 25%, tailoring processes to specific team needs."
+          ],
+          "imagePrompt": "An infographic illustrating operational efficiency with icons representing reporting, analytics, collaboration, and workflows."
+        },
+        "notes": "Emphasize the operational efficiencies gained from each feature. Highlight direct contributions to business outcomes and provide relevant examples.",
+        "sources": [
+          "Internal Efficiency Study Q1 2024",
+          "Customer Feedback Surveys"
+        ]
+      },
+      "duration": 10464,
+      "success": true
+    },
+    {
+      "scenario": "Team Introduction Test",
+      "contentType": "team",
+      "expectedLayouts": [
+        "team-intro",
+        "card-grid",
+        "two-column"
+      ],
+      "selectedLayout": "two-column",
+      "isAppropriate": true,
+      "appropriatenessScore": 100,
+      "content": {
+        "title": "Leadership Team: 20% Revenue Growth Impact",
+        "layout": "two-column",
+        "left": {
+          "bullets": [
+            "CEO's strategic initiatives drove 20% year-over-year revenue growth.",
+            "CFO's cost optimization reduced expenses by 15%, enhancing cash flow.",
+            "CMO's brand repositioning increased customer engagement by 30% on digital platforms."
+          ]
+        },
+        "right": {
+          "bullets": [
+            "COO streamlined operations, cutting delivery times by 25% and boosting satisfaction.",
+            "CTO's technology upgrades reduced downtime by 40%, ensuring higher reliability."
+          ]
+        },
+        "notes": "Emphasize the leadership team's contributions to revenue and operational efficiency, setting the stage for future growth.",
+        "sources": [
+          "Annual Leadership Report 2023",
+          "Q4 Financial Performance Review"
+        ]
+      },
+      "duration": 11541,
+      "success": true
+    }
+  ],
+  "specificResults": [
+    {
+      "testName": "Chart Layout",
+      "layout": "chart",
+      "success": true,
+      "filename": "layout-test-pptx/chart_layout_chart.pptx",
+      "fileSize": 74763,
+      "fileSizeKB": 73,
+      "duration": 44
+    },
+    {
+      "testName": "Comparison Table",
+      "layout": "comparison-table",
+      "success": true,
+      "filename": "layout-test-pptx/comparison_table_comparison-table.pptx",
+      "fileSize": 48312,
+      "fileSizeKB": 47,
+      "duration": 20
+    },
+    {
+      "testName": "Timeline Layout",
+      "layout": "timeline",
+      "success": false,
+      "error": "Request failed with status code 400",
+      "duration": 10
+    },
+    {
+      "testName": "Quote Layout",
+      "layout": "quote",
+      "success": true,
+      "filename": "layout-test-pptx/quote_layout_quote.pptx",
+      "fileSize": 48322,
+      "fileSizeKB": 47,
+      "duration": 21
+    }
+  ],
+  "analysis": {
+    "aiLayoutSelection": {
+      "totalTests": 10,
+      "successful": 10,
+      "appropriate": 3,
+      "appropriatenessRate": 30,
+      "avgAppropriatenessScore": 65,
+      "layoutsUsed": [
+        "mixed-content",
+        "title-bullets",
+        "two-column",
+        "timeline"
+      ],
+      "contentTypesCovered": 10
+    },
+    "specificLayoutRendering": {
+      "totalTests": 4,
+      "successful": 3,
+      "successRate": 75,
+      "avgFileSize": 56
+    },
+    "overall": {
+      "layoutVariety": 4,
+      "contentTypeCoverage": 10
+    }
+  }
+}

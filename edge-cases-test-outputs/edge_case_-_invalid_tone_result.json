@@ -1,0 +1,15 @@
+{
+  "scenario": "Invalid Tone",
+  "result": {
+    "success": false,
+    "status": 400,
+    "data": {
+      "error": "Invalid generation parameters",
+      "code": "INVALID_PARAMS_ERROR",
+      "details": [
+        "tone: Invalid tone type. Must be one of the supported tone styles."
+      ]
+    }
+  },
+  "expectedBehavior": "Should use default tone or handle gracefully"
+}

@@ -1,0 +1,59 @@
+{
+  "content": {
+    "spec": {
+      "title": "Q3 Performance: 25% Revenue Growth Fuels Strategic Expansion",
+      "layout": "mixed-content",
+      "left": {
+        "bullets": [
+          "Achieved 25% revenue growth, surpassing $5M target, driven by new product launch.",
+          "Customer satisfaction scores improved 15%, elevating NPS from 7.5 to 8.6 in Q3.",
+          "Expanded into two new regions, generating $800K in additional quarterly revenue."
+        ]
+      },
+      "right": {
+        "bullets": [
+          "Reduced churn rate from 10% to 7%, enhancing customer retention and profitability.",
+          "Implemented AI-driven analytics, increasing operational efficiency by 20% across departments."
+        ],
+        "imagePrompt": "A professional, high-resolution image of an upward trending graph overlayed with diverse business professionals analyzing growth metrics in a modern boardroom setting, bright natural light, corporate attire."
+      },
+      "notes": "Start with the revenue growth highlight, then transition into customer satisfaction improvements. Emphasize the expansion and efficiency gains as key drivers of future success. Conclude with a call to action for strategic alignment in Q4 initiatives.",
+      "sources": [
+        "Q3 Financial Report",
+        "Customer Feedback Survey",
+        "Market Expansion Analysis"
+      ]
+    },
+    "quality": {
+      "score": 80,
+      "grade": "B",
+      "issues": [
+        "Add altText to describe images for screen readers."
+      ],
+      "strengths": [],
+      "suggestions": []
+    },
+    "timestamp": "2025-08-16T18:58:26.011Z"
+  },
+  "analysis": {
+    "score": 40,
+    "strengths": [
+      "Found 6/6 expected elements"
+    ],
+    "issues": [
+      "Title missing or too short",
+      "No layout specified",
+      "Missing content body",
+      "Layout undefined not in expected: title-bullets, two-column, chart"
+    ],
+    "foundElements": [
+      "revenue",
+      "growth",
+      "Q3",
+      "Q4",
+      "strategic",
+      "market"
+    ],
+    "contentLength": 1323
+  }
+}

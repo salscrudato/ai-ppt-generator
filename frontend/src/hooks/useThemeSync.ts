@@ -30,8 +30,8 @@ const THEME_STORAGE_KEYS = {
 } as const;
 
 // Debounce timing for theme updates
-const SYNC_DEBOUNCE_MS = 100;
-const STORAGE_DEBOUNCE_MS = 300;
+const SYNC_DEBOUNCE_MS = 150;
+const STORAGE_DEBOUNCE_MS = 500;
 
 export interface ThemeSyncState {
   /** Current active theme */
@@ -108,7 +108,7 @@ export function useThemeSync(options: UseThemeSyncOptions = {}): UseThemeSyncRet
 
   // Debug logging helper
   const debugLog = useCallback((message: string, data?: any) => {
-    if (debug) {
+    if (debug && process.env.NODE_ENV === 'development') {
       console.log(`🎨 ThemeSync [${mode}]: ${message}`, data || '');
     }
   }, [debug, mode]);
@@ -232,13 +232,19 @@ export function useThemeSync(options: UseThemeSyncOptions = {}): UseThemeSyncRet
   // Public API: Set theme
   const setTheme = useCallback((themeId: string, source: string = 'user') => {
     debugLog('Theme change requested', { theme: themeId, source });
-    
+
+    // Handle empty string (deselection) by using default theme
+    if (!themeId || themeId.trim() === '') {
+      debugLog('Empty theme ID, using default theme');
+      themeId = getDefaultTheme().id;
+    }
+
     // Validate theme
     const theme = getThemeById(themeId);
     if (!theme) {
-      debugLog('Invalid theme ID provided', { themeId });
-      setError(`Invalid theme ID: ${themeId}`);
-      return;
+      debugLog('Invalid theme ID provided, using default', { themeId });
+      themeId = getDefaultTheme().id;
+      setError(`Invalid theme ID: ${themeId}, using default`);
     }
 
     // Prevent unnecessary updates
@@ -246,6 +252,9 @@ export function useThemeSync(options: UseThemeSyncOptions = {}): UseThemeSyncRet
       debugLog('Theme already set, skipping update', { theme: themeId });
       return;
     }
+
+    // Clear any existing error
+    setError(null);
 
     syncThemeWithContext(themeId, source);
   }, [syncThemeWithContext, debugLog]);
