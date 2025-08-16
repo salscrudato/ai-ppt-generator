@@ -45,12 +45,12 @@ const getApiBaseUrl = () => {
 
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // Local development on same machine
-    const localUrl = 'http://localhost:5003/plsfixthx-ai/us-central1/api';
+    const localUrl = 'http://localhost:5001/plsfixthx-ai/us-central1/api';
     console.log('🏠 Local development, using emulator:', localUrl);
     return localUrl;
   } else {
     // Network access from another device - use the network IP
-    const networkUrl = 'http://192.168.1.176:5003/plsfixthx-ai/us-central1/api';
+    const networkUrl = 'http://192.168.1.176:5001/plsfixthx-ai/us-central1/api';
     console.log('🌐 Network access detected, using network IP:', networkUrl);
     return networkUrl;
   }
@@ -67,7 +67,26 @@ export const API_ENDPOINTS = {
   generate: `${API_BASE_URL}/generate`,
 
   /** Health check endpoint */
-  health: `${API_BASE_URL}/health`
+  health: `${API_BASE_URL}/health`,
+
+  /** Get theme presets catalog */
+  themePresets: `${API_BASE_URL}/theme-presets`,
+
+  /** Get theme recommendations */
+  themes: `${API_BASE_URL}/themes`,
+
+  /** Validate content */
+  validateContent: `${API_BASE_URL}/validate-content`,
+
+  /** Enhanced endpoints */
+  enhanced: {
+    slide: `${API_BASE_URL}/enhanced/slide`,
+    presentation: `${API_BASE_URL}/enhanced/presentation`,
+    analytics: `${API_BASE_URL}/enhanced/analytics`,
+    templates: `${API_BASE_URL}/enhanced/templates`,
+    collaboration: `${API_BASE_URL}/enhanced/collaboration`,
+    export: `${API_BASE_URL}/enhanced/export`
+  }
 } as const;
 
 /**
