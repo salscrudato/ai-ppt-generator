@@ -10,7 +10,7 @@
  * - Responsive layout
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   HiPlus,
@@ -22,9 +22,9 @@ import {
 } from 'react-icons/hi2';
 import DraggableSlideList from './DraggableSlideList';
 import SlideEditor from './SlideEditor';
-// import SlidePreview from './SlidePreview'; // Removed with live preview
-import ThemeGallery from './ThemeGallery';
-// import ThemePreview from './ThemePreview'; // Removed with live preview
+
+import ThemeCarousel from './ThemeCarousel';
+
 import type { Presentation, SlideSpec } from '../types';
 
 // Simple placeholder components
@@ -50,6 +50,8 @@ const ThemePreviewPlaceholder = ({ theme }: any) => (
 );
 import { createNewSlide, generateSlideId } from '../types';
 import { useTheme } from '../utils/themeUtils';
+import { useThemeContext } from '../contexts/ThemeContext';
+import { useThemeSync } from '../hooks/useThemeSync';
 
 interface PresentationManagerProps {
   /** The presentation to manage */
@@ -86,8 +88,28 @@ export default function PresentationManager({
   // Get the currently selected slide
   const selectedSlide = presentation.slides.find(slide => slide.id === selectedSlideId);
 
-  // Get current theme
-  const currentTheme = useTheme(presentation.settings.theme);
+  // Enhanced theme synchronization
+  const themeSync = useThemeSync({
+    mode: 'presentation',
+    initialThemeId: presentation.settings.theme,
+    debug: process.env.NODE_ENV === 'development'
+  });
+
+  // Get current theme using the enhanced system
+  const currentTheme = useTheme(themeSync.themeId);
+
+  // Sync presentation theme with the enhanced system
+  useEffect(() => {
+    const presentationTheme = presentation.settings.theme;
+    if (presentationTheme && presentationTheme !== themeSync.themeId) {
+      themeSync.setTheme(presentationTheme, 'presentation-settings');
+      console.log('🔄 PresentationManager: Synced presentation theme', {
+        theme: presentationTheme,
+        presentationId: presentation.id,
+        previous: themeSync.themeId
+      });
+    }
+  }, [presentation.settings.theme, presentation.id, themeSync]);
 
   // Update presentation helper
   const updatePresentation = (updates: Partial<Presentation>) => {
@@ -177,11 +199,29 @@ export default function PresentationManager({
   };
 
   const handleThemeSelect = (themeId: string) => {
+    // Ensure only one theme is selected at a time
+    // If empty string is passed (deselection), use default theme
+    const selectedThemeId = themeId || 'corporate-blue';
+
+    // Update presentation settings
     updatePresentation({
       settings: {
         ...presentation.settings,
-        theme: themeId
+        theme: selectedThemeId
       }
+    });
+
+    // Use enhanced theme sync to ensure consistency across all components
+    themeSync.setTheme(selectedThemeId, 'theme-selection');
+
+    // Save theme for presentation mode
+    themeSync.setThemeForMode('presentation', selectedThemeId);
+
+    // Log for debugging
+    console.log('🎨 PresentationManager: Theme synchronized', {
+      selected: selectedThemeId,
+      previous: presentation.settings.theme,
+      syncState: themeSync.isSyncing
     });
   };
 
@@ -206,6 +246,7 @@ export default function PresentationManager({
             onSpecChange={handleSlideUpdate}
             onGenerate={() => handleSlideUpdate(editingSlide)}
             onBack={handleBackToOverview}
+            theme={currentTheme}
           />
         );
 
@@ -243,12 +284,13 @@ export default function PresentationManager({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Theme Gallery */}
-              <div className="lg:col-span-2">
-                <ThemeGallery
-                  selectedId={presentation.settings.theme}
+              {/* Theme Carousel */}
+              <div className="lg:col-span-3">
+                <ThemeCarousel
+                  selectedId={themeSync.themeId}
                   onSelect={handleThemeSelect}
                   title="Available Themes"
+                  showCategories={true}
                 />
               </div>
 

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import clsx from 'clsx';
 import type { GenerationParams } from '../types';
 import {
   HiPencilSquare,
@@ -13,14 +14,12 @@ import {
   HiBriefcase
 } from 'react-icons/hi2';
 
-import ThemeGallery from './ThemeGallery';
+import ThemeCarousel from './ThemeCarousel';
 import LoadingButton from './LoadingButton';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { useThemeSync } from '../hooks/useThemeSync';
 
-// Import validation components
-// import { useFormValidation, useValidatedSubmit } from '../hooks/useFormValidation';
-// import { ValidatedTextarea, ValidatedSelect } from './form/ValidatedInput';
-// import { ValidationSummary } from './form/ValidationMessage';
+
 import {
   AUDIENCE_OPTIONS,
   TONE_OPTIONS,
@@ -44,11 +43,52 @@ export default function PromptInput({
   onGenerate
 }: PromptInputProps) {
   const [localParams, setLocalParams] = useState(params);
-  const { setTheme } = useThemeContext();
+  const { setTheme, themeId: contextThemeId } = useThemeContext();
+
+  // Enhanced theme synchronization for single mode
+  const themeSync = useThemeSync({
+    mode: 'single',
+    initialThemeId: params.design?.theme,
+    debug: process.env.NODE_ENV === 'development'
+  });
 
   // Form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+
+  // Track if generation was explicitly requested to prevent accidental triggers
+  const [generationRequested, setGenerationRequested] = useState(false);
+
+  // Sync local params when parent params change (without theme sync to avoid conflicts)
+  React.useEffect(() => {
+    setLocalParams(params);
+  }, [params]);
+
+  // Enhanced theme synchronization using the new hook
+  React.useEffect(() => {
+    const formThemeId = localParams.design?.theme;
+    const syncedThemeId = themeSync.themeId;
+
+    // If form has no theme, initialize with synced theme
+    if (!formThemeId && syncedThemeId) {
+      const updatedParams = {
+        ...localParams,
+        design: { ...localParams.design, theme: syncedThemeId }
+      };
+      setLocalParams(updatedParams);
+      onParamsChange(updatedParams);
+      console.log('🔄 PromptInput: Initialized form theme from sync', {
+        theme: syncedThemeId
+      });
+    }
+    // If form has theme but sync doesn't match, update sync
+    else if (formThemeId && syncedThemeId !== formThemeId) {
+      themeSync.setTheme(formThemeId, 'form-update');
+      console.log('🔄 PromptInput: Updated synced theme from form', {
+        theme: formThemeId
+      });
+    }
+  }, [localParams.design?.theme, themeSync.themeId, themeSync, onParamsChange]);
 
   // Simplified validation for deployment
   const validateForm = (params: GenerationParams) => {
@@ -69,6 +109,14 @@ export default function PromptInput({
     key: K,
     value: GenerationParams[K]
   ) => {
+    console.log('📝 PromptInput: updateParam called', { key, value, loading });
+
+    // Prevent parameter updates during generation to avoid conflicts
+    if (loading) {
+      console.log('🚫 PromptInput: Parameter update blocked during generation', { key, value });
+      return;
+    }
+
     const updated = { ...localParams, [key]: value };
     setLocalParams(updated);
     onParamsChange(updated);
@@ -89,6 +137,33 @@ export default function PromptInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    // Debug logging to track when generation is triggered
+    console.log('🎯 PromptInput: handleSubmit called', {
+      eventType: e.type,
+      target: e.target,
+      currentTarget: e.currentTarget,
+      loading,
+      canSubmit,
+      submitter: (e.nativeEvent as SubmitEvent)?.submitter
+    });
+
+    // Prevent submission if already loading or form is invalid
+    if (loading || !canSubmit) {
+      console.log('🚫 PromptInput: Submission blocked', { loading, canSubmit });
+      return;
+    }
+
+    // Additional check: ensure this is from the submit button or explicitly requested
+    const submitter = (e.nativeEvent as SubmitEvent)?.submitter;
+    if (submitter && submitter.type !== 'submit' && !generationRequested) {
+      console.log('🚫 PromptInput: Submission not from submit button and not explicitly requested', { submitter, generationRequested });
+      return;
+    }
+
+    // Reset the generation requested flag
+    setGenerationRequested(false);
 
     // Ensure all required fields have defaults
     const paramsWithDefaults = {
@@ -109,10 +184,10 @@ export default function PromptInput({
     const validationResult = validateForm(paramsWithDefaults);
 
     if (validationResult.success && validationResult.data) {
-      console.log('Sending validated data:', validationResult.data);
+      console.log('✅ PromptInput: Validation passed, calling onGenerate', validationResult.data);
       onGenerate(validationResult.data);
     } else {
-      console.log('Form validation failed:', validationResult.fieldErrors);
+      console.log('❌ PromptInput: Form validation failed', validationResult.fieldErrors);
       // Mark all fields as touched to show errors
       setTouchedFields(new Set(Object.keys(paramsWithDefaults)));
     }
@@ -121,20 +196,116 @@ export default function PromptInput({
   // Check if form can be submitted
   const canSubmit = !loading && localParams.prompt.trim().length >= 10 && Object.keys(validationErrors).length === 0;
 
-  // Handle keyboard shortcuts for form submission
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+  // Explicit button click handler for additional safety
+  const handleGenerateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('🖱️ PromptInput: Generate button clicked', { loading, canSubmit });
+
+    if (loading || !canSubmit) {
       e.preventDefault();
       e.stopPropagation();
-      // Trigger form submission on Ctrl+Enter if valid
-      if (canSubmit) {
-        handleSubmit(e);
+      console.log('🚫 PromptInput: Button click blocked', { loading, canSubmit });
+      return;
+    }
+
+    // Mark that generation was explicitly requested
+    setGenerationRequested(true);
+    console.log('✅ PromptInput: Generation explicitly requested via button click');
+
+    // Let the form submission handle the rest
+  };
+
+  // Handle keyboard shortcuts for form submission
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Only allow Ctrl+Enter for form submission, prevent other Enter key submissions
+    if (e.key === 'Enter') {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('⌨️ PromptInput: Ctrl+Enter pressed', { canSubmit });
+        // Trigger form submission on Ctrl+Enter if valid
+        if (canSubmit) {
+          setGenerationRequested(true);
+          console.log('✅ PromptInput: Generation explicitly requested via Ctrl+Enter');
+          handleSubmit(e);
+        }
+      } else {
+        // Prevent regular Enter from submitting the form
+        const target = e.target as HTMLElement;
+        if (target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          console.log('🚫 PromptInput: Regular Enter blocked on', target.tagName);
+        }
       }
     }
   };
 
+  // Debug component to show theme sync status (only in development)
+  const ThemeSyncDebug = () => {
+    if (process.env.NODE_ENV !== 'development') return null;
+
+    const formTheme = localParams.design?.theme;
+    const isInSync = formTheme === contextThemeId;
+    const [syncStatus, setSyncStatus] = React.useState<'synced' | 'syncing' | 'out-of-sync'>('synced');
+
+    // Track sync status changes
+    React.useEffect(() => {
+      if (isInSync) {
+        setSyncStatus('synced');
+      } else {
+        setSyncStatus('syncing');
+        // After a brief moment, if still not synced, mark as out of sync
+        const timer = setTimeout(() => {
+          if (formTheme !== contextThemeId) {
+            setSyncStatus('out-of-sync');
+          }
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }, [formTheme, contextThemeId, isInSync]);
+
+    const getStatusColor = () => {
+      switch (syncStatus) {
+        case 'synced': return "bg-green-100 text-green-800 border border-green-200";
+        case 'syncing': return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+        case 'out-of-sync': return "bg-red-100 text-red-800 border border-red-200";
+      }
+    };
+
+    const getStatusText = () => {
+      switch (syncStatus) {
+        case 'synced': return '✓ Synced';
+        case 'syncing': return '⏳ Syncing...';
+        case 'out-of-sync': return '⚠ Out of sync';
+      }
+    };
+
+    const getStatusTextColor = () => {
+      switch (syncStatus) {
+        case 'synced': return "text-green-600";
+        case 'syncing': return "text-yellow-600";
+        case 'out-of-sync': return "text-red-600";
+      }
+    };
+
+    return (
+      <div className={clsx(
+        "fixed top-4 right-4 z-50 px-3 py-2 rounded-lg text-xs font-mono shadow-lg transition-colors duration-200",
+        getStatusColor()
+      )}>
+        <div className="text-xs opacity-75 mb-1">Theme Sync Status</div>
+        <div>Form: <span className="font-semibold">{formTheme || 'none'}</span></div>
+        <div>Context: <span className="font-semibold">{contextThemeId || 'none'}</span></div>
+        <div className={clsx("font-bold mt-1", getStatusTextColor())}>
+          {getStatusText()}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen">
+      <ThemeSyncDebug />
+
       {/* Enhanced Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -347,16 +518,46 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             <h3 className="text-lg font-semibold text-slate-900">Choose Theme</h3>
           </div>
 
-          <ThemeGallery
-            selectedId={localParams.design?.theme}
+          <ThemeCarousel
+            selectedId={localParams.design?.theme || themeSync.themeId || 'corporate-blue'}
             onSelect={(themeId) => {
-              updateParam('design', { ...localParams.design, theme: themeId });
-              setTheme(themeId); // Also update the theme context
+              console.log('🎨 PromptInput: Theme selected', {
+                themeId,
+                loading,
+                currentFormTheme: localParams.design?.theme,
+                currentSyncTheme: themeSync.themeId
+              });
+
+              // Prevent theme changes during generation
+              if (loading) {
+                console.log('🚫 PromptInput: Theme change blocked during generation');
+                return;
+              }
+
+              // If empty string is passed (deselection), use default theme
+              const selectedThemeId = themeId || 'corporate-blue';
+
+              // Update form state
+              const updatedDesign = { ...localParams.design, theme: selectedThemeId };
+              const updatedParams = { ...localParams, design: updatedDesign };
+
+              // Update local state first
+              setLocalParams(updatedParams);
+
+              // Update parent
+              onParamsChange(updatedParams);
+
+              // Use enhanced theme sync for consistency
+              themeSync.setTheme(selectedThemeId, 'theme-carousel');
+              themeSync.setThemeForMode('single', selectedThemeId);
+
+              console.log('✅ PromptInput: Theme synchronized', {
+                selected: selectedThemeId,
+                previousForm: localParams.design?.theme,
+                previousSync: themeSync.themeId
+              });
             }}
-            compact={true}
-            showCategories={false}
-            enablePreview={true}
-            showPreviewButton={true}
+            showCategories={true}
             title=""
           />
         </motion.div>
@@ -505,6 +706,7 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             className="px-8 sm:px-12 py-4 sm:py-5 text-lg sm:text-xl font-bold rounded-3xl shadow-xl hover:shadow-glow-lg focus:ring-4 focus:ring-indigo-300 min-h-[44px] touch-target"
             aria-describedby="form-status"
             aria-label={canSubmit ? "Generate presentation draft" : "Complete the form to generate draft"}
+            onClick={handleGenerateClick}
           >
             Generate Draft
           </LoadingButton>

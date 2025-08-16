@@ -1,0 +1,60 @@
+{
+  "recommendations": [],
+  "analysis": {
+    "category": "educational",
+    "complexity": "moderate",
+    "sentiment": "positive",
+    "keywords": [
+      "sustainable business practices",
+      "environmental impact",
+      "cost benefits",
+      "implementation strategies"
+    ],
+    "entities": [
+      {
+        "text": "sustainability",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "cost benefits",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "environmental impact",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "implementation strategies",
+        "type": "concept",
+        "confidence": 0.95
+      }
+    ],
+    "suggestedLayouts": [
+      "title-bullets",
+      "two-column",
+      "chart"
+    ],
+    "visualElements": [
+      {
+        "type": "chart",
+        "relevance": 0.85,
+        "description": "A bar chart comparing the cost savings of sustainable practices versus traditional practices."
+      },
+      {
+        "type": "diagram",
+        "relevance": 0.8,
+        "description": "A flowchart illustrating the steps for implementing sustainable practices in a business."
+      },
+      {
+        "type": "image",
+        "relevance": 0.75,
+        "description": "Images of sustainable business practices in action, such as recycling or energy-efficient technologies."
+      }
+    ],
+    "toneAlignment": 0.9,
+    "audienceAlignment": 0.85
+  }
+}

@@ -1,0 +1,242 @@
+{
+  "slide": {
+    "title": "Untitled Slide",
+    "layout": "quote",
+    "slides": [
+      {
+        "title": "Introducing Our New Brand Identity",
+        "content": [
+          {
+            "type": "text",
+            "text": "Unveiling a fresh vision that encapsulates our values and aspirations."
+          },
+          {
+            "type": "image",
+            "src": "path/to/brand_identity_image.jpg",
+            "caption": "Our New Brand Identity"
+          }
+        ]
+      },
+      {
+        "title": "Logo Design",
+        "content": [
+          {
+            "type": "text",
+            "text": "Our logo symbolizes innovation and trust, combining modern aesthetics with timeless elements."
+          },
+          {
+            "type": "image",
+            "src": "path/to/logo_design_image.jpg",
+            "caption": "The Essence of Our Brand"
+          }
+        ]
+      },
+      {
+        "title": "Color Palette",
+        "content": [
+          {
+            "type": "text",
+            "text": "Our color palette reflects our brand's personality and emotional resonance. It includes:"
+          },
+          {
+            "type": "bullets",
+            "items": [
+              "Primary: Vibrant Blue - representing trust and professionalism",
+              "Secondary: Energetic Orange - symbolizing creativity and enthusiasm",
+              "Accent: Fresh Green - conveying growth and sustainability"
+            ]
+          },
+          {
+            "type": "image",
+            "src": "path/to/color_palette_image.jpg",
+            "caption": "Our Color Palette"
+          }
+        ]
+      },
+      {
+        "title": "Typography Choices",
+        "content": [
+          {
+            "type": "text",
+            "text": "Typography plays a vital role in our communication. We have selected:"
+          },
+          {
+            "type": "two-column",
+            "items": [
+              {
+                "header": "Headlines",
+                "text": "Bold Sans Serif - for impactful messaging."
+              },
+              {
+                "header": "Body Text",
+                "text": "Clean Serif - ensuring readability and elegance."
+              }
+            ]
+          },
+          {
+            "type": "image",
+            "src": "path/to/typography_image.jpg",
+            "caption": "Typography Choices"
+          }
+        ]
+      },
+      {
+        "title": "Brand Guidelines for Marketing Campaigns",
+        "content": [
+          {
+            "type": "text",
+            "text": "Our brand guidelines ensure consistency across all marketing materials. Key elements include:"
+          },
+          {
+            "type": "bullets",
+            "items": [
+              "Logo usage specifications",
+              "Color application rules",
+              "Typography hierarchy and spacing"
+            ]
+          },
+          {
+            "type": "image",
+            "src": "path/to/brand_guidelines_image.jpg",
+            "caption": "Brand Guidelines Overview"
+          }
+        ]
+      },
+      {
+        "title": "Embracing Our New Identity",
+        "content": [
+          {
+            "type": "text",
+            "text": "Together, we will harness this new brand identity to inspire and connect with our audience."
+          },
+          {
+            "type": "diagram",
+            "src": "path/to/brand_inspiration_diagram.jpg",
+            "caption": "Connecting Through Our Brand"
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "contentAnalysis": {
+      "category": "creative",
+      "complexity": "moderate",
+      "sentiment": "positive",
+      "keywords": [
+        "brand identity",
+        "logo design",
+        "color palette",
+        "typography",
+        "brand guidelines"
+      ],
+      "entities": [
+        {
+          "text": "brand identity",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "logo design",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "color palette",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "typography",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "marketing campaigns",
+          "type": "concept",
+          "confidence": 0.95
+        }
+      ],
+      "suggestedLayouts": [
+        "title-bullets",
+        "two-column",
+        "image"
+      ],
+      "visualElements": [
+        {
+          "type": "image",
+          "relevance": 0.9,
+          "description": "Showcase the new logo and color palette in a visually appealing manner."
+        },
+        {
+          "type": "diagram",
+          "relevance": 0.8,
+          "description": "Illustrate the brand guidelines and how they apply to marketing materials."
+        }
+      ],
+      "toneAlignment": 0.9,
+      "audienceAlignment": 0.85
+    },
+    "layoutRecommendation": {
+      "layoutId": "quote",
+      "confidence": 1,
+      "reasoning": [
+        "Creative content requires visually engaging, artistic layouts",
+        "Simple content works well with clean, minimal layouts"
+      ],
+      "optimizations": [
+        {
+          "type": "accessibility",
+          "description": "Ensure sufficient color contrast and font sizes",
+          "impact": "high",
+          "implementation": {
+            "minFontSize": 18,
+            "contrastRatio": 4.5
+          }
+        }
+      ],
+      "alternatives": [
+        {
+          "layoutId": "hero",
+          "confidence": 1,
+          "reason": "Creative content requires visually engaging, artistic layouts"
+        },
+        {
+          "layoutId": "image-focus",
+          "confidence": 0.5714285714285715,
+          "reason": "Creative content requires visually engaging, artistic layouts"
+        },
+        {
+          "layoutId": "creative-showcase",
+          "confidence": 0.5714285714285715,
+          "reason": "Creative content requires visually engaging, artistic layouts"
+        }
+      ]
+    },
+    "themeInfo": {
+      "id": "dynamic-creative-1755291406199",
+      "name": "Dynamic Creative Theme",
+      "category": "creative"
+    },
+    "qualityScore": 100,
+    "performanceMetrics": {
+      "duration": 23571,
+      "cacheUsed": false
+    },
+    "storyFramework": {
+      "id": "problem-solution",
+      "name": "Problem-Solution Framework"
+    }
+  },
+  "recommendations": {
+    "improvements": [],
+    "alternatives": [
+      "Creative content requires visually engaging, artistic layouts",
+      "Creative content requires visually engaging, artistic layouts",
+      "Creative content requires visually engaging, artistic layouts"
+    ],
+    "optimizations": [
+      "Ensure sufficient color contrast and font sizes"
+    ]
+  }
+}

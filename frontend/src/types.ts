@@ -297,7 +297,18 @@ export function createNewSlide(overrides: Partial<SlideSpec> = {}): SlideSpec {
 /**
  * Create a new presentation with default values
  */
-export function createNewPresentation(title: string = 'New Presentation'): Presentation {
+export function createNewPresentation(
+  title: string = 'New Presentation',
+  options?: {
+    theme?: string;
+    brand?: {
+      primary?: string;
+      secondary?: string;
+      accent?: string;
+      fontFamily?: string;
+    };
+  }
+): Presentation {
   return {
     id: `presentation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     title,
@@ -306,7 +317,10 @@ export function createNewPresentation(title: string = 'New Presentation'): Prese
       createdAt: new Date(),
       updatedAt: new Date()
     },
-    settings: {}
+    settings: {
+      theme: options?.theme || 'corporate-blue',
+      brand: options?.brand
+    }
   };
 }
 

@@ -38,7 +38,7 @@ interface ThemeProviderProps {
   persistTheme?: boolean;
 }
 
-const THEME_STORAGE_KEY = 'ai-ppt-theme';
+const THEME_STORAGE_KEY = 'ai-ppt-ai-ppt-selected-theme';
 const GLOBAL_THEME_STORAGE_KEY = 'ai-ppt-global-theme';
 
 export function ThemeProvider({

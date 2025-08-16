@@ -53,6 +53,9 @@ import { powerPointService } from "./services/powerPointService";
 import { validationService } from "./services/validationService";
 import { type SlideSpec, safeValidateSlideSpec } from "./schema";
 
+// Import enhanced services
+import { EnhancedApiService } from "./services/enhancedApiService";
+
 
 // Production-ready configuration constants
 const CONFIG = {
@@ -700,6 +703,41 @@ app.post('/generate', async (req, res) => {
     return res.status(status).json({ error: message, code });
   }
 });
+
+/**
+ * ENHANCED API ENDPOINTS
+ * Premium features with advanced AI processing, dynamic themes, and intelligent layouts
+ */
+
+/**
+ * Enhanced slide generation with AI orchestration
+ */
+app.post('/enhanced/slide', EnhancedApiService.generateEnhancedSlide);
+
+/**
+ * Enhanced presentation generation with storytelling frameworks
+ */
+app.post('/enhanced/presentation', EnhancedApiService.generateEnhancedPresentation);
+
+/**
+ * Performance analytics endpoint
+ */
+app.get('/enhanced/analytics', EnhancedApiService.getPerformanceAnalytics);
+
+/**
+ * Template recommendations based on content analysis
+ */
+app.post('/enhanced/templates', EnhancedApiService.getTemplateRecommendations);
+
+/**
+ * Collaboration session management
+ */
+app.post('/enhanced/collaboration', EnhancedApiService.createCollaborationSession);
+
+/**
+ * Advanced export with multiple formats and optimizations
+ */
+app.post('/enhanced/export', EnhancedApiService.exportPresentation);
 
 /**
  * Export the Express app as an optimized Firebase Cloud Function

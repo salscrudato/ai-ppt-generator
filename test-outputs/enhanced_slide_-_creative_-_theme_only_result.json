@@ -1,0 +1,183 @@
+{
+  "slide": {
+    "title": "Untitled Slide",
+    "layout": "title-bullets",
+    "slides": [
+      {
+        "title": "Introducing Our New Brand Identity",
+        "layout": "title-bullets",
+        "content": [
+          {
+            "bullet": "Elevating our presence with a fresh, modern aesthetic."
+          },
+          {
+            "bullet": "Aligning our visual identity with our core values."
+          },
+          {
+            "bullet": "Strengthening brand recognition and customer loyalty."
+          }
+        ],
+        "visuals": {
+          "image": "brand_identity_intro.jpg"
+        }
+      },
+      {
+        "title": "Logo Design",
+        "layout": "two-column",
+        "content": [
+          {
+            "column_1": "Our new logo symbolizes innovation and trust, reflecting our commitment to excellence. It is designed to be versatile and memorable."
+          },
+          {
+            "column_2": "Key Features:\n- Simplified design for versatility\n- Represents our brand values\n- Easily recognizable across all platforms"
+          }
+        ],
+        "visuals": {
+          "image": "new_logo_design.png"
+        }
+      },
+      {
+        "title": "Color Palette",
+        "layout": "two-column",
+        "content": [
+          {
+            "column_1": "Our color palette is carefully curated to evoke emotions and connect with our audience. Each color has a specific meaning and purpose."
+          },
+          {
+            "column_2": "Primary Colors:\n- Blue: Trust and Reliability\n- Green: Growth and Harmony\nAccent Colors:\n- Orange: Creativity and Energy\n- Grey: Professionalism"
+          }
+        ],
+        "visuals": {
+          "image": "color_palette_chart.png"
+        }
+      },
+      {
+        "title": "Typography Choices",
+        "layout": "two-column",
+        "content": [
+          {
+            "column_1": "Our typography reflects our brand's personality. We have selected fonts that enhance readability and maintain a professional look."
+          },
+          {
+            "column_2": "Font Families:\n- Headings: Montserrat - Bold and Modern\n- Body: Open Sans - Clean and Legible\n- Accent: Roboto - Versatile and Friendly"
+          }
+        ],
+        "visuals": {
+          "image": "typography_samples.png"
+        }
+      },
+      {
+        "title": "Brand Guidelines for Marketing Campaigns",
+        "layout": "title-bullets",
+        "content": [
+          {
+            "bullet": "Consistency is key. Follow our brand guidelines to ensure cohesive messaging across all channels."
+          },
+          {
+            "bullet": "Use the logo and colors correctly to maintain brand integrity."
+          },
+          {
+            "bullet": "Incorporate typography in all marketing materials to enhance brand recognition."
+          }
+        ],
+        "visuals": {
+          "image": "brand_guidelines_overview.png"
+        }
+      },
+      {
+        "title": "Conclusion",
+        "layout": "title-bullets",
+        "content": [
+          {
+            "bullet": "Our new brand identity is designed to inspire and connect."
+          },
+          {
+            "bullet": "Let's embrace these changes to create impactful marketing campaigns."
+          },
+          {
+            "bullet": "Together, we will elevate our brand to new heights!"
+          }
+        ],
+        "visuals": {
+          "image": "brand_identity_conclusion.jpg"
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "contentAnalysis": {
+      "category": "creative",
+      "complexity": "moderate",
+      "sentiment": "positive",
+      "keywords": [
+        "brand identity",
+        "logo design",
+        "color palette",
+        "typography",
+        "brand guidelines"
+      ],
+      "entities": [
+        {
+          "text": "brand identity",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "logo design",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "color palette",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "typography",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "marketing campaigns",
+          "type": "concept",
+          "confidence": 0.95
+        }
+      ],
+      "suggestedLayouts": [
+        "title-bullets",
+        "two-column",
+        "image"
+      ],
+      "visualElements": [
+        {
+          "type": "image",
+          "relevance": 0.9,
+          "description": "Showcase the new logo design and color palette visually."
+        },
+        {
+          "type": "diagram",
+          "relevance": 0.85,
+          "description": "Illustrate the brand guidelines and typography choices in a structured format."
+        }
+      ],
+      "toneAlignment": 0.9,
+      "audienceAlignment": 0.85
+    },
+    "themeInfo": {
+      "id": "dynamic-creative-1755291471221",
+      "name": "Dynamic Creative Theme",
+      "category": "creative"
+    },
+    "qualityScore": 85,
+    "performanceMetrics": {
+      "duration": 21738,
+      "cacheUsed": false
+    },
+    "storyFramework": null
+  },
+  "recommendations": {
+    "improvements": [],
+    "alternatives": [],
+    "optimizations": []
+  }
+}

@@ -20,6 +20,8 @@ import clsx from 'clsx';
 // Import the new SlidePreview component and theme context
 import { SlidePreview } from './SlidePreview';
 import { useCurrentTheme } from '../contexts/ThemeContext';
+import { useThemeSync } from '../hooks/useThemeSync';
+import type { ProfessionalTheme } from '../themes/professionalThemes';
 
 interface SlideEditorProps {
   spec: SlideSpec;
@@ -28,6 +30,8 @@ interface SlideEditorProps {
   onSpecChange: (spec: SlideSpec) => void;
   onGenerate: () => void;
   onBack: () => void;
+  /** Optional theme override - if not provided, uses theme context */
+  theme?: ProfessionalTheme;
 }
 
 export default function SlideEditor({
@@ -36,10 +40,20 @@ export default function SlideEditor({
   error,
   onSpecChange,
   onGenerate,
-  onBack
+  onBack,
+  theme
 }: SlideEditorProps) {
   const [localSpec, setLocalSpec] = useState(spec);
-  const currentTheme = useCurrentTheme();
+  const contextTheme = useCurrentTheme();
+
+  // Enhanced theme synchronization for slide editor
+  const themeSync = useThemeSync({
+    mode: 'presentation', // SlideEditor is typically used in presentation mode
+    debug: process.env.NODE_ENV === 'development'
+  });
+
+  // Use provided theme, synchronized theme, or fall back to context theme
+  const currentTheme = theme || themeSync.currentTheme || contextTheme;
 
   const updateSpec = (updates: Partial<SlideSpec>) => {
     const updated = { ...localSpec, ...updates };

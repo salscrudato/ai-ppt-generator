@@ -1,0 +1,51 @@
+{
+  "recommendations": [],
+  "analysis": {
+    "category": "business",
+    "complexity": "moderate",
+    "sentiment": "positive",
+    "keywords": [
+      "quarterly business review",
+      "performance",
+      "strategic goals",
+      "market analysis",
+      "key achievements"
+    ],
+    "entities": [
+      {
+        "text": "technology",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "executives",
+        "type": "person",
+        "confidence": 0.9
+      }
+    ],
+    "suggestedLayouts": [
+      "title-bullets",
+      "two-column",
+      "chart"
+    ],
+    "visualElements": [
+      {
+        "type": "chart",
+        "relevance": 0.85,
+        "description": "Performance metrics over the last quarter, showcasing growth trends and key performance indicators."
+      },
+      {
+        "type": "table",
+        "relevance": 0.8,
+        "description": "Summary of key achievements and strategic goals, allowing for quick comparison and clarity."
+      },
+      {
+        "type": "diagram",
+        "relevance": 0.75,
+        "description": "Market analysis diagram highlighting competitive positioning and market trends."
+      }
+    ],
+    "toneAlignment": 0.9,
+    "audienceAlignment": 0.85
+  }
+}

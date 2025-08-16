@@ -86,7 +86,7 @@ module.exports = {
         '*.config.js',
         '*.config.ts',
         '*.config.mjs',
-        '.eslintrc.js',
+
         '.prettierrc.js',
         'tailwind.config.js',
         'vite.config.ts',

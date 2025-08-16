@@ -1,0 +1,66 @@
+{
+  "recommendations": [],
+  "analysis": {
+    "category": "creative",
+    "complexity": "moderate",
+    "sentiment": "positive",
+    "keywords": [
+      "brand identity",
+      "logo design",
+      "color palette",
+      "typography",
+      "brand guidelines"
+    ],
+    "entities": [
+      {
+        "text": "brand identity",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "logo design",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "color palette",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "typography choices",
+        "type": "concept",
+        "confidence": 0.95
+      },
+      {
+        "text": "marketing campaigns",
+        "type": "concept",
+        "confidence": 0.95
+      }
+    ],
+    "suggestedLayouts": [
+      "title-bullets",
+      "two-column",
+      "image with caption"
+    ],
+    "visualElements": [
+      {
+        "type": "image",
+        "relevance": 0.9,
+        "description": "Showcase the new logo design prominently to create visual impact."
+      },
+      {
+        "type": "diagram",
+        "relevance": 0.85,
+        "description": "Illustrate the relationship between brand elements (logo, color palette, typography) and their application in marketing."
+      },
+      {
+        "type": "table",
+        "relevance": 0.8,
+        "description": "Present brand guidelines in a structured format for easy reference."
+      }
+    ],
+    "toneAlignment": 0.9,
+    "audienceAlignment": 0.85
+  }
+}

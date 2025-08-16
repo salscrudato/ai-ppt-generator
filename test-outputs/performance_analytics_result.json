@@ -1,0 +1,24 @@
+{
+  "summary": {
+    "averageDuration": 16685.75,
+    "totalOperations": 16,
+    "errorRate": 0.0625,
+    "cacheHitRate": 0.8397116044361685
+  },
+  "trends": [
+    {
+      "operation": "enhanced-generation",
+      "averageDuration": 17483.466666666667,
+      "count": 15
+    },
+    {
+      "operation": "enhanced-presentation",
+      "averageDuration": 4720,
+      "count": 1
+    }
+  ],
+  "recommendations": [
+    "Consider enabling caching to reduce generation time",
+    "Investigate and fix recurring errors"
+  ]
+}

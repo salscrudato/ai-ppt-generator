@@ -84,11 +84,7 @@ import {
   applyResponsiveAdjustments,
   type LayoutResult
 } from './core/enhancedSlideLayoutEngine';
-import {
-  runEnhancedStylingTests,
-  type TestResult,
-  type TestSuiteConfig
-} from './testing/enhancedStylingTests';
+// Removed testing imports - functionality moved to proper test files
 import {
   createStandardizedMeasurements,
   createFontMapping,
@@ -783,19 +779,16 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
               });
             }
           } else {
-            // Enhanced testing for modern themes
-            const testResults = await runEnhancedStylingTests([spec], theme as unknown as ProfessionalTheme, {
-              includeAccessibilityTests: true,
-              includePerformanceTests: false, // Skip performance tests for individual slides
-              includeVisualConsistencyTests: false, // Skip consistency tests for individual slides
-              includeThemeCompatibilityTests: true,
-              strictMode: false
-            });
+            // Basic validation for modern themes
+            console.log(`✅ Processing slide "${spec.title}" with theme ${theme.id}`);
 
-            const criticalIssues = testResults.filter(r => !r.passed && r.score < 50);
-            if (criticalIssues.length > 0) {
-              console.warn(`⚠️ Critical styling issues for slide "${spec.title}":`,
-                criticalIssues.map(r => r.testName));
+            // Basic accessibility checks
+            if (spec.title && spec.title.length > 100) {
+              console.warn(`⚠️ Title too long for slide "${spec.title}" - consider shortening for readability`);
+            }
+
+            if (spec.bullets && spec.bullets.length > 8) {
+              console.warn(`⚠️ Too many bullet points (${spec.bullets.length}) for slide "${spec.title}" - consider splitting`);
             }
           }
         } catch (styleError) {
@@ -906,14 +899,24 @@ export async function generatePpt(specs: SlideSpec[], validateStyles: boolean = 
       slide.background = { color: bgColor };
     }
 
-    // Add slide title with improved visibility
+    // Add slide title with proper positioning and spacing
+    const titleY = 0.5;
+    const titleHeight = 1.0;
+    const titleFontSize = spec.layout === 'title' ? 36 : 24;
+
     slide.addText(spec.title || 'Untitled Slide', {
-      x: 0.75, y: 0.4, w: 8.5, h: 0.8,
-      fontSize: spec.layout === 'title' ? 36 : 28,
+      x: LAYOUT_CONSTANTS.CONTENT_PADDING,
+      y: titleY,
+      w: LAYOUT_CONSTANTS.MAX_CONTENT_WIDTH,
+      h: titleHeight,
+      fontSize: titleFontSize,
       bold: true,
-      color: '000000', // Use black for maximum visibility
-      align: spec.layout === 'title' ? 'center' : 'left',
-      // fontFace removed to prevent corruption - PowerPoint will use default safe font
+      color: safeColorFormat(traditionalTheme.colors.text?.primary || traditionalTheme.colors.primary || '000000'),
+      align: 'left',
+      fontFace: 'Calibri', // Use PowerPoint default font
+      wrap: true,
+      valign: 'top',
+      lineSpacing: 110
     });
 
     // Enhanced dynamic layout handling with comprehensive support
@@ -1884,7 +1887,7 @@ function renderTimeline(slide: pptxgen.Slide, timeline: NonNullable<SlideSpec['t
   let currentY = contentY;
   const itemSpacing = 0.8;
 
-  timeline.forEach((item, index) => {
+  timeline.forEach((item: any, index: number) => {
     // Date with enhanced styling (safe properties only)
     slide.addText(item.date || '', {
       x: 0.5,
@@ -2594,55 +2597,50 @@ function addEnhancedBullets(slide: pptxgen.Slide, bullets: string[], theme: Prof
   const textColorApp = getContextualColor('primary-text', palette, theme.colors.background);
   const accentColorApp = getContextualColor('accent-text', palette, theme.colors.background);
 
-  // Enhanced typography with theme-based sizing
-  const fontSize = Math.max(theme.typography?.body?.sizes?.normal || 16, 14);
+  // Enhanced typography with proper sizing for PowerPoint
+  const fontSize = 18; // Fixed size for consistency
   const lineHeight = 0.8; // Increased spacing to prevent overlap
-  const bulletHeight = 0.7; // Increased height for better text wrapping
+  const bulletHeight = 0.7; // Increased height for proper text wrapping
   const maxHeight = 3.5; // Maximum content height for 16:9 format
 
-  // Use accessible colors
+  // Use accessible colors with fallbacks
   const textColor = safeColorFormat(textColorApp.color);
   const accentColor = safeColorFormat(accentColorApp.color);
 
   bullets.forEach((bullet, i) => {
     const bulletY = y + i * lineHeight;
 
-    // Ensure bullets don't exceed slide boundaries (leave more margin)
-    if (bulletY + bulletHeight > 5.2) return;
+    // Ensure bullets don't exceed slide boundaries
+    if (bulletY + bulletHeight > 5.0) return;
 
-    // Add bullet symbol with accent color
-    slide.addText('●', {
+    // Add bullet symbol with proper spacing
+    slide.addText('•', {
       x: x,
       y: bulletY,
-      w: 0.3,
+      w: 0.4,
       h: bulletHeight,
       fontSize: fontSize - 2,
       color: accentColor,
       align: 'left',
       valign: 'top',
-      bold: true
+      bold: true,
+      fontFace: 'Calibri'
     });
 
-    // Add bullet text with enhanced styling
+    // Add bullet text with proper wrapping and spacing
     slide.addText(bullet, {
-      x: x + 0.4,
+      x: x + 0.4, // Proper indent for bullet alignment
       y: bulletY,
-      w: w - 0.4,
+      w: w - 0.4, // Ensure text doesn't overflow
       h: bulletHeight,
       fontSize,
       color: textColor,
       align: 'left',
       valign: 'top',
       wrap: true,
-      lineSpacing: 120, // Improved line spacing for readability
-      shadow: {
-        type: 'outer',
-        color: '000000',
-        blur: 1,
-        offset: 0.5,
-        angle: 45,
-        opacity: 5
-      }
+      fontFace: 'Calibri',
+      lineSpacing: 120, // Better line spacing for readability
+      autoFit: true // Enable auto-fit for better text handling
     });
   });
 }
@@ -2982,7 +2980,7 @@ function renderEnhancedTimeline(slide: pptxgen.Slide, timeline: NonNullable<Slid
     line: { width: 0 }
   });
 
-  timeline.forEach((item, i) => {
+  timeline.forEach((item: any, i: number) => {
     const itemX = 1.0 + i * itemWidth;
 
     // Timeline point

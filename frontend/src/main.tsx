@@ -6,7 +6,11 @@ import { ThemeProvider } from './contexts/ThemeContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider persistTheme={true} enableGlobalTheme={false}>
+    <ThemeProvider
+      initialThemeId="corporate-blue"
+      persistTheme={true}
+      enableGlobalTheme={false}
+    >
       <App />
     </ThemeProvider>
   </StrictMode>,

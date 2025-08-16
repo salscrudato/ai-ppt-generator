@@ -211,6 +211,13 @@ export const AUDIENCE_GUIDANCE = {
     tone: 'Authoritative, transparent, service-oriented',
     psychology: 'Build trust through transparency and public benefit',
     structure: 'Issue → Policy → Implementation → Public Impact'
+  },
+  business: {
+    language: 'Professional business terminology, performance-focused, strategic',
+    focus: 'Business outcomes, operational efficiency, growth metrics',
+    tone: 'Professional, results-oriented, strategic',
+    psychology: 'Appeal to business success, efficiency, and competitive advantage',
+    structure: 'Challenge → Solution → Results → Business Impact'
   }
 };
 

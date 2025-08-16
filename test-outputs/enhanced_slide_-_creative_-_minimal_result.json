@@ -1,0 +1,186 @@
+{
+  "slide": {
+    "title": "Untitled Slide",
+    "layout": "title-bullets",
+    "slides": [
+      {
+        "title": "Introducing Our New Brand Identity",
+        "content": [
+          {
+            "type": "text",
+            "body": "Unveiling a fresh perspective that reflects our vision and mission."
+          },
+          {
+            "type": "image",
+            "src": "path/to/brand_identity_image.jpg",
+            "alt": "New Brand Identity Visual"
+          }
+        ]
+      },
+      {
+        "title": "Logo Design",
+        "content": [
+          {
+            "type": "text",
+            "body": "Our logo embodies the essence of our brand, symbolizing innovation and trust."
+          },
+          {
+            "type": "image",
+            "src": "path/to/logo_design_image.jpg",
+            "alt": "Logo Design Example"
+          }
+        ]
+      },
+      {
+        "title": "Color Palette",
+        "content": [
+          {
+            "type": "text",
+            "body": "A vibrant color palette that communicates energy, creativity, and professionalism."
+          },
+          {
+            "type": "two-column",
+            "left": {
+              "type": "bullets",
+              "items": [
+                "Primary Color: Blue (#007BFF)",
+                "Secondary Color: Green (#28A745)",
+                "Accent Color: Orange (#FFC107)"
+              ]
+            },
+            "right": {
+              "type": "image",
+              "src": "path/to/color_palette_image.jpg",
+              "alt": "Color Palette Swatches"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Typography Choices",
+        "content": [
+          {
+            "type": "text",
+            "body": "Our typography complements our brand, ensuring readability and consistency."
+          },
+          {
+            "type": "two-column",
+            "left": {
+              "type": "bullets",
+              "items": [
+                "Headings: Montserrat Bold",
+                "Body Text: Open Sans Regular",
+                "Accent Text: Roboto Italic"
+              ]
+            },
+            "right": {
+              "type": "image",
+              "src": "path/to/typography_samples_image.jpg",
+              "alt": "Typography Samples"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Brand Guidelines",
+        "content": [
+          {
+            "type": "text",
+            "body": "Consistent application of our brand identity across all marketing channels."
+          },
+          {
+            "type": "diagram",
+            "src": "path/to/brand_guidelines_diagram.jpg",
+            "alt": "Brand Guidelines Overview"
+          }
+        ]
+      },
+      {
+        "title": "Inspiring Our Marketing Campaigns",
+        "content": [
+          {
+            "type": "text",
+            "body": "Our new brand identity sets the stage for impactful and engaging marketing initiatives."
+          },
+          {
+            "type": "image",
+            "src": "path/to/marketing_campaign_image.jpg",
+            "alt": "Marketing Campaign Inspiration"
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "contentAnalysis": {
+      "category": "creative",
+      "complexity": "moderate",
+      "sentiment": "positive",
+      "keywords": [
+        "brand identity",
+        "logo design",
+        "color palette",
+        "typography",
+        "brand guidelines"
+      ],
+      "entities": [
+        {
+          "text": "brand identity",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "logo design",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "color palette",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "typography choices",
+          "type": "concept",
+          "confidence": 0.95
+        },
+        {
+          "text": "marketing campaigns",
+          "type": "concept",
+          "confidence": 0.95
+        }
+      ],
+      "suggestedLayouts": [
+        "title-bullets",
+        "two-column",
+        "image"
+      ],
+      "visualElements": [
+        {
+          "type": "image",
+          "relevance": 0.9,
+          "description": "Display of the new logo and color palette to visually represent brand identity."
+        },
+        {
+          "type": "diagram",
+          "relevance": 0.85,
+          "description": "Flowchart illustrating the brand guidelines and how they apply to marketing campaigns."
+        }
+      ],
+      "toneAlignment": 0.9,
+      "audienceAlignment": 0.85
+    },
+    "themeInfo": null,
+    "qualityScore": 85,
+    "performanceMetrics": {
+      "duration": 15591,
+      "cacheUsed": false
+    },
+    "storyFramework": null
+  },
+  "recommendations": {
+    "improvements": [],
+    "alternatives": [],
+    "optimizations": []
+  }
+}

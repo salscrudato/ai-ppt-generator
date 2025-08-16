@@ -106,11 +106,23 @@ enhancement-plan-*.ts
 
 # Additional test and debug patterns
 functions/test-*.js
+functions/test-*.ts
+functions/test-*.pptx
 functions/debug-*.js
 functions/demo-*.js
 functions/test-outputs/
 functions/*.pptx
 test-modern-api.pptx
+
+# Firebase debug logs
+firebase-debug.log
+firebase-debug.*.log
+
+# AI agent test artifacts
+functions/src/test-*.ts
+functions/src/testing/
+*-styling.js
+*-validation.js
 
 # AI agent optimization patterns
 *.md.backup

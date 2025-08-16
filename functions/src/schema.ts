@@ -203,7 +203,14 @@ export const SlideSpecSchema = z.object({
 
     /** Author and presentation metadata */
     author: z.string().optional(),
-    date: z.string().optional()
+    date: z.string().optional(),
+
+    /** Enhanced design properties */
+    textColor: VALIDATION_PATTERNS.colorHex.optional(),
+    backgroundColor: VALIDATION_PATTERNS.colorHex.optional(),
+    fontSize: z.number().min(8).max(72).optional(),
+    highContrast: z.boolean().optional(),
+    colorAdjustments: z.record(z.string()).optional()
   }).optional(),
 
   /** Speaker notes for presentation delivery and context */
@@ -218,7 +225,18 @@ export const SlideSpecSchema = z.object({
   imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
 
   /** Whether to generate the image (explicit user request) */
-  generateImage: z.boolean().optional()
+  generateImage: z.boolean().optional(),
+
+  /** Enhanced properties for premium features */
+  imageUrl: z.string().url().optional(),
+  altText: z.string().optional(),
+  accessibilityRole: z.string().optional(),
+  headingLevel: z.number().min(1).max(6).optional(),
+  imageOptimized: z.boolean().optional(),
+  structureOptimized: z.boolean().optional(),
+  brandCompliant: z.boolean().optional(),
+  table: z.any().optional(),
+  timelineData: z.any().optional()
 });
 
 /** TypeScript type inferred from the slide specification schema */
@@ -239,7 +257,8 @@ export const GenerationParamsSchema = z.object({
   /** Target audience for content adaptation and tone with expanded options */
   audience: z.enum([
     'general', 'executives', 'technical', 'sales', 'investors', 'students',
-    'healthcare', 'education', 'marketing', 'finance', 'startup', 'government'
+    'healthcare', 'education', 'marketing', 'finance', 'startup', 'government',
+    'business' // Added business audience
   ], {
     errorMap: () => ({ message: 'Invalid audience type. Must be one of the supported audience categories.' })
   }).default('general'),
@@ -266,7 +285,8 @@ export const GenerationParamsSchema = z.object({
   /** Industry context for specialized content */
   industry: z.enum([
     'general', 'technology', 'healthcare', 'finance', 'education', 'retail',
-    'manufacturing', 'consulting', 'nonprofit', 'government', 'startup'
+    'manufacturing', 'consulting', 'nonprofit', 'government', 'startup',
+    'hospitality' // Added hospitality industry
   ]).default('general'),
 
   /** Enhanced design preferences and branding */

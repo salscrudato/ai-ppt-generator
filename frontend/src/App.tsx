@@ -32,28 +32,32 @@
  * @author AI PowerPoint Generator Team
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AppState, GenerationParams, SlideSpec, Presentation } from './types';
 import { generateSlideId, createNewPresentation } from './types';
 import PromptInput from './components/PromptInput';
+import { useThemeContext } from './contexts/ThemeContext';
+import { useThemeSync, cleanupThemeStorage, migrateThemeStorage } from './hooks/useThemeSync';
 
 import SlideEditor from './components/SlideEditor';
 import PresentationManager from './components/PresentationManager';
+import ThemeCarouselDemo from './components/ThemeCarouselDemo';
 import StepIndicator from './components/StepIndicator';
-// import { LoadingOverlay } from './components/LoadingSpinner';
+
 import StageProgressOverlay from './components/StageProgressOverlay';
 import { ToastContainer, useToasts } from './components/ToastNotification';
 import MobileNavigation, { MobileLayout, useMobileNavigation } from './components/MobileNavigation';
 import { useLoadingState, LOADING_STAGES } from './hooks/useLoadingState';
 import { AriaLiveRegion } from './utils/accessibility';
 import AccessibilityControls, { SkipLinks } from './components/AccessibilityControls';
-import { initializeAccessibilityTesting } from './utils/accessibilityTesting';
+
 import { HiPresentationChartLine, HiRectangleStack, HiDocumentText } from 'react-icons/hi2';
 import { API_ENDPOINTS, verifyApiConnection } from './config';
 import { NotificationProvider, useNotifications } from './components/NotificationSystem';
-import { themeManager } from './utils/themeManager';
+
 import { responsiveUtils } from './utils/responsiveUtils';
+
 
 import './App.css';
 
@@ -69,6 +73,8 @@ function AppContent() {
   const notifications = useNotifications();
   const { toasts, showSuccess, showError, removeToast } = useToasts();
   const { isVisible: showMobileNav } = useMobileNavigation();
+  const { themeId: contextThemeId } = useThemeContext();
+
   // Initialize application state with optimized default values
   const [state, setState] = useState<AppState>({
     step: 'input',
@@ -107,6 +113,22 @@ function AppContent() {
     }
   });
 
+  // Enhanced theme synchronization with the new hook
+  const themeSync = useThemeSync({
+    mode: state.mode,
+    debug: process.env.NODE_ENV === 'development',
+    persistTheme: true
+  });
+
+  // Debug logging for theme synchronization
+  React.useEffect(() => {
+    console.log('🎨 App: Theme state', {
+      contextThemeId,
+      formThemeId: state.params.design?.theme,
+      step: state.step
+    });
+  }, [contextThemeId, state.params.design?.theme, state.step]);
+
   // Verify API connection on component mount for debugging
   useEffect(() => {
     const checkApiConnection = async () => {
@@ -118,20 +140,59 @@ function AppContent() {
     };
 
     checkApiConnection();
-    initializeAccessibilityTesting();
 
-    // Initialize theme system
-    themeManager.initialize();
+
 
     // Set up responsive breakpoint monitoring
     responsiveUtils.onBreakpointChange('app', (deviceInfo) => {
       console.log('📱 Breakpoint changed:', deviceInfo.currentBreakpoint);
     });
 
+
+
     return () => {
       responsiveUtils.removeBreakpointListener('app');
     };
   }, []);
+
+
+
+  // Initialize theme storage cleanup and migration on first load
+  useEffect(() => {
+    // Clean up old conflicting theme storage
+    cleanupThemeStorage();
+
+    // Migrate old theme storage to new format
+    migrateThemeStorage();
+
+    console.log('🎨 App: Theme storage initialized and cleaned up');
+  }, []);
+
+  // Sync theme when switching modes or when presentation theme changes
+  useEffect(() => {
+    if (state.mode === 'presentation' && state.presentation?.settings.theme) {
+      const presentationTheme = state.presentation.settings.theme;
+
+      // Use the enhanced theme sync to ensure consistency
+      if (themeSync.themeId !== presentationTheme) {
+        themeSync.setTheme(presentationTheme, 'presentation-mode');
+        console.log('🔄 App: Synced presentation theme', {
+          theme: presentationTheme,
+          mode: state.mode,
+          previous: themeSync.themeId
+        });
+      }
+    }
+  }, [state.mode, state.presentation?.settings.theme, themeSync]);
+
+  // Check for demo mode after all hooks
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDemoMode = urlParams.get('demo') === 'theme-carousel';
+
+  // If in demo mode, render the demo component
+  if (isDemoMode) {
+    return <ThemeCarouselDemo />;
+  }
 
   /**
    * Update application state with partial updates
@@ -153,6 +214,20 @@ function AppContent() {
    * @param params - User input parameters for slide generation
    */
   const generateDraft = async (params: GenerationParams) => {
+    // Debug logging to track when generation is triggered
+    console.log('🚀 App: generateDraft called', {
+      params,
+      currentStep: state.step,
+      currentLoading: state.loading,
+      stackTrace: new Error().stack?.split('\n').slice(1, 5)
+    });
+
+    // Prevent multiple simultaneous generations
+    if (state.loading) {
+      console.log('🚫 App: Generation already in progress, ignoring request');
+      return;
+    }
+
     updateState({ loading: true, error: undefined });
     loadingState.startLoading(LOADING_STAGES.SLIDE_GENERATION);
 
@@ -253,7 +328,7 @@ function AppContent() {
         body: JSON.stringify({
           spec: spec,
           withImage: shouldIncludeImages,
-          themeId: state.params.design?.theme || 'corporate-blue'
+          themeId: state.params.design?.theme || themeSync.themeId || 'corporate-blue'
         })
       });
 
@@ -297,7 +372,19 @@ function AppContent() {
    * Switch to presentation mode and create a new presentation
    */
   const switchToPresentationMode = () => {
-    const presentation = createNewPresentation('My Presentation');
+    // Get the current theme using the enhanced theme sync system
+    const currentTheme = state.params.design?.theme || themeSync.themeId || 'corporate-blue';
+
+    // Save current single mode theme before switching
+    themeSync.setThemeForMode('single', themeSync.themeId);
+
+    // Get or use the presentation mode theme
+    const presentationTheme = themeSync.getThemeForMode('presentation') || currentTheme;
+
+    const presentation = createNewPresentation('My Presentation', {
+      theme: presentationTheme,
+      brand: state.params.design?.brand
+    });
 
     // If we have a current draft, add it as the first slide
     if (state.draft) {
@@ -312,6 +399,15 @@ function AppContent() {
       step: 'presentation',
       presentation,
       selectedSlideId: presentation.slides[0]?.id
+    });
+
+    // Set the theme for presentation mode
+    themeSync.setTheme(presentationTheme, 'switch-to-presentation');
+
+    console.log('🔄 App: Switched to presentation mode', {
+      theme: presentationTheme,
+      previousTheme: currentTheme,
+      slideCount: presentation.slides.length
     });
   };
 
@@ -371,11 +467,27 @@ function AppContent() {
    * Switch back to single slide mode
    */
   const switchToSingleMode = () => {
+    // Save current presentation theme before switching
+    if (state.presentation?.settings.theme) {
+      themeSync.setThemeForMode('presentation', state.presentation.settings.theme);
+    }
+
+    // Get the single mode theme
+    const singleModeTheme = themeSync.getThemeForMode('single') || themeSync.themeId;
+
     updateState({
       mode: 'single',
       step: 'input',
       presentation: undefined,
       selectedSlideId: undefined
+    });
+
+    // Set the theme for single mode
+    themeSync.setTheme(singleModeTheme, 'switch-to-single');
+
+    console.log('🔄 App: Switched to single mode', {
+      theme: singleModeTheme,
+      previousMode: 'presentation'
     });
   };
 

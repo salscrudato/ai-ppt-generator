@@ -1,7 +1,11 @@
 {
+  // TypeScript Project References Configuration
+  // Uses project references for better build performance and organization
   "files": [],
   "references": [
+    // Main application TypeScript configuration
     { "path": "./tsconfig.app.json" },
+    // Node.js tools and build scripts configuration
     { "path": "./tsconfig.node.json" }
   ]
 }

@@ -31,7 +31,7 @@ export const LAYOUT_CONSTANTS = {
   /** Optimized content width for 16:9 */
   MAX_CONTENT_WIDTH: 8.5,
   /** Optimized starting Y position below title */
-  CONTENT_Y: 1.6,
+  CONTENT_Y: 1.8,
   /** Optimized column width for 16:9 */
   COLUMN_WIDTH: 4.0,
   /** Standard gap between columns */
