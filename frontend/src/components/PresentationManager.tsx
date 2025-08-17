@@ -1,6 +1,6 @@
 /**
  * PresentationManager Component
- * 
+ *
  * Main component for managing multi-slide presentations with drag-and-drop functionality.
  * Features:
  * - Slide thumbnail view with reordering
@@ -20,7 +20,7 @@ import {
   HiEye,
   HiPaintBrush
 } from 'react-icons/hi2';
-import DraggableSlideList from './DraggableSlideList';
+// import DraggableSlideList from './DraggableSlideList';
 import SlideEditor from './SlideEditor';
 
 import ThemeCarousel from './ThemeCarousel';
@@ -39,6 +39,7 @@ const SlidePreviewPlaceholder = ({ draft, onEdit, onBack }: any) => (
       <button onClick={onEdit} className="px-4 py-2 bg-blue-500 text-white rounded">Edit</button>
       <button onClick={onBack} className="px-4 py-2 bg-gray-500 text-white rounded">Back</button>
     </div>
+import { usePreviewOptions } from '../contexts/PreviewOptionsContext';
   </div>
 );
 
@@ -50,8 +51,8 @@ const ThemePreviewPlaceholder = ({ theme }: any) => (
 );
 import { createNewSlide, generateSlideId } from '../types';
 import { useTheme } from '../utils/themeUtils';
-import { useThemeContext } from '../contexts/ThemeContext';
-import { useThemeSync } from '../hooks/useThemeSync';
+// import { useThemeContext } from '../contexts/ThemeContext';
+// import { useThemeSync } from '../hooks/useThemeSync';
 
 interface PresentationManagerProps {
   /** The presentation to manage */
@@ -78,6 +79,7 @@ export default function PresentationManager({
   loading = false,
   error
 }: PresentationManagerProps) {
+  const previewOptions = usePreviewOptions();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [selectedSlideId, setSelectedSlideId] = useState<string | undefined>(
     presentation.slides[0]?.id
@@ -89,11 +91,12 @@ export default function PresentationManager({
   const selectedSlide = presentation.slides.find(slide => slide.id === selectedSlideId);
 
   // Enhanced theme synchronization
-  const themeSync = useThemeSync({
-    mode: 'presentation',
-    initialThemeId: presentation.settings.theme,
-    debug: false // Disabled to reduce console spam
-  });
+  // const themeSync = useThemeSync({
+  //   mode: 'presentation',
+  //   initialThemeId: presentation.settings.theme,
+  //   debug: false // Disabled to reduce console spam
+  // });
+  const themeSync = null; // Temporary fallback
 
   // Get current theme using the enhanced system
   const currentTheme = useTheme(themeSync.themeId);
@@ -149,11 +152,11 @@ export default function PresentationManager({
       id: generateSlideId(),
       title: `${slide.title} (Copy)`
     };
-    
+
     const slideIndex = presentation.slides.findIndex(s => s.id === slide.id);
     const newSlides = [...presentation.slides];
     newSlides.splice(slideIndex + 1, 0, newSlide);
-    
+
     updatePresentation({ slides: newSlides });
     setSelectedSlideId(newSlide.id);
   };
@@ -177,7 +180,7 @@ export default function PresentationManager({
     const newSlide = createNewSlide({
       title: `Slide ${presentation.slides.length + 1}`
     });
-    
+
     const newSlides = [...presentation.slides, newSlide];
     updatePresentation({ slides: newSlides });
     setSelectedSlideId(newSlide.id);
@@ -478,6 +481,23 @@ export default function PresentationManager({
             <div>
               <h1 className="text-2xl font-bold text-slate-900">
                 {presentation.title}
+          {/* Typography/Spacing Controls */}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" onChange={(e) => previewOptions.setOptions({ compactMode: e.target.checked })} />
+              Compact mode
+            </label>
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              onChange={(e) => previewOptions.setOptions({ typographyScale: e.target.value as any })}
+              defaultValue={previewOptions.typographyScale}
+            >
+              <option value="auto">Typography: Auto</option>
+              <option value="normal">Typography: Normal</option>
+              <option value="compact">Typography: Compact</option>
+              <option value="large">Typography: Large</option>
+            </select>
+          </div>
               </h1>
               <p className="text-slate-600">
                 {presentation.slides.length} slide{presentation.slides.length !== 1 ? 's' : ''}

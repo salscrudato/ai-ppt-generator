@@ -37,27 +37,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { AppState, GenerationParams, SlideSpec, Presentation } from './types';
 import { generateSlideId, createNewPresentation } from './types';
 import PromptInput from './components/PromptInput';
-import { useThemeContext } from './contexts/ThemeContext';
-import { useThemeSync, cleanupThemeStorage, migrateThemeStorage } from './hooks/useThemeSync';
-
 import SlideEditor from './components/SlideEditor';
 import PresentationManager from './components/PresentationManager';
-import ThemeCarouselDemo from './components/ThemeCarouselDemo';
-import StepIndicator from './components/StepIndicator';
 
-import StageProgressOverlay from './components/StageProgressOverlay';
-import { ToastContainer, useToasts } from './components/ToastNotification';
-import MobileNavigation, { MobileLayout, useMobileNavigation } from './components/MobileNavigation';
+import StepIndicator from './components/StepIndicator';
 import { useLoadingState, LOADING_STAGES } from './hooks/useLoadingState';
-import { AriaLiveRegion } from './utils/accessibility';
-import AccessibilityControls, { SkipLinks } from './components/AccessibilityControls';
 
 import { HiPresentationChartLine, HiRectangleStack, HiDocumentText } from 'react-icons/hi2';
 import { API_ENDPOINTS, verifyApiConnection } from './config';
-import { NotificationProvider, useNotifications } from './components/NotificationSystem';
-
-import { responsiveUtils } from './utils/responsiveUtils';
-
+import { frontendDebugLogger } from './utils/debugLogger';
 
 import './App.css';
 
@@ -68,12 +56,13 @@ import './App.css';
  * and seamless user experience. Handles API communication, error states, and
  * provides real-time feedback throughout the generation process.
  */
-// Main App component (internal)
 function AppContent() {
-  const notifications = useNotifications();
-  const { toasts, showSuccess, showError, removeToast } = useToasts();
-  const { isVisible: showMobileNav } = useMobileNavigation();
-  const { themeId: contextThemeId } = useThemeContext();
+  const contextThemeId = 'corporate-blue';
+
+  // Initialize logging
+  useEffect(() => {
+    console.log('App initialized');
+  }, []);
 
   // Initialize application state with optimized default values
   const [state, setState] = useState<AppState>({
@@ -89,36 +78,20 @@ function AppContent() {
     loading: false
   });
 
-  // Enhanced loading state management
+  // Simplified loading state management
   const loadingState = useLoadingState({
     defaultTimeout: 60000, // 60 seconds for slide generation
     onComplete: () => {
       console.log('✅ Operation completed successfully');
-      AriaLiveRegion.getInstance().announceSuccess('Slide generation completed successfully');
-      showSuccess('Success!', 'Your presentation has been generated successfully.');
     },
     onError: (error) => {
       console.error('❌ Operation failed:', error);
-      AriaLiveRegion.getInstance().announceError(error);
-      showError('Generation Failed', error, {
-        action: {
-          label: 'Try Again',
-          onClick: () => {
-            updateState({ error: undefined });
-            loadingState.resetLoading();
-          }
-        }
-      });
       updateState({ error, loading: false });
     }
   });
 
-  // Enhanced theme synchronization with the new hook
-  const themeSync = useThemeSync({
-    mode: state.mode,
-    debug: false, // Disabled to reduce console spam
-    persistTheme: true
-  });
+  // Simplified theme handling (theme sync removed)
+  const themeSync = { themeId: contextThemeId || 'corporate-blue' };
 
   // Debug logging for theme synchronization (only in development)
   React.useEffect(() => {
@@ -145,30 +118,12 @@ function AppContent() {
 
 
 
-    // Set up responsive breakpoint monitoring
-    responsiveUtils.onBreakpointChange('app', (deviceInfo) => {
-      console.log('📱 Breakpoint changed:', deviceInfo.currentBreakpoint);
-    });
 
-
-
-    return () => {
-      responsiveUtils.removeBreakpointListener('app');
-    };
   }, []);
 
 
 
-  // Initialize theme storage cleanup and migration on first load
-  useEffect(() => {
-    // Clean up old conflicting theme storage
-    cleanupThemeStorage();
 
-    // Migrate old theme storage to new format
-    migrateThemeStorage();
-
-    console.log('🎨 App: Theme storage initialized and cleaned up');
-  }, []);
 
   // Sync theme when switching modes or when presentation theme changes
   useEffect(() => {
@@ -187,14 +142,7 @@ function AppContent() {
     }
   }, [state.mode, state.presentation?.settings.theme, themeSync]);
 
-  // Check for demo mode after all hooks
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDemoMode = urlParams.get('demo') === 'theme-carousel';
 
-  // If in demo mode, render the demo component
-  if (isDemoMode) {
-    return <ThemeCarouselDemo />;
-  }
 
   /**
    * Update application state with partial updates
@@ -236,12 +184,10 @@ function AppContent() {
     try {
       // Stage 1: Analyzing input
       loadingState.setStage('analyzing');
-      AriaLiveRegion.getInstance().announceLoadingState('Analyzing your input');
       await new Promise(resolve => setTimeout(resolve, 800));
 
       // Stage 2: Generate content using AI
       loadingState.setStage('generating');
-      AriaLiveRegion.getInstance().announceLoadingState('Generating slide content with AI');
 
       // Call the backend API to generate the slide content
       const response = await fetch(API_ENDPOINTS.draft, {
@@ -265,7 +211,6 @@ function AppContent() {
 
       // Stage 3: Finalizing
       loadingState.setStage('finalizing');
-      AriaLiveRegion.getInstance().announceLoadingState('Finalizing your slide');
       await new Promise(resolve => setTimeout(resolve, 400));
 
       loadingState.completeLoading('Slide ready!');
@@ -273,7 +218,8 @@ function AppContent() {
       // Show quality feedback if available
       if (result.quality) {
         const qualityMessage = `Content quality: ${result.quality.grade} (${result.quality.score}/100)`;
-        notifications.showSuccess('Draft Generated', qualityMessage);
+        // notifications.showSuccess('Draft Generated', qualityMessage);
+        console.log('✅ Draft Generated:', qualityMessage);
       }
 
       updateState({
@@ -285,11 +231,12 @@ function AppContent() {
     } catch (error) {
       console.error('Draft generation failed:', error);
 
-      // Use enhanced notification system for better user feedback
-      notifications.handleApiError(error, 'Draft Generation', () => {
-        // Retry function
-        generateDraft(state.params);
-      });
+      // Use simple error notification (notifications system not available)
+      // notifications.handleApiError(error, 'Draft Generation', () => {
+      //   // Retry function
+      //   generateDraft(state.params);
+      // });
+      console.error('Draft generation error:', error);
 
       loadingState.failLoading('Draft generation failed');
       updateState({
@@ -309,6 +256,19 @@ function AppContent() {
    * @param spec - Complete slide specification for PowerPoint generation
    */
   const generateSlide = async (spec: SlideSpec) => {
+    const context: FrontendLogContext = {
+      requestId: `ppt_gen_${Date.now()}`,
+      component: 'App',
+      action: 'generateSlide',
+      route: '/generate'
+    };
+
+    // Log PowerPoint generation start
+    console.log(`Starting PowerPoint generation for: ${spec.title}`, {
+      layout: spec.layout,
+      hasContent: !!(spec.paragraph || (spec.bullets && spec.bullets.length > 0))
+    });
+
     updateState({ loading: true, error: undefined });
 
     // Start stage-based loading for PowerPoint generation
@@ -320,7 +280,6 @@ function AppContent() {
 
       // Stage 1: Preparing
       loadingState.setStage('preparing');
-      AriaLiveRegion.getInstance().announceLoadingState('Preparing presentation');
 
       // For PowerPoint generation, we need to handle blob responses
       // Keep using fetch directly for now since our API client expects JSON
@@ -330,7 +289,9 @@ function AppContent() {
         body: JSON.stringify({
           spec: spec,
           withImage: shouldIncludeImages,
-          themeId: state.params.design?.theme || themeSync.themeId || 'corporate-blue'
+          themeId: state.params.design?.theme || themeSync.themeId || 'corporate-blue',
+          compactMode: false, // previewOptions.compactMode fallback
+          typographyScale: 'medium' // previewOptions.typographyScale fallback
         })
       });
 
@@ -340,27 +301,63 @@ function AppContent() {
 
       // Stage 2: Building
       loadingState.setStage('building');
-      AriaLiveRegion.getInstance().announceLoadingState('Building PowerPoint file');
 
       const blob = await response.blob();
+
+      // Log download process
+      console.log('PowerPoint blob received', {
+        blobSize: blob.size,
+        blobType: blob.type
+      });
+
+      // Validate blob before download
+      if (blob.size === 0) {
+        throw new Error('Received empty PowerPoint file - generation may have failed');
+      }
+
+      if (blob.size < 1000) {
+        console.warn('PowerPoint file suspiciously small', {
+          fileSize: blob.size,
+          minimumExpected: 1000
+        });
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${spec.title.replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
+      const filename = `${spec.title.replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
 
+      // Log successful download
+      console.log('PowerPoint download initiated', {
+        filename,
+        fileSize: blob.size,
+        fileSizeKB: Math.round(blob.size / 1024)
+      });
+
       loadingState.completeLoading('PowerPoint generated successfully!');
-      showSuccess('Download Started', 'Your PowerPoint presentation is ready!');
+      // showSuccess('Download Started', 'Your PowerPoint presentation is ready!');
+      console.log('✅ Download Started: Your PowerPoint presentation is ready!');
       updateState({ loading: false });
     } catch (error) {
       console.error('PowerPoint generation failed:', error);
 
-      // Use enhanced notification system for better user feedback
-      notifications.handleApiError(error, 'PowerPoint Generation', () => {
-        // Retry function
-        generateSlide(spec);
+      // Log error details
+      console.error('PowerPoint generation context at failure', {
+        specTitle: spec.title,
+        specLayout: spec.layout,
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        errorMessage: error instanceof Error ? error.message : String(error)
       });
+
+      // Use enhanced notification system for better user feedback
+      // notifications.handleApiError(error, 'PowerPoint Generation', () => {
+      //   // Retry function
+      //   generateSlide(spec);
+      // });
+      console.error('PowerPoint generation error:', error);
 
       loadingState.failLoading('PowerPoint generation failed');
       updateState({
@@ -415,55 +412,9 @@ function AppContent() {
 
 
 
-  /**
-   * Mobile navigation handlers
-   */
-  const handleMobileNavigation = (action: 'back' | 'home' | 'switch-mode') => {
-    switch (action) {
-      case 'back':
-        if (state.step === 'edit') {
-          updateState({ step: 'input' });
-        } else if (state.step === 'presentation') {
-          updateState({ step: 'edit' });
-        }
-        break;
-      case 'home':
-        updateState({ step: 'input' });
-        break;
-      case 'switch-mode':
-        if (state.mode === 'single') {
-          switchToPresentationMode();
-        } else {
-          switchToSingleMode();
-        }
-        break;
-    }
-  };
+  // Mobile navigation handlers removed for simplification
 
-  const getMobilePrimaryAction = () => {
-    switch (state.step) {
-      case 'input':
-        return {
-          label: 'Generate',
-          action: () => generateDraft(state.params),
-          disabled: !state.params.prompt?.trim()
-        };
-      case 'edit':
-        return {
-          label: 'Create PPT',
-          action: () => generateSlide(state.editedSpec!),
-          disabled: !state.editedSpec
-        };
-      case 'presentation':
-        return {
-          label: 'Export',
-          action: () => generatePresentation(state.presentation!),
-          disabled: !state.presentation?.slides.length
-        };
-      default:
-        return { label: 'Continue', action: () => {}, disabled: true };
-    }
-  };
+  // Mobile primary action function removed for simplification
 
   /**
    * Switch back to single slide mode
@@ -513,10 +464,12 @@ function AppContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          spec: presentation.slides, // Send array of slides
-          themeId: presentation.settings.theme || 'corporate-blue',
-          withValidation: true
-        })
+            spec: presentation.slides, // Send array of slides
+            themeId: presentation.settings.theme || 'corporate-blue',
+            withValidation: true,
+            compactMode: false, // previewOptions.compactMode fallback
+            typographyScale: 'medium' // previewOptions.typographyScale fallback
+          })
       });
 
       if (!response.ok) {
@@ -602,13 +555,8 @@ function AppContent() {
     }
   };
 
-  const mobileAction = getMobilePrimaryAction();
-
   return (
-    <MobileLayout hasNavigation={showMobileNav}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-pink-50/20 relative overflow-hidden">
-      {/* Skip Links for Accessibility */}
-      <SkipLinks />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-pink-50/20 relative overflow-hidden">
 
       {/* Enhanced Background Pattern */}
       <div className="absolute inset-0" aria-hidden="true">
@@ -742,53 +690,29 @@ function AppContent() {
         </div>
       </motion.main>
 
-      {/* Enhanced Stage Progress Overlay */}
-      <StageProgressOverlay
-        visible={loadingState.isLoading}
-        currentStage={loadingState.currentStage}
-        stages={loadingState.stages}
-        currentStageIndex={loadingState.currentStageIndex}
-        progress={loadingState.progress}
-        error={state.error}
-        showStageList={true}
-        onDismiss={() => {
-          updateState({ error: undefined });
-          loadingState.resetLoading();
-        }}
-      />
-
-      {/* Toast Notifications */}
-      <ToastContainer
-        toasts={toasts}
-        onDismiss={removeToast}
-        position="top-right"
-      />
-
-      {/* Accessibility Controls */}
-      <AccessibilityControls />
-
-      {/* Mobile Navigation */}
-      {showMobileNav && (
-        <MobileNavigation
-          currentStep={state.step}
-          mode={state.mode}
-          loading={state.loading}
-          onNavigate={handleMobileNavigation}
-          onPrimaryAction={mobileAction.action}
-          primaryActionLabel={mobileAction.label}
-          primaryActionDisabled={mobileAction.disabled}
-        />
+      {/* Simplified loading indicator */}
+      {loadingState.isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <p className="text-gray-900 font-medium">
+                {typeof loadingState.currentStage === 'string' ? loadingState.currentStage : 'Loading...'}
+              </p>
+              {state.error && (
+                <p className="text-red-600 text-sm mt-2">
+                  {typeof state.error === 'string' ? state.error : state.error.message || 'An error occurred'}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
-      </div>
-    </MobileLayout>
+    </div>
   );
 }
 
-// Main App component with NotificationProvider wrapper
+// Main App component (simplified)
 export default function App() {
-  return (
-    <NotificationProvider>
-      <AppContent />
-    </NotificationProvider>
-  );
+  return <AppContent />;
 }

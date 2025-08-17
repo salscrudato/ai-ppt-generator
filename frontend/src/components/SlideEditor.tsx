@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SlideSpec } from '../types';
 import {
@@ -18,9 +18,10 @@ import {
 import clsx from 'clsx';
 
 // Import the new SlidePreview component and theme context
-import { SlidePreview } from './SlidePreview';
-import { useCurrentTheme } from '../contexts/ThemeContext';
-import { useThemeSync } from '../hooks/useThemeSync';
+// import { usePreviewOptions } from '../contexts/PreviewOptionsContext';
+// import { SlidePreview } from './SlidePreview';
+// import { useCurrentTheme } from '../contexts/ThemeContext';
+// import { useThemeSync } from '../hooks/useThemeSync';
 import type { ProfessionalTheme } from '../themes/professionalThemes';
 
 interface SlideEditorProps {
@@ -44,16 +45,26 @@ export default function SlideEditor({
   theme
 }: SlideEditorProps) {
   const [localSpec, setLocalSpec] = useState(spec);
-  const contextTheme = useCurrentTheme();
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('SlideEditor received spec:', spec);
+    console.log('SlideEditor localSpec:', localSpec);
+  }, [spec, localSpec]);
+  // const contextTheme = useCurrentTheme();
+  const contextTheme = null; // Temporary fallback
 
   // Enhanced theme synchronization for slide editor
-  const themeSync = useThemeSync({
-    mode: 'presentation', // SlideEditor is typically used in presentation mode
-    debug: false // Disabled to reduce console spam
-  });
+  // const themeSync = useThemeSync({
+  //   mode: 'presentation', // SlideEditor is typically used in presentation mode
+  //   debug: false // Disabled to reduce console spam
+  // });
+  const themeSync = null; // Temporary fallback
 
+  // const previewOptions = usePreviewOptions();
+  const previewOptions = { options: { zoom: 100 } }; // Temporary fallback
   // Use provided theme, synchronized theme, or fall back to context theme
-  const currentTheme = theme || themeSync.currentTheme || contextTheme;
+  const currentTheme = theme || themeSync?.currentTheme || contextTheme;
 
   const updateSpec = (updates: Partial<SlideSpec>) => {
     const updated = { ...localSpec, ...updates };
@@ -1213,6 +1224,23 @@ export default function SlideEditor({
               rows={4}
               className="input resize-none"
             />
+            {/* Typography & spacing options */}
+            <div className="flex items-center gap-3 mt-4">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked={previewOptions.compactMode} onChange={(e) => previewOptions.setOptions({ compactMode: e.target.checked })} />
+                Compact mode
+              </label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                onChange={(e) => previewOptions.setOptions({ typographyScale: e.target.value as any })}
+                value={previewOptions.typographyScale}
+              >
+                <option value="auto">Typography: Auto</option>
+                <option value="normal">Typography: Normal</option>
+                <option value="compact">Typography: Compact</option>
+                <option value="large">Typography: Large</option>
+              </select>
+            </div>
           </div>
         </motion.div>
 
@@ -1228,11 +1256,18 @@ export default function SlideEditor({
               <HiEye className="w-5 h-5 text-blue-500" />
               Live Preview
             </h3>
-            <SlidePreview
+            {/* <SlidePreview
               spec={localSpec}
               theme={currentTheme}
               className="w-full shadow-lg"
-            />
+            /> */}
+            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <div className="text-4xl mb-2">📄</div>
+                <div className="text-sm">Slide Preview</div>
+                <div className="text-xs mt-1">Preview temporarily disabled</div>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -1246,7 +1281,9 @@ export default function SlideEditor({
           className="flex items-center gap-3 p-4 bg-error-50 border border-error-200 rounded-xl text-error-700"
         >
           <HiExclamationTriangle className="w-5 h-5 flex-shrink-0" />
-          <span className="text-sm font-medium">{error}</span>
+          <span className="text-sm font-medium">
+            {typeof error === 'string' ? error : error?.message || 'An error occurred'}
+          </span>
         </motion.div>
       )}
 

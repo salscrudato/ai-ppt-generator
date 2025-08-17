@@ -34,7 +34,7 @@
 
 import { setGlobalOptions } from "firebase-functions";
 import { onRequest } from "firebase-functions/v2/https";
-import { logger } from "firebase-functions";
+import { logger as firebaseLogger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
 import express from "express";
 import cors from "cors";
@@ -46,7 +46,10 @@ import { apiKeyValidator } from "./config/apiKeyValidator";
 // Import enhanced core modules with error types
 import { AIGenerationError, ValidationError, TimeoutError, RateLimitError, ContentFilterError, NetworkError } from "./llm";
 import { PROFESSIONAL_THEMES, selectThemeForContent } from "./professionalThemes";
-import { debugLogger, DebugCategory } from "./utils/debugLogger";
+import { logger } from "./utils/smartLogger";
+import { env } from "./config/environment";
+import { generatePpt } from "./pptGenerator-simple";
+// Modern design system removed for simplification
 
 // Import new modular services
 import { aiService } from "./services/aiService";
@@ -54,8 +57,7 @@ import { powerPointService } from "./services/powerPointService";
 import { validationService } from "./services/validationService";
 import { type SlideSpec, safeValidateSlideSpec } from "./schema";
 
-// Import enhanced services
-import { EnhancedApiService } from "./services/enhancedApiService";
+// Enhanced services removed for simplification
 
 
 // Production-ready configuration constants
@@ -250,7 +252,7 @@ app.get('/health', (_req, res) => {
       });
     }
   } catch (error) {
-    logger.error('API key validation error:', error);
+    logger.error('API key validation error:', {}, error);
     apiKeyStatus = 'error';
   }
 
@@ -283,7 +285,7 @@ app.get('/config/status', (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('Configuration status check failed:', error);
+    logger.error('Configuration status check failed:', {}, error);
     return res.status(500).json({
       error: 'Configuration check failed',
       details: error instanceof Error ? error.message : String(error)
@@ -308,7 +310,7 @@ app.post('/config/test-api-key', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('API key test failed:', error);
+    logger.error('API key test failed:', {}, error);
     return res.status(500).json({
       error: 'API key test failed',
       details: error instanceof Error ? error.message : String(error)
@@ -561,6 +563,204 @@ app.post('/validate-content', async (req, res) => {
 });
 
 /**
+ * Enhanced PowerPoint file generation endpoint with professional design system
+ */
+app.post('/generate/professional', async (req, res) => {
+  const performanceMetric = startPerformanceTracking('/generate/professional', req);
+
+  try {
+    logger.info('Professional PowerPoint generation request', {
+      hasSpec: !!req.body.spec,
+      colorPalette: req.body.colorPalette || 'corporate',
+      metadata: req.body.metadata,
+      timestamp: new Date().toISOString()
+    });
+
+    let spec: SlideSpec[];
+    let slideCount = 1;
+    const colorPalette = req.body.colorPalette || 'corporate';
+
+    // Validate color palette
+    // Color palette validation simplified
+    const validPalettes = ['corporate', 'creative', 'finance', 'tech', 'ocean'];
+    if (!validPalettes.includes(colorPalette)) {
+      logger.warn('Invalid color palette provided', { colorPalette });
+      endPerformanceTracking(performanceMetric, false, 'INVALID_PALETTE_ERROR');
+      return res.status(400).json({
+        error: 'Invalid color palette provided',
+        code: 'INVALID_PALETTE_ERROR',
+        availablePalettes: validPalettes
+      });
+    }
+
+    // Handle slide generation from parameters or direct spec
+    if (!req.body.spec && req.body.prompt) {
+      // Generate slides from parameters using AI service
+      const paramValidation = validationService.validateGenerationParams(req.body);
+      if (!paramValidation.success) {
+        logger.warn('Invalid generation parameters provided', { errors: paramValidation.errors });
+        endPerformanceTracking(performanceMetric, false, 'INVALID_PARAMS_ERROR');
+        return res.status(400).json({
+          error: 'Invalid generation parameters provided',
+          code: 'INVALID_PARAMS_ERROR',
+          details: paramValidation.errors
+        });
+      }
+
+      try {
+        const generatedSpec = await aiService.generateSlideContent(paramValidation.data!);
+        spec = [generatedSpec];
+        logger.info('Successfully generated slide from parameters');
+      } catch (error) {
+        logger.error('Failed to generate slide from parameters', { error: error instanceof Error ? error.message : 'Unknown error' });
+        endPerformanceTracking(performanceMetric, false, 'AI_GENERATION_ERROR');
+        return res.status(500).json({
+          error: 'Failed to generate slide content',
+          code: 'AI_GENERATION_ERROR',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    } else if (req.body.spec) {
+      // Use provided specification
+      if (Array.isArray(req.body.spec)) {
+        const specArray = req.body.spec as unknown[];
+        const validatedSpecs: SlideSpec[] = [];
+        const validationErrors: string[][] = [];
+
+        for (const s of specArray) {
+          const v = safeValidateSlideSpec(s);
+          if (!v.success) {
+            validationErrors.push(v.errors || ['Unknown validation error']);
+          } else if (v.data) {
+            if (Array.isArray(v.data)) {
+              validatedSpecs.push(...v.data);
+            } else {
+              validatedSpecs.push(v.data);
+            }
+          }
+        }
+
+        if (validationErrors.length > 0) {
+          logger.warn('Some slide specifications failed validation', { validationErrors });
+          endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
+          return res.status(400).json({
+            error: 'Some slide specifications failed validation',
+            code: 'VALIDATION_ERROR',
+            details: validationErrors
+          });
+        }
+
+        spec = validatedSpecs;
+      } else {
+        const validation = safeValidateSlideSpec(req.body.spec);
+        if (!validation.success) {
+          logger.warn('Slide specification validation failed', { errors: validation.errors });
+          endPerformanceTracking(performanceMetric, false, 'VALIDATION_ERROR');
+          return res.status(400).json({
+            error: 'Slide specification validation failed',
+            code: 'VALIDATION_ERROR',
+            details: validation.errors
+          });
+        }
+        if (validation.data) {
+          spec = Array.isArray(validation.data) ? validation.data : [validation.data];
+        } else {
+          spec = [];
+        }
+      }
+    } else {
+      logger.warn('No slide specification or generation parameters provided');
+      endPerformanceTracking(performanceMetric, false, 'MISSING_INPUT_ERROR');
+      return res.status(400).json({
+        error: 'Either slide specification or generation parameters (prompt) must be provided',
+        code: 'MISSING_INPUT_ERROR',
+        details: ['Provide either "spec" with slide specifications or "prompt" with generation parameters']
+      });
+    }
+
+    slideCount = spec.length;
+
+    // Guard against undefined or empty spec
+    if (!spec || spec.length === 0) {
+      logger.error('Internal error: spec not defined or empty');
+      endPerformanceTracking(performanceMetric, false, 'INTERNAL_ERROR');
+      return res.status(500).json({
+        error: 'Internal error: No valid specification provided',
+        code: 'INTERNAL_ERROR'
+      });
+    }
+
+    // Generate PowerPoint using simplified generator
+    const requestId = logger.generateRequestId();
+    const context = { requestId, operation: 'ppt-generation' };
+
+    logger.startPerf(`ppt-gen-${requestId}`, context);
+    logger.info('Starting PowerPoint generation', context, {
+      slideCount: Array.isArray(spec) ? spec.length : 1,
+      withValidation: req.body.withValidation ?? true,
+      firstSlideTitle: Array.isArray(spec) ? spec[0]?.title : (spec as SlideSpec).title,
+      firstSlideLayout: Array.isArray(spec) ? spec[0]?.layout : (spec as SlideSpec).layout
+    });
+
+    const pptBuffer = await generatePpt(spec, req.body.withValidation ?? true);
+
+    const duration = logger.endPerf(`ppt-gen-${requestId}`, context, {
+      bufferSize: pptBuffer.length,
+      sizeKB: Math.round(pptBuffer.length / 1024)
+    });
+
+    // Configure response headers
+    const firstSpec = spec[0];
+    const sanitizedTitle = firstSpec.title?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'presentation';
+    const filename = `${sanitizedTitle}_professional.pptx`;
+
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.setHeader('Content-Length', pptBuffer.length.toString());
+
+    endPerformanceTracking(performanceMetric, true);
+    logger.info('Professional PowerPoint generated successfully', {
+      slideCount,
+      colorPalette,
+      bufferSize: pptBuffer.length,
+      filename
+    });
+
+    return res.send(pptBuffer);
+
+  } catch (error) {
+    logger.error('Professional PowerPoint generation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
+    endPerformanceTracking(performanceMetric, false, 'GENERATION_ERROR');
+
+    if (error instanceof AIGenerationError) {
+      return res.status(503).json({
+        error: 'AI service temporarily unavailable',
+        code: 'AI_SERVICE_ERROR',
+        details: error.message
+      });
+    }
+
+    if (error instanceof ValidationError) {
+      return res.status(400).json({
+        error: 'Content validation failed',
+        code: 'VALIDATION_ERROR',
+        details: error.message
+      });
+    }
+
+    return res.status(500).json({
+      error: 'PowerPoint generation failed',
+      code: 'GENERATION_ERROR',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * PowerPoint file generation endpoint
  */
 app.post('/generate', async (req, res) => {
@@ -686,7 +886,9 @@ app.post('/generate', async (req, res) => {
       includeImages: true,
       includeNotes: true,
       includeMetadata: true,
-      quality: 'standard'
+      quality: 'standard',
+      compactMode: Boolean(req.body.compactMode),
+      typographyScale: (req.body.typographyScale as any) || 'auto'
     });
 
     const pptBuffer = powerPointResult.buffer;
@@ -778,40 +980,7 @@ app.post('/generate', async (req, res) => {
   }
 });
 
-/**
- * ENHANCED API ENDPOINTS
- * Premium features with advanced AI processing, dynamic themes, and intelligent layouts
- */
-
-/**
- * Enhanced slide generation with AI orchestration
- */
-app.post('/enhanced/slide', EnhancedApiService.generateEnhancedSlide);
-
-/**
- * Enhanced presentation generation with storytelling frameworks
- */
-app.post('/enhanced/presentation', EnhancedApiService.generateEnhancedPresentation);
-
-/**
- * Performance analytics endpoint
- */
-app.get('/enhanced/analytics', EnhancedApiService.getPerformanceAnalytics);
-
-/**
- * Template recommendations based on content analysis
- */
-app.post('/enhanced/templates', EnhancedApiService.getTemplateRecommendations);
-
-/**
- * Collaboration session management
- */
-app.post('/enhanced/collaboration', EnhancedApiService.createCollaborationSession);
-
-/**
- * Advanced export with multiple formats and optimizations
- */
-app.post('/enhanced/export', EnhancedApiService.exportPresentation);
+// Enhanced API endpoints removed for simplification
 
 /**
  * Export the Express app as an optimized Firebase Cloud Function

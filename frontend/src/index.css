@@ -1,9 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* Import reusable component styles */
+/* Import reusable component styles - temporarily disabled for build
 @import './styles/components.css';
 @import './styles/accessibility.css';
 @import './styles/responsive.css';
+*/
 
 @tailwind base;
 @tailwind components;

@@ -22,20 +22,24 @@ export const SLIDE_DIMENSIONS = {
 } as const;
 
 /**
- * Layout spacing constants that mirror backend generator
- * All values in inches, converted to relative units for preview
+ * Enhanced layout spacing constants that mirror backend generator
+ * All values in inches, optimized for modern presentations and full slide utilization
  */
 export const LAYOUT_CONSTANTS = {
-  /** Enhanced padding for 16:9 format */
+  /** Reduced padding for better space utilization */
   CONTENT_PADDING: 0.5,
-  /** Optimized content width for 16:9 */
+  /** Maximized content width for 16:9 format */
   MAX_CONTENT_WIDTH: 9.0,
-  /** Optimized starting Y position below title */
-  CONTENT_Y: 1.2,
-  /** Optimized column width for 16:9 */
-  COLUMN_WIDTH: 4.25,
-  /** Standard gap between columns */
+  /** Optimized starting Y position below title (aligned with backend) */
+  CONTENT_Y: 1.6,
+  /** Enhanced column width for better balance (aligned with backend) */
+  COLUMN_WIDTH: 4.0,
+  /** Refined gap between columns */
   COLUMN_GAP: 0.5,
+  /** Enhanced spacing between elements */
+  ELEMENT_SPACING: 0.25,
+  /** Margin for visual breathing room */
+  VISUAL_MARGIN: 0.15,
 } as const;
 
 /**
@@ -55,8 +59,8 @@ export const toPercentageHeight = (inches: number): number => {
 };
 
 /**
- * Responsive layout measurements for preview components
- * All values as percentages for CSS compatibility
+ * Enhanced responsive layout measurements for preview components
+ * All values as percentages for CSS compatibility, optimized for modern presentations
  */
 export const PREVIEW_LAYOUT = {
   /** Content padding as percentage of slide width */
@@ -71,23 +75,27 @@ export const PREVIEW_LAYOUT = {
   columnGap: toPercentage(LAYOUT_CONSTANTS.COLUMN_GAP),
   /** Right column X position */
   rightColumnX: toPercentage(LAYOUT_CONSTANTS.CONTENT_PADDING + LAYOUT_CONSTANTS.COLUMN_WIDTH + LAYOUT_CONSTANTS.COLUMN_GAP),
+  /** Element spacing as percentage */
+  elementSpacing: toPercentage(LAYOUT_CONSTANTS.ELEMENT_SPACING),
+  /** Visual margin as percentage */
+  visualMargin: toPercentage(LAYOUT_CONSTANTS.VISUAL_MARGIN),
 } as const;
 
 /**
- * Typography scaling for preview
- * Relative to slide dimensions for responsive scaling
+ * Enhanced typography scaling for preview
+ * Optimized for better readability and modern visual hierarchy
  */
 export const PREVIEW_TYPOGRAPHY = {
-  /** Title font size relative to container */
-  titleSize: '1.8rem',
-  /** Heading font size */
-  headingSize: '1.2rem',
-  /** Body text size */
-  bodySize: '0.9rem',
-  /** Small text size */
-  smallSize: '0.75rem',
-  /** Tiny text size */
-  tinySize: '0.65rem',
+  /** Enhanced title font size for better prominence */
+  titleSize: '2.2rem',
+  /** Improved heading font size */
+  headingSize: '1.5rem',
+  /** Enhanced body text size for better readability */
+  bodySize: '1.1rem',
+  /** Improved small text size */
+  smallSize: '0.9rem',
+  /** Enhanced tiny text size for better legibility */
+  tinySize: '0.8rem',
 } as const;
 
 /**

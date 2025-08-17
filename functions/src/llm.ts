@@ -8,14 +8,25 @@
  * - Step 4: Final validation and styling refinement
  * - Robust error handling, retries, and performance monitoring
  *
- * @version 3.2.0-enhanced
- * @author AI PowerPoint Generator Team
- * (enhanced by expert co-pilot)
+ * @version 3.3.0-enhanced
+ *   - Safer JSON parsing with structured extraction fallback
+ *   - Schema recovery path before final failure
+ *   - Optional runtime overrides (temperature/timeout/maxTokens)
+ *   - Content length budgeting (short/medium/long)
+ *   - Extra chart validation (series length vs categories)
+ *   - Concurrency-limited batch generation (env: AI_BATCH_CONCURRENCY)
+ *   - Hex color normalization (#RGB -> #RRGGBB)
+ *   - Better cancellation support via AbortSignal passthrough
+ *
+ * @author
+ *   AI PowerPoint Generator Team (enhanced by expert co-pilot)
  */
 
 /* eslint-disable no-console */
 
 import OpenAI from 'openai';
+import { logger } from './utils/smartLogger';
+import { env } from './config/environment';
 
 /* =========================================================================================
  * SECTION: Types & Schema (inline drop-in replacement for ./schema)
@@ -52,7 +63,7 @@ export interface ContentItem {
   type: 'text' | 'bullet' | 'number' | 'icon' | 'metric';
   content: string;
   emphasis?: Emphasis;
-  color?: string; // hex
+  color?: string; // #RRGGBB
   iconName?: string;
 }
 
@@ -81,7 +92,7 @@ export interface ProcessStep {
 
 export interface DesignHints {
   theme?: string;
-  accentColor?: string; // hex
+  accentColor?: string; // #RRGGBB
   backgroundStyle?: string;
   imageStyle?: 'photo' | 'illustration' | 'isometric';
 }
@@ -114,40 +125,198 @@ export interface GenerationParams {
   contentLength?: ContentLength;
   withImage?: boolean;
   brand?: {
-    primaryColor?: string; // hex
-    secondaryColor?: string; // hex
+    primaryColor?: string; // #RRGGBB
+    secondaryColor?: string; // #RRGGBB
     font?: string;
     logoUrl?: string;
   };
   language?: string; // e.g., "en", "es"
   mode?: 'test' | 'production';
+
+  /** Optional runtime overrides (non-breaking additions) */
+  temperatureOverride?: number;
+  timeoutMsOverride?: number;
+  maxTokensOverride?: number;
+  /** Optional abort signal to cancel long operations */
+  signal?: AbortSignal;
 }
 
-/** Validation result structure (drop-in replacement for safeValidateSlideSpec) */
+/* =========================================================================================
+ * SECTION: Helpers (hex, json extraction, truncation, concurrency)
+ * =======================================================================================*/
+
+const VALID_LAYOUTS: LayoutType[] = [
+  'title',
+  'title-bullets',
+  'title-paragraph',
+  'two-column',
+  'image-right',
+  'image-left',
+  'quote',
+  'chart',
+  'timeline',
+  'process-flow',
+  'comparison-table',
+  'before-after',
+  'problem-solution',
+  'mixed-content',
+  'metrics-dashboard',
+  'thank-you'
+];
+
+const VALID_EMPHASIS: Emphasis[] = ['normal', 'bold', 'italic', 'highlight'];
+
+const HEX6 = /^#[0-9A-Fa-f]{6}$/;
+const HEX3 = /^#[0-9A-Fa-f]{3}$/;
+
+function normalizeHex6(input: any): string | undefined {
+  if (typeof input !== 'string') return undefined;
+  const s = input.trim();
+  if (HEX6.test(s)) return s;
+  if (HEX3.test(s)) {
+    const [, tri] = s.match(HEX3) as RegExpMatchArray;
+    const expanded =
+      '#' +
+      tri
+        .split('')
+        .map((c) => c + c)
+        .join('');
+    return expanded;
+  }
+  return undefined;
+}
+
+function truncateWithEllipsis(s: string, max: number): string {
+  if (s.length <= max) return s;
+  // Prefer trimming at a word boundary within ~15 chars past the limit
+  const slice = s.slice(0, max + 15);
+  const lastSpace = slice.lastIndexOf(' ');
+  const cut = lastSpace > max - 10 ? lastSpace : max;
+  return s.slice(0, cut).trimEnd() + '…';
+}
+
+function clamp<T>(n: T, min: T, max: T): T {
+  // Simple generic clamp for numbers (TS keeps T=number usage)
+  const nn = n as unknown as number;
+  const mi = min as unknown as number;
+  const ma = max as unknown as number;
+  return Math.max(mi, Math.min(ma, nn)) as unknown as T;
+}
+
+function applyContentLengthBudget(spec: SlideSpec, target: ContentLength | undefined): SlideSpec {
+  if (!target) return spec;
+  const budget =
+    target === 'short'
+      ? { bulletsMax: 4, bulletLen: 90, paraLen: 300 }
+      : target === 'long'
+      ? { bulletsMax: 8, bulletLen: 140, paraLen: 900 }
+      : { bulletsMax: 6, bulletLen: 120, paraLen: 600 };
+
+  const trimBullets = (arr?: string[]) =>
+    Array.isArray(arr)
+      ? arr
+          .slice(0, budget.bulletsMax)
+          .map((b) => truncateWithEllipsis(String(b), budget.bulletLen))
+      : undefined;
+
+  const trimmed: SlideSpec = {
+    ...spec,
+    bullets: trimBullets(spec.bullets),
+    paragraph: spec.paragraph ? truncateWithEllipsis(spec.paragraph, budget.paraLen) : undefined,
+    left: spec.left
+      ? {
+          ...spec.left,
+          bullets: trimBullets(spec.left.bullets),
+          paragraph: spec.left.paragraph ? truncateWithEllipsis(spec.left.paragraph, Math.round(budget.paraLen * 0.6)) : undefined
+        }
+      : undefined,
+    right: spec.right
+      ? {
+          ...spec.right,
+          bullets: trimBullets(spec.right.bullets),
+          paragraph: spec.right.paragraph ? truncateWithEllipsis(spec.right.paragraph, Math.round(budget.paraLen * 0.6)) : undefined
+        }
+      : undefined,
+    notes: spec.notes ? truncateWithEllipsis(spec.notes, 1200) : undefined,
+    sources: spec.sources ? spec.sources.slice(0, 8) : undefined
+  };
+
+  return trimmed;
+}
+
+/**
+ * Extract the first valid JSON object substring from a model response.
+ * Handles nested/quoted braces to mitigate minor non-JSON pre/postamble.
+ */
+function extractFirstJsonObject(text: string): string | null {
+  if (!text) return null;
+  const len = text.length;
+  let i = 0;
+  // Find first '{'
+  while (i < len && text[i] !== '{') i++;
+  if (i >= len) return null;
+
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let j = i; j < len; j++) {
+    const ch = text[j];
+    if (inStr) {
+      if (esc) {
+        esc = false;
+      } else if (ch === '\\') {
+        esc = true;
+      } else if (ch === '"') {
+        inStr = false;
+      }
+      continue;
+    } else {
+      if (ch === '"') {
+        inStr = true;
+        continue;
+      }
+      if (ch === '{') depth++;
+      if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          return text.slice(i, j + 1);
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Minimal, dependency-free promise concurrency */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= items.length) break;
+      results[i] = await fn(items[i], i);
+    }
+  }
+
+  const workers = Array.from({ length: clamp(limit, 1, 16) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+/* =========================================================================================
+ * SECTION: Validation
+ * =======================================================================================*/
+
 export function safeValidateSlideSpec(
   data: any
 ): { success: true; data: SlideSpec } | { success: false; errors: string[] } {
   const errors: string[] = [];
-  const validLayouts: LayoutType[] = [
-    'title',
-    'title-bullets',
-    'title-paragraph',
-    'two-column',
-    'image-right',
-    'image-left',
-    'quote',
-    'chart',
-    'timeline',
-    'process-flow',
-    'comparison-table',
-    'before-after',
-    'problem-solution',
-    'mixed-content',
-    'metrics-dashboard',
-    'thank-you'
-  ];
-
-  const isHex = (s: any) => typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s);
 
   const isString = (v: any) => typeof v === 'string' && v.trim().length > 0;
   const isStrArr = (a: any) => Array.isArray(a) && a.every((v) => typeof v === 'string');
@@ -165,31 +334,27 @@ export function safeValidateSlideSpec(
 
   // Required
   if (!isString(data.title)) errors.push('title is required and must be a non-empty string.');
-  if (!isString(data.layout) || !validLayouts.includes(data.layout)) {
-    errors.push(`layout is required and must be one of: ${validLayouts.join(', ')}`);
+  if (!isString(data.layout) || !VALID_LAYOUTS.includes(data.layout)) {
+    errors.push(`layout is required and must be one of: ${VALID_LAYOUTS.join(', ')}`);
   }
 
   // Optional basics
-  if (data.bullets !== undefined && !isStrArr(data.bullets))
-    errors.push('bullets must be an array of strings.');
-  if (data.paragraph !== undefined && typeof data.paragraph !== 'string')
-    errors.push('paragraph must be a string.');
+  if (data.bullets !== undefined && !isStrArr(data.bullets)) errors.push('bullets must be an array of strings.');
+  if (data.paragraph !== undefined && typeof data.paragraph !== 'string') errors.push('paragraph must be a string.');
 
   // Left/Right columns
   const sideAllowed = ['title', 'bullets', 'paragraph'];
   if (data.left) {
     ensureOnlyAllowedKeys(data.left, sideAllowed, 'left');
     if (data.left.title !== undefined && !isString(data.left.title)) errors.push('left.title must be a string.');
-    if (data.left.bullets !== undefined && !isStrArr(data.left.bullets))
-      errors.push('left.bullets must be an array of strings.');
+    if (data.left.bullets !== undefined && !isStrArr(data.left.bullets)) errors.push('left.bullets must be an array of strings.');
     if (data.left.paragraph !== undefined && typeof data.left.paragraph !== 'string')
       errors.push('left.paragraph must be a string.');
   }
   if (data.right) {
     ensureOnlyAllowedKeys(data.right, sideAllowed, 'right');
     if (data.right.title !== undefined && !isString(data.right.title)) errors.push('right.title must be a string.');
-    if (data.right.bullets !== undefined && !isStrArr(data.right.bullets))
-      errors.push('right.bullets must be an array of strings.');
+    if (data.right.bullets !== undefined && !isStrArr(data.right.bullets)) errors.push('right.bullets must be an array of strings.');
     if (data.right.paragraph !== undefined && typeof data.right.paragraph !== 'string')
       errors.push('right.paragraph must be a string.');
   }
@@ -208,11 +373,11 @@ export function safeValidateSlideSpec(
           errors.push(`contentItems[${i}].type invalid.`);
         }
         if (!isString(item.content)) errors.push(`contentItems[${i}].content must be a non-empty string.`);
-        if (item.emphasis !== undefined && !['normal', 'bold', 'italic', 'highlight'].includes(item.emphasis)) {
+        if (item.emphasis !== undefined && !VALID_EMPHASIS.includes(item.emphasis)) {
           errors.push(`contentItems[${i}].emphasis invalid.`);
         }
-        if (item.color !== undefined && !isHex(item.color)) {
-          errors.push(`contentItems[${i}].color must be a 6-digit hex color like #1A2B3C.`);
+        if (item.color !== undefined && !normalizeHex6(item.color)) {
+          errors.push(`contentItems[${i}].color must be a hex color like #1A2B3C or #ABC.`);
         }
         if (item.iconName !== undefined && typeof item.iconName !== 'string') {
           errors.push(`contentItems[${i}].iconName must be a string.`);
@@ -235,6 +400,20 @@ export function safeValidateSlideSpec(
       !c.series.every((s: any) => isString(s?.name) && Array.isArray(s?.data) && s.data.every((n: any) => typeof n === 'number'))
     ) {
       errors.push('chart.series must be [{ name: string, data: number[] }, ...].');
+    }
+    // Additional structural validation: series length vs categories
+    if (Array.isArray(c?.categories) && Array.isArray(c?.series)) {
+      const catLen = c.categories.length;
+      if (c.type === 'pie') {
+        if (c.series.length !== 1) errors.push('chart.series for pie must contain exactly one series.');
+        else if (Array.isArray(c.series[0].data) && c.series[0].data.length !== catLen) {
+          errors.push('For pie charts, series[0].data length must match categories length.');
+        }
+      } else {
+        if (!c.series.every((s: any) => Array.isArray(s.data) && s.data.length === catLen)) {
+          errors.push('For bar/line charts, each series.data length must match categories length.');
+        }
+      }
     }
   }
 
@@ -286,7 +465,7 @@ export function safeValidateSlideSpec(
     const d = data.design;
     const allowed = ['theme', 'accentColor', 'backgroundStyle', 'imageStyle'];
     ensureOnlyAllowedKeys(d, allowed, 'design');
-    if (d.accentColor !== undefined && !isHex(d.accentColor)) errors.push('design.accentColor must be hex.');
+    if (d.accentColor !== undefined && !normalizeHex6(d.accentColor)) errors.push('design.accentColor must be hex.');
     if (d.imageStyle !== undefined && !['photo', 'illustration', 'isometric'].includes(d.imageStyle))
       errors.push('design.imageStyle must be photo|illustration|isometric.');
   }
@@ -429,10 +608,7 @@ export function generateRefinementPrompt(input: GenerationParams, partial: Parti
 }
 
 /** Batch prompt builder for cohesive image prompts */
-export function generateBatchImagePrompts(
-  input: GenerationParams,
-  slideSpecs: Partial<SlideSpec>[]
-): string {
+export function generateBatchImagePrompts(input: GenerationParams, slideSpecs: Partial<SlideSpec>[]): string {
   const titles = slideSpecs.map((s, i) => ({ index: i, title: s.title ?? `Slide ${i + 1}` }));
   return [
     `You will generate cohesive, emotionally-resonant image prompts for multiple slides.`,
@@ -484,7 +660,7 @@ export function logCostEstimate(args: { textTokens: number; imageCount: number; 
 }
 
 /* =========================================================================================
- * SECTION: Error Types (unchanged + a few additions)
+ * SECTION: Error Types
  * =======================================================================================*/
 
 export class AIGenerationError extends Error {
@@ -673,14 +849,24 @@ function sanitizeAIResponse(data: any): any {
           type: String(type) as ContentItem['type'],
           content: String(content).trim()
         };
-        if (item.emphasis && ['normal', 'bold', 'italic', 'highlight'].includes(item.emphasis)) out.emphasis = item.emphasis;
-        if (item.color && typeof item.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(item.color)) out.color = item.color;
+        if (item.emphasis && VALID_EMPHASIS.includes(item.emphasis)) out.emphasis = item.emphasis;
+
+        const normalizedColor = normalizeHex6(item.color);
+        if (normalizedColor) out.color = normalizedColor;
+
         if (item.iconName && typeof item.iconName === 'string') out.iconName = item.iconName;
         return out;
       })
       .filter(Boolean);
 
     if (sanitized.contentItems.length === 0) delete sanitized.contentItems;
+  }
+
+  // design accent color normalization
+  if (sanitized.design?.accentColor) {
+    const normalized = normalizeHex6(sanitized.design.accentColor);
+    if (normalized) sanitized.design.accentColor = normalized;
+    else delete sanitized.design.accentColor;
   }
 
   return sanitized;
@@ -691,32 +877,12 @@ export function sanitizeAIResponseWithRecovery(data: any): any {
 
   let sanitized = sanitizeAIResponse(data);
 
-  const validLayouts: LayoutType[] = [
-    'title',
-    'title-bullets',
-    'title-paragraph',
-    'two-column',
-    'image-right',
-    'image-left',
-    'quote',
-    'chart',
-    'timeline',
-    'process-flow',
-    'comparison-table',
-    'before-after',
-    'problem-solution',
-    'mixed-content',
-    'metrics-dashboard',
-    'thank-you'
-  ];
-
-  // Ensure title
+  // Ensure requireds or infer
   if (!sanitized.title || typeof sanitized.title !== 'string' || sanitized.title.trim() === '') {
     sanitized.title = 'Untitled Slide';
   }
 
-  // Infer layout if invalid/missing
-  if (!sanitized.layout || !validLayouts.includes(sanitized.layout)) {
+  if (!sanitized.layout || !VALID_LAYOUTS.includes(sanitized.layout)) {
     if (sanitized.bullets && sanitized.bullets.length > 0) sanitized.layout = 'title-bullets';
     else if (sanitized.paragraph) sanitized.layout = 'title-paragraph';
     else if (sanitized.left || sanitized.right) sanitized.layout = 'two-column';
@@ -741,7 +907,6 @@ export function sanitizeAIResponseWithRecovery(data: any): any {
     'design'
   ]);
 
-  // Strip unknown props
   const clean: Record<string, any> = {};
   for (const key of Object.keys(sanitized)) {
     if (allowedProperties.has(key)) clean[key] = sanitized[key];
@@ -755,7 +920,7 @@ export function sanitizeAIResponseWithRecovery(data: any): any {
 
 /**
  * We prefer Firebase defineSecret('OPENAI_API_KEY') when available,
- * otherwise we fall back to process.env.OPENAI_API_KEY.
+ * otherwise we fall back to process.env or env helper.
  */
 type SecretLike = { value(): string | undefined };
 let secretProvider: SecretLike | null = null;
@@ -773,17 +938,15 @@ try {
 
 let openai: OpenAI | null = null;
 
-function getApiKey(): string {
-  const fromSecret = secretProvider?.value?.();
-  const fromEnv = process.env.OPENAI_API_KEY;
-  const apiKey = fromSecret || fromEnv;
-  if (!apiKey) throw new Error('OpenAI API key is not configured (set Firebase Secret OPENAI_API_KEY or env var).');
-  return apiKey;
-}
-
 function getOpenAI(): OpenAI {
   if (!openai) {
-    openai = new OpenAI({ apiKey: getApiKey() });
+    const fromSecret = secretProvider?.value?.();
+    const apiKey = fromSecret || env.getOpenAIApiKey();
+    if (!apiKey) {
+      throw new Error('Missing OpenAI API key. Ensure OPENAI_API_KEY is configured.');
+    }
+    openai = new OpenAI({ apiKey });
+    logger.info('OpenAI client initialized', { operation: 'openai-init' });
   }
   return openai;
 }
@@ -794,20 +957,38 @@ function getOpenAI(): OpenAI {
 
 const AI_CONFIG = getTextModelConfig();
 
+type CallOverrides = Partial<{
+  temperature: number;
+  timeoutMs: number;
+  maxTokens: number;
+  signal: AbortSignal;
+}>;
+
+function deriveCallOverrides(input?: GenerationParams): CallOverrides {
+  if (!input) return {};
+  const o: CallOverrides = {};
+  if (typeof input.temperatureOverride === 'number') o.temperature = input.temperatureOverride;
+  if (typeof input.timeoutMsOverride === 'number') o.timeoutMs = input.timeoutMsOverride;
+  if (typeof input.maxTokensOverride === 'number') o.maxTokens = input.maxTokensOverride;
+  if (input.signal) o.signal = input.signal;
+  return o;
+}
+
 /**
  * Make a single validated SlideSpec call with retries and fallbacks.
  */
 async function aiCallWithRetry(
   prompt: string,
   stepName: string,
-  previousSpec?: Partial<SlideSpec>
+  previousSpec?: Partial<SlideSpec>,
+  overrides?: CallOverrides
 ): Promise<SlideSpec> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= AI_CONFIG.maxRetries; attempt++) {
     try {
       console.log(`${stepName} attempt ${attempt}/${AI_CONFIG.maxRetries} (model: ${AI_CONFIG.model})`);
-      return await makeAICallSlideSpec(prompt, stepName, previousSpec, AI_CONFIG.model, attempt);
+      return await makeAICallSlideSpec(prompt, stepName, previousSpec, AI_CONFIG.model, attempt, overrides);
     } catch (error: any) {
       lastError = error;
       console.error(`${stepName} attempt ${attempt} failed:`, error?.message || error);
@@ -831,7 +1012,14 @@ async function aiCallWithRetry(
   if (AI_CONFIG.fallbackModel && AI_CONFIG.fallbackModel !== AI_CONFIG.model) {
     console.log(`Primary model failed; trying fallback model: ${AI_CONFIG.fallbackModel}`);
     try {
-      return await makeAICallSlideSpec(prompt, stepName, previousSpec, AI_CONFIG.fallbackModel, AI_CONFIG.maxRetries + 1);
+      return await makeAICallSlideSpec(
+        prompt,
+        stepName,
+        previousSpec,
+        AI_CONFIG.fallbackModel,
+        AI_CONFIG.maxRetries + 1,
+        overrides
+      );
     } catch (fallbackError: any) {
       lastError = fallbackError;
       console.error(`Fallback model failed for ${stepName}:`, fallbackError?.message || fallbackError);
@@ -873,10 +1061,17 @@ async function makeAICallSlideSpec(
   stepName: string,
   previousSpec: Partial<SlideSpec> | undefined,
   model: string,
-  attempt: number
+  attempt: number,
+  overrides?: CallOverrides
 ): Promise<SlideSpec> {
+  const timeoutMs = overrides?.timeoutMs ?? AI_CONFIG.timeoutMs;
+  const userSignal = overrides?.signal;
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.timeoutMs);
+  const onAbort = () => controller.abort();
+  // Wire external signal to inner controller if provided
+  if (userSignal) userSignal.addEventListener('abort', onAbort);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
@@ -890,42 +1085,76 @@ async function makeAICallSlideSpec(
         model: model as any,
         messages,
         response_format: { type: 'json_object' },
-        temperature: AI_CONFIG.temperature,
-        max_tokens: AI_CONFIG.maxTokens
+        temperature: overrides?.temperature ?? AI_CONFIG.temperature,
+        max_tokens: overrides?.maxTokens ?? AI_CONFIG.maxTokens
       },
       { signal: controller.signal }
     );
 
     const raw = response.choices?.[0]?.message?.content;
     if (!raw) throw new Error('Empty response from AI model.');
+
     let parsed: any;
     try {
       parsed = JSON.parse(raw);
     } catch (e) {
-      throw new Error(`Invalid JSON response: ${(e as Error).message}`);
+      // Attempt structured recovery by extracting the first JSON object
+      const extracted = extractFirstJsonObject(raw);
+      if (!extracted) {
+        throw new Error(`Invalid JSON response: ${(e as Error).message}`);
+      }
+      try {
+        parsed = JSON.parse(extracted);
+      } catch (e2) {
+        throw new Error(`Invalid JSON (post-extraction) response: ${(e2 as Error).message}`);
+      }
     }
 
-    // Sanitize then validate
-    const sanitized = sanitizeAIResponse(parsed);
+    // Sanitize->Recover->Validate
+    const sanitized = sanitizeAIResponseWithRecovery(parsed);
     const validation = safeValidateSlideSpec(sanitized);
     if (!validation.success) {
-      const errorAnalysis = analyzeValidationErrors(validation.errors);
-      const message = `Slide specification validation failed - ${errorAnalysis.category}: ${errorAnalysis.helpfulMessage}`;
-      console.error('Validation details:', {
-        category: errorAnalysis.category,
-        helpfulMessage: errorAnalysis.helpfulMessage,
-        suggestedFix: errorAnalysis.suggestedFix,
-        originalErrors: validation.errors,
-        stepName,
-        attempt
-      });
-      throw new ValidationError(message, validation.errors);
+      // Last-ditch: try to coerce a minimal viable spec to avoid hard fail
+      const recovery: SlideSpec = {
+        title: sanitized.title || 'Untitled Slide',
+        layout:
+          VALID_LAYOUTS.includes(sanitized.layout) ? sanitized.layout : (sanitized.bullets ? 'title-bullets' : 'title-paragraph'),
+        bullets: Array.isArray(sanitized.bullets) ? sanitized.bullets.map(String) : undefined,
+        paragraph: typeof sanitized.paragraph === 'string' ? sanitized.paragraph : undefined,
+        left: sanitized.left,
+        right: sanitized.right,
+        contentItems: sanitized.contentItems,
+        imagePrompt: typeof sanitized.imagePrompt === 'string' ? sanitized.imagePrompt : undefined,
+        notes: typeof sanitized.notes === 'string' ? sanitized.notes : undefined,
+        sources: Array.isArray(sanitized.sources) ? sanitized.sources.map(String) : undefined,
+        chart: sanitized.chart,
+        timeline: sanitized.timeline,
+        comparisonTable: sanitized.comparisonTable,
+        processSteps: sanitized.processSteps,
+        design: sanitized.design
+      };
+
+      const recheck = safeValidateSlideSpec(recovery);
+      if (!recheck.success) {
+        const errorAnalysis = analyzeValidationErrors(recheck.errors);
+        const message = `Slide specification validation failed - ${errorAnalysis.category}: ${errorAnalysis.helpfulMessage}`;
+        console.error('Validation details:', {
+          category: errorAnalysis.category,
+          helpfulMessage: errorAnalysis.helpfulMessage,
+          suggestedFix: errorAnalysis.suggestedFix,
+          originalErrors: recheck.errors,
+          stepName,
+          attempt
+        });
+        throw new ValidationError(message, recheck.errors);
+      }
+      return recheck.data;
     }
 
     return validation.data;
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      throw new TimeoutError(`${stepName} timed out after ${AI_CONFIG.timeoutMs}ms`, AI_CONFIG.timeoutMs);
+      throw new TimeoutError(`${stepName} timed out after ${timeoutMs}ms`, timeoutMs);
     }
 
     const oe = error as any;
@@ -945,10 +1174,7 @@ async function makeAICallSlideSpec(
         );
       }
       if (openaiError.status >= 500) {
-        throw new NetworkError(
-          `OpenAI service error: ${openaiError.error?.message || 'Service unavailable'}`,
-          openaiError.status
-        );
+        throw new NetworkError(`OpenAI service error: ${openaiError.error?.message || 'Service unavailable'}`, openaiError.status);
       }
       if (openaiError.status >= 400) {
         throw new ValidationError(`API request error: ${openaiError.error?.message || 'Bad request'}`, [
@@ -970,6 +1196,7 @@ async function makeAICallSlideSpec(
     );
   } finally {
     clearTimeout(timeoutId);
+    if (userSignal) userSignal.removeEventListener('abort', onAbort);
   }
 }
 
@@ -978,10 +1205,16 @@ async function makeAICallSlideSpec(
  */
 async function aiCallForBatchImagePrompts(
   prompt: string,
-  slideCount: number
+  slideCount: number,
+  overrides?: CallOverrides
 ): Promise<{ imagePrompts: string[] }> {
+  const timeoutMs = overrides?.timeoutMs ?? AI_CONFIG.timeoutMs;
+  const userSignal = overrides?.signal;
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.timeoutMs);
+  const onAbort = () => controller.abort();
+  if (userSignal) userSignal.addEventListener('abort', onAbort);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await getOpenAI().chat.completions.create(
@@ -992,8 +1225,11 @@ async function aiCallForBatchImagePrompts(
           { role: 'user', content: prompt }
         ],
         response_format: { type: 'json_object' },
-        temperature: AI_CONFIG.temperature,
-        max_tokens: Math.max(400, Math.min(1200, 80 * slideCount))
+        temperature: overrides?.temperature ?? AI_CONFIG.temperature,
+        max_tokens: Math.max(
+          400,
+          Math.min(overrides?.maxTokens ?? 1200, 80 * slideCount) // keep sane caps
+        )
       },
       { signal: controller.signal }
     );
@@ -1003,12 +1239,14 @@ async function aiCallForBatchImagePrompts(
     let parsed: any;
     try {
       parsed = JSON.parse(raw);
-    } catch (e) {
-      throw new Error(`Invalid JSON for batch image prompts: ${(e as Error).message}`);
+    } catch {
+      const extracted = extractFirstJsonObject(raw);
+      if (!extracted) throw new Error('Invalid JSON for batch image prompts.');
+      parsed = JSON.parse(extracted);
     }
 
     const prompts = parsed?.imagePrompts;
-    if (!Array.isArray(prompts) || prompts.some((p) => typeof p !== 'string')) {
+    if (!Array.isArray(prompts) || prompts.some((p: any) => typeof p !== 'string')) {
       throw new Error('imagePrompts must be an array of strings.');
     }
     if (prompts.length !== slideCount) {
@@ -1017,6 +1255,7 @@ async function aiCallForBatchImagePrompts(
     return { imagePrompts: prompts };
   } finally {
     clearTimeout(timeoutId);
+    if (userSignal) userSignal.removeEventListener('abort', onAbort);
   }
 }
 
@@ -1159,8 +1398,12 @@ export function generateFallbackImagePrompt(slideSpec: Partial<SlideSpec>, error
  * Generate a slide specification using chained AI for high-quality outputs
  */
 export async function generateSlideSpec(input: GenerationParams): Promise<SlideSpec> {
-  const startTime = Date.now();
-  console.log(`Starting chained slide generation with ${AI_CONFIG.model}...`, {
+  const requestId = logger.generateRequestId();
+  const context = { requestId, operation: 'slide-generation' };
+
+  logger.startPerf(`slide-gen-${requestId}`, context);
+  logger.info('Starting chained slide generation', context, {
+    model: AI_CONFIG.model,
     promptLength: input.prompt?.length,
     audience: input.audience,
     tone: input.tone,
@@ -1174,39 +1417,77 @@ export async function generateSlideSpec(input: GenerationParams): Promise<SlideS
     operation: 'Slide Generation'
   });
 
-  // Step 1: Content
-  let partialSpec = await aiCallWithRetry(generateContentPrompt(input), 'Content Generation');
+  const callOverrides = deriveCallOverrides(input);
 
-  // Step 2: Layout
-  partialSpec = await aiCallWithRetry(generateLayoutPrompt(input, partialSpec), 'Layout Refinement', partialSpec);
+  try {
+    // Step 1: Content
+    logger.info('Step 1: Generating content', { ...context, stage: 'content' });
+    let partialSpec = await aiCallWithRetry(generateContentPrompt(input), 'Content Generation', undefined, callOverrides);
+    logger.debug('Content generation completed', context, { title: partialSpec.title });
 
-  // Step 3: Image prompt (optional)
-  if (input.withImage) {
-    partialSpec = await aiCallWithRetry(generateImagePrompt(input, partialSpec), 'Image Prompt Generation', partialSpec);
+    // Step 2: Layout
+    logger.info('Step 2: Refining layout', { ...context, stage: 'layout' });
+    partialSpec = await aiCallWithRetry(
+      generateLayoutPrompt(input, partialSpec),
+      'Layout Refinement',
+      partialSpec,
+      callOverrides
+    );
+    logger.debug('Layout refinement completed', context, { layout: partialSpec.layout });
+
+    // Step 3: Image prompt (optional)
+    if (input.withImage) {
+      logger.info('Step 3: Generating image prompt', { ...context, stage: 'image' });
+      partialSpec = await aiCallWithRetry(
+        generateImagePrompt(input, partialSpec),
+        'Image Prompt Generation',
+        partialSpec,
+        callOverrides
+      );
+      logger.debug('Image prompt generated', context, { hasImagePrompt: !!partialSpec.imagePrompt });
+    }
+
+    // Step 4: Final refinement
+    logger.info('Step 4: Final refinement', { ...context, stage: 'refinement' });
+    let finalSpec = await aiCallWithRetry(
+      generateRefinementPrompt(input, partialSpec),
+      'Final Refinement',
+      partialSpec,
+      callOverrides
+    );
+
+    // Apply content-length budgeting post-process (non-destructive)
+    finalSpec = applyContentLengthBudget(finalSpec, input.contentLength);
+
+    logger.endPerf(`slide-gen-${requestId}`, context, {
+      title: finalSpec.title,
+      layout: finalSpec.layout,
+      hasContent: !!(finalSpec.bullets || finalSpec.paragraph),
+      hasImage: !!finalSpec.imagePrompt
+    });
+
+    logger.success('Chained slide generation completed', context, {
+      title: finalSpec.title,
+      layout: finalSpec.layout,
+      contentType: finalSpec.bullets ? 'bullets' : 'paragraph',
+      bulletCount: finalSpec.bullets?.length || 0
+    });
+
+    return finalSpec;
+  } catch (error) {
+    logger.endPerf(`slide-gen-${requestId}`, context);
+    logger.error('Slide generation failed', context, error);
+    throw error;
   }
-
-  // Step 4: Final refinement
-  const finalSpec = await aiCallWithRetry(generateRefinementPrompt(input, partialSpec), 'Final Refinement', partialSpec);
-
-  const generationTime = Date.now() - startTime;
-  console.log('Chained generation successful', {
-    title: finalSpec.title,
-    layout: finalSpec.layout,
-    generationTime: `${generationTime}ms`
-  });
-
-  return finalSpec;
 }
 
 /**
  * Generate multiple slides with cohesive image prompts in fewer calls.
  */
-export async function generateBatchSlideSpecs(
-  input: GenerationParams,
-  slideCount: number = 1
-): Promise<SlideSpec[]> {
+export async function generateBatchSlideSpecs(input: GenerationParams, slideCount: number = 1): Promise<SlideSpec[]> {
   const startTime = Date.now();
-  console.log(`Starting batch slide generation for ${slideCount} slides with ${AI_CONFIG.model}...`);
+  const concurrency = Number(process.env.AI_BATCH_CONCURRENCY ?? 3);
+  console.log(`Starting batch slide generation for ${slideCount} slides with ${AI_CONFIG.model} (concurrency=${concurrency})...`);
 
   logCostEstimate({
     textTokens: 3000 * slideCount,
@@ -1214,54 +1495,59 @@ export async function generateBatchSlideSpecs(
     operation: `Batch Slide Generation (${slideCount} slides)`
   });
 
-  const slideSpecs: SlideSpec[] = [];
+  const indices = Array.from({ length: slideCount }, (_, i) => i);
+  const callOverrides = deriveCallOverrides(input);
 
-  // Generate content+layout for each slide
-  for (let i = 0; i < slideCount; i++) {
-    console.log(`Generating slide ${i + 1}/${slideCount}...`);
+  // Content + layout generation with limited concurrency
+  let slideSpecs = await mapWithConcurrency(indices, concurrency, async (i) => {
     const slideInput: GenerationParams = {
       ...input,
       prompt: `${input.prompt} - Slide ${i + 1} of ${slideCount}`,
       withImage: false
     };
 
-    let spec = await aiCallWithRetry(generateContentPrompt(slideInput), `Content Generation (Slide ${i + 1})`);
-    spec = await aiCallWithRetry(generateLayoutPrompt(slideInput, spec), `Layout Refinement (Slide ${i + 1})`, spec);
+    let spec = await aiCallWithRetry(generateContentPrompt(slideInput), `Content Generation (Slide ${i + 1})`, undefined, callOverrides);
+    spec = await aiCallWithRetry(
+      generateLayoutPrompt(slideInput, spec),
+      `Layout Refinement (Slide ${i + 1})`,
+      spec,
+      callOverrides
+    );
 
-    slideSpecs.push(spec);
-  }
+    return applyContentLengthBudget(spec, input.contentLength);
+  });
 
   // Batch image prompts if requested
   if (input.withImage && slideSpecs.length > 0) {
     console.log('Processing batch image prompts...');
     try {
       const batchPrompt = generateBatchImagePrompts(input, slideSpecs);
-      const { imagePrompts } = await aiCallForBatchImagePrompts(batchPrompt, slideSpecs.length);
+      const { imagePrompts } = await aiCallForBatchImagePrompts(batchPrompt, slideSpecs.length, callOverrides);
 
-      for (let i = 0; i < slideSpecs.length; i++) {
-        slideSpecs[i] = {
-          ...slideSpecs[i],
-          imagePrompt: imagePrompts[i]
-        };
-      }
+      slideSpecs = slideSpecs.map((s, i) => ({ ...s, imagePrompt: imagePrompts[i] }));
       console.log('Batch image prompts generated and applied successfully.');
     } catch (error) {
       console.warn('Batch image processing failed, falling back to individual prompts:', (error as Error).message);
-      for (let i = 0; i < slideSpecs.length; i++) {
+      slideSpecs = await mapWithConcurrency(slideSpecs, concurrency, async (spec, idx) => {
         try {
-          slideSpecs[i] = await aiCallWithRetry(
-            generateImagePrompt(input, slideSpecs[i]),
-            `Image Prompt Generation (Slide ${i + 1})`,
-            slideSpecs[i]
+          const withImage = await aiCallWithRetry(
+            generateImagePrompt(input, spec),
+            `Image Prompt Generation (Slide ${idx + 1})`,
+            spec,
+            callOverrides
           );
+          return withImage;
         } catch (imageError) {
-          console.warn(`Image generation failed for slide ${i + 1}, using fallback image prompt:`, (imageError as Error).message);
-          slideSpecs[i] = {
-            ...slideSpecs[i],
-            imagePrompt: generateFallbackImagePrompt(slideSpecs[i], imageError as Error)
+          console.warn(
+            `Image generation failed for slide ${idx + 1}, using fallback image prompt:`,
+            (imageError as Error).message
+          );
+          return {
+            ...spec,
+            imagePrompt: generateFallbackImagePrompt(spec, imageError as Error)
           };
         }
-      }
+      });
     }
   }
 

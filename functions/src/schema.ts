@@ -4,7 +4,7 @@
  * Enhanced schemas with support for chained generation, image integration, and advanced layouts.
  * Ensures data integrity for multi-step AI processes and professional outputs, with improved validation for accessibility, readability, and content quality.
  *
- * @version 3.6.0-enhanced
+ * @version 3.6.1-enhanced
  * @author
  *   AI PowerPoint Generator Team (revised by expert co‑pilot)
  */
@@ -12,47 +12,83 @@
 import { z, ZodError } from 'zod';
 
 /* -------------------------------------------------------------------------------------------------
- * Common Validators & Utilities
+ * Common Validators, Utilities & Constants
  * ------------------------------------------------------------------------------------------------- */
 
 // NOTE: Keep these validators focused and composable. We prefer explicit, readable rules over
 // overly clever abstractions so downstream teams can maintain and extend them easily.
+
+// Helpers for color-contrast & parsing hex (used by quality checks — not hard validation)
+const HEX6 = /^#([0-9A-Fa-f]{6})$/;
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const m = HEX6.exec(hex);
+  if (!m) return null;
+  const int = parseInt(m[1], 16);
+  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+}
+
+function srgbToLinear(c: number): number {
+  // WCAG sRGB linearization
+  const cs = c / 255;
+  return cs <= 0.04045 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(hex: string): number | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const R = srgbToLinear(rgb.r);
+  const G = srgbToLinear(rgb.g);
+  const B = srgbToLinear(rgb.b);
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+function contrastRatio(fgHex: string, bgHex: string): number | null {
+  const L1 = relativeLuminance(fgHex);
+  const L2 = relativeLuminance(bgHex);
+  if (L1 == null || L2 == null) return null;
+  const lighter = Math.max(L1, L2);
+  const darker = Math.min(L1, L2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 const VALIDATION_PATTERNS = {
   title: z
     .string()
     .min(1, 'Title is required and cannot be empty')
     .max(120, 'Title must be under 120 characters for optimal display')
-    .refine((val) => val.trim().length > 0, 'Title cannot be only whitespace'),
+    .refine((val) => val.trim().length > 0, 'Title cannot be only whitespace')
+    .transform((v) => v.trim()),
 
   shortText: z
     .string()
     .max(160, 'Text must be under 160 characters for readability')
-    .refine((val) => val.trim().length > 0 || val.length === 0, 'Text cannot be only whitespace'),
+    .refine((val) => val.trim().length > 0 || val.length === 0, 'Text cannot be only whitespace')
+    .transform((v) => v.trim()),
 
   longText: z
     .string()
     .max(1200, 'Text must be under 1200 characters to fit on slide')
-    .refine((val) => val.trim().length > 0 || val.length === 0, 'Text cannot be only whitespace'),
+    .refine((val) => val.trim().length > 0 || val.length === 0, 'Text cannot be only whitespace')
+    .transform((v) => v.trim()),
 
   colorHex: z
     .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid 6-digit hex color (e.g., #FF0000)')
+    .regex(HEX6, 'Must be a valid 6-digit hex color (e.g., #FF0000)')
     .transform((val) => val.toUpperCase()),
 
   // Allow common font-family characters including spaces, digits, hyphens, commas, and quotes.
   fontFamily: z
     .string()
     .min(1, 'Font family is required')
-    .refine(
-      (val) => /^[\w\s\-,'"]+$/.test(val),
-      'Font family contains invalid characters'
-    ),
+    .refine((val) => /^[\w\s\-,'"]+$/.test(val), 'Font family contains invalid characters'),
 
   imagePrompt: z
     .string()
     .min(20, 'Image prompt must be at least 20 characters for quality generation')
     .max(500, 'Image prompt must be under 500 characters for optimal AI processing')
-    .refine((val) => val.trim().length >= 20, 'Image prompt cannot be mostly whitespace'),
+    .refine((val) => val.trim().length >= 20, 'Image prompt cannot be mostly whitespace')
+    .transform((v) => v.trim()),
 
   percentage: z.coerce.number().min(0, 'Percentage cannot be negative').max(100, 'Percentage cannot exceed 100'),
 
@@ -134,6 +170,7 @@ export const SlideSpecSchema = z
       .array(VALIDATION_PATTERNS.shortText)
       .max(10, 'Maximum 10 bullet points allowed for readability')
       .refine((arr) => arr.length === 0 || arr.every((item) => item.trim().length > 0), 'Bullet points cannot be empty')
+      .transform((arr) => arr?.map((s) => s.trim()))
       .optional(),
 
     /** Paragraph content */
@@ -148,7 +185,11 @@ export const SlideSpecSchema = z
     left: z
       .object({
         heading: z.string().max(80, 'Heading too long for column').optional(),
-        bullets: z.array(VALIDATION_PATTERNS.shortText).max(8, 'Maximum 8 bullets per column for readability').optional(),
+        bullets: z
+          .array(VALIDATION_PATTERNS.shortText)
+          .max(8, 'Maximum 8 bullets per column for readability')
+          .transform((arr) => arr?.map((s) => s.trim()))
+          .optional(),
         paragraph: VALIDATION_PATTERNS.longText.optional(),
         metrics: z
           .array(
@@ -169,7 +210,11 @@ export const SlideSpecSchema = z
     right: z
       .object({
         heading: z.string().max(80, 'Heading too long for column').optional(),
-        bullets: z.array(VALIDATION_PATTERNS.shortText).max(8, 'Maximum 8 bullets per column for readability').optional(),
+        bullets: z
+          .array(VALIDATION_PATTERNS.shortText)
+          .max(8, 'Maximum 8 bullets per column for readability')
+          .transform((arr) => arr?.map((s) => s.trim()))
+          .optional(),
         paragraph: VALIDATION_PATTERNS.longText.optional(),
         imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
         generateImage: z.boolean().optional(),
@@ -345,6 +390,26 @@ export const SlideSpecSchema = z
       });
     }
 
+    // "comparison-table" layout requires comparisonTable
+    if (spec.layout === 'comparison-table' && !spec.comparisonTable) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['comparisonTable'],
+        message: 'comparison-table layout requires comparisonTable data.',
+      });
+    }
+
+    // "process-flow" layout requires ≥ 2 steps
+    if (spec.layout === 'process-flow') {
+      if (!spec.processSteps || spec.processSteps.length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['processSteps'],
+          message: 'process-flow layout requires at least 2 steps.',
+        });
+      }
+    }
+
     // timeline layout must include >= 2 items
     if (spec.layout === 'timeline') {
       if (!spec.timeline || spec.timeline.length < 2) {
@@ -356,22 +421,22 @@ export const SlideSpecSchema = z
       }
     }
 
-    // image-full layout requires an image source (url or prompt in any slot)
-    if (spec.layout === 'image-full') {
+    // image-* layouts require at least one image source (url or prompt)
+    if (spec.layout === 'image-full' || spec.layout === 'image-left' || spec.layout === 'image-right') {
       const hasAnyImage =
-        !!spec.imageUrl ||
-        !!spec.imagePrompt ||
-        !!spec.left?.imagePrompt ||
-        !!spec.right?.imagePrompt;
+        !!spec.imageUrl || !!spec.imagePrompt || !!spec.left?.imagePrompt || !!spec.right?.imagePrompt;
       if (!hasAnyImage) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['imageUrl'],
-          message: 'image-full layout requires an imageUrl or an imagePrompt.',
+          message: `${spec.layout} layout requires an imageUrl or an imagePrompt.`,
         });
       }
       // Encourage alt text for accessibility when an image exists
-      if ((spec.imageUrl || spec.imagePrompt || spec.left?.imagePrompt || spec.right?.imagePrompt) && !spec.altText) {
+      if (
+        (spec.imageUrl || spec.imagePrompt || spec.left?.imagePrompt || spec.right?.imagePrompt) &&
+        !spec.altText
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['altText'],
@@ -382,7 +447,7 @@ export const SlideSpecSchema = z
 
     // chart: categories length should match each series data length
     if (spec.chart) {
-      const { categories, series } = spec.chart;
+      const { categories, series, type } = spec.chart;
       series.forEach((s, idx) => {
         if (s.data.length !== categories.length) {
           ctx.addIssue({
@@ -391,7 +456,24 @@ export const SlideSpecSchema = z
             message: `Data length (${s.data.length}) must match categories length (${categories.length}).`,
           });
         }
+        if ((type === 'pie' || type === 'doughnut') && s.data.some((v) => v < 0)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['chart', 'series', idx, 'data'],
+            message: 'Pie/doughnut charts cannot contain negative values.',
+          });
+        }
       });
+      if ((spec.chart.type === 'pie' || spec.chart.type === 'doughnut')) {
+        const total = series.reduce((sum, s) => sum + s.data.reduce((a, b) => a + b, 0), 0);
+        if (total <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['chart', 'series'],
+            message: 'Pie/doughnut charts require a positive total.',
+          });
+        }
+      }
     }
 
     // comparison table: enforce row width consistency with headers
@@ -656,7 +738,7 @@ export function validateContentQuality(spec: SlideSpec): {
     score -= 20;
   }
 
-  // Accessibility checks
+  // Accessibility checks (non-fatal; heuristics)
   if (spec.design?.brand?.primary && spec.design?.brand?.secondary) {
     const primary = spec.design.brand.primary;
     const secondary = spec.design.brand.secondary;
@@ -671,6 +753,17 @@ export function validateContentQuality(spec: SlideSpec): {
   if (anyImage && !spec.altText) {
     accessibilityIssues.push('Add altText to describe images for screen readers.');
     accessibilityScore -= 10;
+  }
+
+  // WCAG color contrast heuristic if both colors provided
+  if (spec.design?.textColor && spec.design?.backgroundColor) {
+    const ratio = contrastRatio(spec.design.textColor, spec.design.backgroundColor);
+    if (ratio != null && ratio < 4.5) {
+      accessibilityIssues.push(
+        `Foreground/background contrast ratio ~${ratio.toFixed(2)}:1 is below the recommended 4.5:1 for normal text.`
+      );
+      accessibilityScore -= 15;
+    }
   }
 
   // Readability assessment (lightweight heuristic)
@@ -693,6 +786,14 @@ export function validateContentQuality(spec: SlideSpec): {
   if (complexWordRatio > 0.15) {
     readabilityIssues.push('Consider using simpler language for better comprehension.');
     readabilityScore -= 10;
+  }
+
+  // chart heuristics
+  if (spec.chart && (spec.chart.type === 'pie' || spec.chart.type === 'doughnut')) {
+    if (spec.chart.categories.length > 6) {
+      suggestions.push('Pie/doughnut charts read best with 6 or fewer categories.');
+      score -= 3;
+    }
   }
 
   let readabilityLevel = 'Graduate';
@@ -776,6 +877,9 @@ export function generateContentImprovements(
   if (!spec.sources || spec.sources.length === 0) {
     enhancementSuggestions.push('Add credible sources to support your content.');
   }
+  if (spec.chart && (spec.chart.type === 'pie' || spec.chart.type === 'doughnut') && spec.chart.categories.length > 6) {
+    enhancementSuggestions.push('For pie/doughnut charts, limit categories to 6 or fewer to avoid clutter.');
+  }
 
   return {
     priorityImprovements,
@@ -786,9 +890,21 @@ export function generateContentImprovements(
 
 /* -------------------------------------------------------------------------------------------------
  * New Layout Engine — Slide Type Schemas
+ * (Expanded to cover more slide types; keeps backward compat with existing generator)
  * ------------------------------------------------------------------------------------------------- */
 
-export const SlideTypeSchema = z.enum(['title', 'bullets', 'twoColumn', 'metrics', 'section', 'quote', 'image', 'timeline', 'table', 'comparison']);
+export const SlideTypeSchema = z.enum([
+  'title',
+  'bullets',
+  'twoColumn',
+  'metrics',
+  'section',
+  'quote',
+  'image',
+  'timeline',
+  'table',
+  'comparison',
+]);
 export type SlideType = z.infer<typeof SlideTypeSchema>;
 
 // Column content schemas for two-column layouts
@@ -800,7 +916,7 @@ export const ColumnContentSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('image'),
-    src: z.string().url(),
+    src: VALIDATION_PATTERNS.url,
     alt: VALIDATION_PATTERNS.shortText,
     caption: VALIDATION_PATTERNS.shortText.optional(),
   }),
@@ -809,7 +925,7 @@ export const ColumnContentSchema = z.discriminatedUnion('type', [
     text: VALIDATION_PATTERNS.longText,
     image: z
       .object({
-        src: z.string().url(),
+        src: VALIDATION_PATTERNS.url,
         alt: VALIDATION_PATTERNS.shortText,
       })
       .optional(),
@@ -852,7 +968,10 @@ export const BulletSlideConfigSchema = z.object({
   type: z.literal('bullets'),
   title: VALIDATION_PATTERNS.title,
   subtitle: VALIDATION_PATTERNS.shortText.optional(),
-  bullets: z.array(VALIDATION_PATTERNS.shortText).min(3, 'At least 3 bullet points required for effective content').max(6, 'Maximum 6 bullet points for optimal readability'),
+  bullets: z
+    .array(VALIDATION_PATTERNS.shortText)
+    .min(3, 'At least 3 bullet points required for effective content')
+    .max(6, 'Maximum 6 bullet points for optimal readability'),
   bulletStyle: z.enum(['disc', 'circle', 'square', 'dash', 'arrow', 'number']).optional(),
   maxBullets: z.number().min(3).max(8).optional(),
   maxWordsPerBullet: z.number().min(8).max(20).optional(),
@@ -882,8 +1001,173 @@ export const MetricsSlideConfigSchema = z.object({
 });
 export type MetricsSlideConfig = z.infer<typeof MetricsSlideConfigSchema>;
 
+// NEW: Quote slide config
+export const QuoteSlideConfigSchema = z.object({
+  type: z.literal('quote'),
+  title: VALIDATION_PATTERNS.shortText.optional(),
+  quote: VALIDATION_PATTERNS.longText,
+  author: VALIDATION_PATTERNS.shortText.optional(),
+  role: VALIDATION_PATTERNS.shortText.optional(),
+  highlightColor: VALIDATION_PATTERNS.colorHex.optional(),
+});
+export type QuoteSlideConfig = z.infer<typeof QuoteSlideConfigSchema>;
+
+// NEW: Image slide config
+export const ImageSlideConfigSchema = z.object({
+  type: z.literal('image'),
+  title: VALIDATION_PATTERNS.shortText.optional(),
+  src: VALIDATION_PATTERNS.url,
+  alt: VALIDATION_PATTERNS.shortText,
+  caption: VALIDATION_PATTERNS.shortText.optional(),
+  fullBleed: z.boolean().optional(),
+  borderRadius: z.coerce.number().min(0).max(48).optional(),
+});
+export type ImageSlideConfig = z.infer<typeof ImageSlideConfigSchema>;
+
+// NEW: Timeline slide config
+export const TimelineSlideConfigSchema = z.object({
+  type: z.literal('timeline'),
+  title: VALIDATION_PATTERNS.title,
+  items: z
+    .array(
+      z.object({
+        date: z.string().max(30, 'Date is too long'),
+        title: VALIDATION_PATTERNS.shortText,
+        description: VALIDATION_PATTERNS.longText.optional(),
+        milestone: z.boolean().optional(),
+      })
+    )
+    .min(2, 'At least two timeline items required')
+    .max(12, 'Maximum 12 timeline items'),
+});
+export type TimelineSlideConfig = z.infer<typeof TimelineSlideConfigSchema>;
+
+// NEW: Table slide config (base schema for discriminated union)
+const BaseTableSlideConfigSchema = z.object({
+  type: z.literal('table'),
+  title: z.string().min(1).max(120), // Use basic string validation for discriminated union
+  headers: z.array(z.string().min(1).max(160)).min(2).max(6),
+  rows: z.array(z.array(z.string().min(1).max(160))).min(1).max(20),
+  rowStripes: z.boolean().optional(),
+});
+
+// Enhanced table schema with full validation (for actual use)
+export const TableSlideConfigSchema = z
+  .object({
+    type: z.literal('table'),
+    title: VALIDATION_PATTERNS.title,
+    headers: z.array(VALIDATION_PATTERNS.shortText).min(2).max(6),
+    rows: z.array(z.array(VALIDATION_PATTERNS.shortText)).min(1).max(20),
+    rowStripes: z.boolean().optional(),
+  })
+  .superRefine((tbl, ctx) => {
+    tbl.rows.forEach((r, i) => {
+      if (r.length !== tbl.headers.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['rows', i],
+          message: `Row ${i + 1} must have ${tbl.headers.length} cells to match headers.`,
+        });
+      }
+    });
+  });
+export type TableSlideConfig = z.infer<typeof TableSlideConfigSchema>;
+
+// NEW: Comparison slide config
+export const ComparisonSlideConfigSchema = z.object({
+  type: z.literal('comparison'),
+  title: VALIDATION_PATTERNS.title,
+  leftTitle: VALIDATION_PATTERNS.shortText.optional(),
+  rightTitle: VALIDATION_PATTERNS.shortText.optional(),
+  leftBullets: z.array(VALIDATION_PATTERNS.shortText).min(1).max(6),
+  rightBullets: z.array(VALIDATION_PATTERNS.shortText).min(1).max(6),
+  showCheckmarks: z.boolean().optional(),
+});
+export type ComparisonSlideConfig = z.infer<typeof ComparisonSlideConfigSchema>;
+
+// Base schemas for discriminated union (without ZodEffects)
+const BaseTitleSlideConfigSchema = z.object({
+  type: z.literal('title'),
+  title: z.string().min(1).max(120),
+  subtitle: z.string().max(160).optional(),
+  author: z.string().max(100).optional(),
+  date: z.string().max(50).optional(),
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseBulletSlideConfigSchema = z.object({
+  type: z.literal('bullets'),
+  title: z.string().min(1).max(120),
+  subtitle: z.string().max(160).optional(),
+  bullets: z.array(z.string().max(160)).min(1).max(10),
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseTwoColumnSlideConfigSchema = z.object({
+  type: z.literal('twoColumn'),
+  title: z.string().min(1).max(120),
+  subtitle: z.string().max(160).optional(),
+  leftColumn: z.any(), // Simplified for discriminated union
+  rightColumn: z.any(), // Simplified for discriminated union
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseMetricsSlideConfigSchema = z.object({
+  type: z.literal('metrics'),
+  title: z.string().min(1).max(120),
+  subtitle: z.string().max(160).optional(),
+  metrics: z.array(z.any()).min(1).max(12), // Simplified for discriminated union
+  layout: z.enum(['grid', 'row', 'column', 'featured']).optional(),
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseQuoteSlideConfigSchema = z.object({
+  type: z.literal('quote'),
+  title: z.string().max(160).optional(),
+  quote: z.string().max(1200),
+  author: z.string().max(160).optional(),
+  role: z.string().max(160).optional(),
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseImageSlideConfigSchema = z.object({
+  type: z.literal('image'),
+  title: z.string().max(160).optional(),
+  src: z.string().url(),
+  alt: z.string().max(160),
+  caption: z.string().max(160).optional(),
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseTimelineSlideConfigSchema = z.object({
+  type: z.literal('timeline'),
+  title: z.string().min(1).max(120),
+  items: z.array(z.any()).min(2).max(8), // Simplified for discriminated union
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+});
+
+const BaseComparisonSlideConfigSchema = z.object({
+  type: z.literal('comparison'),
+  title: z.string().min(1).max(120),
+  leftTitle: z.string().max(160).optional(),
+  rightTitle: z.string().max(160).optional(),
+  leftBullets: z.array(z.string().max(160)).min(1).max(6),
+  rightBullets: z.array(z.string().max(160)).min(1).max(6),
+  showCheckmarks: z.boolean().optional(),
+});
+
 // Union of all slide configurations (new layout engine)
-export const SlideConfigSchema = z.discriminatedUnion('type', [TitleSlideConfigSchema, BulletSlideConfigSchema, TwoColumnSlideConfigSchema, MetricsSlideConfigSchema]);
+export const SlideConfigSchema = z.discriminatedUnion('type', [
+  BaseTitleSlideConfigSchema,
+  BaseBulletSlideConfigSchema,
+  BaseTwoColumnSlideConfigSchema,
+  BaseMetricsSlideConfigSchema,
+  BaseQuoteSlideConfigSchema,
+  BaseImageSlideConfigSchema,
+  BaseTimelineSlideConfigSchema,
+  BaseTableSlideConfigSchema,
+  BaseComparisonSlideConfigSchema,
+]);
 export type SlideConfig = z.infer<typeof SlideConfigSchema>;
 
 /* -------------------------------------------------------------------------------------------------

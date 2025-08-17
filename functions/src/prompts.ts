@@ -17,7 +17,7 @@
  */
 
 import { SlideSpecSchema, type GenerationParams, type SlideSpec, SLIDE_LAYOUTS } from './schema';
-import { SlideType, SlideConfig } from './slides/index';
+// Slide types simplified - using schema types instead
 
 /**
  * Enhanced System prompt with modern prompt engineering techniques
@@ -1170,9 +1170,9 @@ Perform targeted refinement to achieve professional excellence.
 **Evaluation Criteria:**
 - Language sophistication matches ${input.audience} expectations
 - Tone aligns with "${input.tone}" specification
+- Content complexity matches audience needs
 - Psychological triggers appropriate for audience motivation
 - Professional standards met for business context
-- Content complexity matches audience expertise
 
 **Audience Check:**
 - Would ${input.audience} find this compelling and credible?
@@ -1708,7 +1708,7 @@ You must respond with properly structured JSON that matches the requested slide 
  * Generate content-aware prompt for specific slide types
  */
 export function generateSlidePrompt(
-  slideType: SlideType,
+  slideType: string,
   topic: string,
   audience: keyof typeof AUDIENCE_GUIDANCE = 'general',
   contentLength: keyof typeof CONTENT_LENGTH_SPECS = 'moderate',

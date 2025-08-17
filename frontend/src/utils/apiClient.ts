@@ -6,6 +6,7 @@
 import { API_ENDPOINTS } from '../config';
 import { frontendDebugLogger, DebugCategory } from './debugLogger';
 
+
 // API response wrapper
 interface APIResponse<T = any> {
   data?: T;
@@ -68,13 +69,26 @@ class APIClient {
     const url = `${this.baseURL}${endpoint}`;
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Start tracking
+    // Start tracking with both loggers
     const apiCallId = frontendDebugLogger.trackAPICall(url, mergedOptions.method || 'GET', mergedOptions.body);
     const perfId = frontendDebugLogger.startPerformanceTracking(`API ${mergedOptions.method} ${endpoint}`, {
       requestId,
       endpoint,
       method: mergedOptions.method
     });
+
+    // Advanced logger tracking
+    const context: FrontendLogContext = {
+      requestId,
+      component: 'apiClient',
+      action: 'request'
+    };
+
+    const advancedRequestId = frontendDebugLogger.trackAPICall(
+      url,
+      mergedOptions.method || 'GET',
+      mergedOptions.body
+    );
 
     const startTime = performance.now();
 
@@ -137,6 +151,20 @@ class APIClient {
         duration
       });
 
+      // Advanced logger response tracking
+      const apiMetrics: APICallMetrics = {
+        url,
+        method: mergedOptions.method || 'GET',
+        requestSize: mergedOptions.body ? JSON.stringify(mergedOptions.body).length : 0,
+        responseSize: JSON.stringify(responseData || {}).length,
+        statusCode: response.status,
+        duration,
+        retryCount: 0,
+        cached: false
+      };
+
+      frontendDebugLogger.completeAPICall(advancedRequestId, response.status, responseData);
+
       if (success) {
         frontendDebugLogger.info(`API request successful: ${mergedOptions.method} ${endpoint}`, DebugCategory.API, {
           requestId,
@@ -165,6 +193,9 @@ class APIClient {
         error: errorMessage,
         duration
       });
+
+      // Debug logger error tracking
+      frontendDebugLogger.completeAPICall(advancedRequestId, 0, null, errorMessage);
 
       frontendDebugLogger.error(`API request error: ${mergedOptions.method} ${endpoint}`, {
         requestId,

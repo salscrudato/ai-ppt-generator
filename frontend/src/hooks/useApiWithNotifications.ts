@@ -186,11 +186,11 @@ export function useApiWithNotifications<T = any>(): UseApiWithNotificationsRetur
 export function usePowerPointGeneration() {
   const api = useApiWithNotifications<Buffer>();
 
-  const generatePowerPoint = useCallback(async (slideSpec: any, theme?: string) => {
+  const generatePowerPoint = useCallback(async (slideSpec: any, theme?: string, options?: { compactMode?: boolean; typographyScale?: 'auto'|'compact'|'normal'|'large' }) => {
     return api.execute('/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spec: slideSpec, themeId: theme }),
+      body: JSON.stringify({ spec: slideSpec, themeId: theme, compactMode: options?.compactMode, typographyScale: options?.typographyScale }),
       showSuccessNotification: true,
       successMessage: 'PowerPoint generated successfully!',
       loadingMessage: 'Generating your PowerPoint presentation...',

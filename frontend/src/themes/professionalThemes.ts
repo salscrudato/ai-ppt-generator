@@ -98,6 +98,91 @@ export interface ProfessionalTheme {
  * Synchronized with backend themes for consistent user experience
  */
 export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
+  // Executive Dark Theme
+  {
+    id: 'executive-dark',
+    name: 'Executive Dark',
+    category: 'corporate',
+    description: 'Professional dark theme for executive presentations',
+    colors: {
+      primary: '#3B82F6',
+      secondary: '#64748B',
+      accent: '#10B981',
+      background: '#1E293B',
+      surface: '#334155',
+      text: {
+        primary: '#F8FAFC',
+        secondary: '#CBD5E1',
+        inverse: '#1E293B',
+        muted: '#94A3B8'
+      },
+      semantic: {
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#3B82F6'
+      },
+      borders: {
+        light: '#475569',
+        medium: '#64748B',
+        strong: '#94A3B8'
+      }
+    },
+    typography: {
+      headings: {
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        weights: [400, 500, 600, 700],
+        sizes: {
+          display: 48,
+          h1: 36,
+          h2: 28,
+          h3: 22,
+          h4: 18
+        }
+      },
+      body: {
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        weights: [400, 500],
+        sizes: {
+          large: 18,
+          medium: 16,
+          small: 14,
+          caption: 12
+        },
+        lineHeight: 1.6
+      }
+    },
+    spacing: {
+      baseUnit: 4,
+      scale: {
+        xs: 4,
+        sm: 8,
+        md: 16,
+        lg: 24,
+        xl: 32,
+        xxl: 48
+      }
+    },
+    effects: {
+      shadows: {
+        sm: '0 1px 2px rgba(0, 0, 0, 0.3)',
+        md: '0 4px 6px rgba(0, 0, 0, 0.3)',
+        lg: '0 10px 15px rgba(0, 0, 0, 0.3)',
+        xl: '0 20px 25px rgba(0, 0, 0, 0.4)'
+      },
+      borderRadius: {
+        sm: 4,
+        md: 8,
+        lg: 12,
+        xl: 16
+      },
+      transitions: {
+        fast: '150ms ease-in-out',
+        normal: '300ms ease-in-out',
+        slow: '500ms ease-in-out'
+      }
+    }
+  },
   // Core Professional Themes
   {
     id: 'corporate-blue',

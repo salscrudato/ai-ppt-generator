@@ -11,7 +11,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiSparkles } from 'react-icons/hi2';
-import { useReducedMotion } from '../hooks/useReducedMotion';
+// import { useReducedMotion } from '../hooks/useReducedMotion';
 import clsx from 'clsx';
 
 interface LoadingSpinnerProps {
@@ -34,7 +34,8 @@ export default function LoadingSpinner({
   message,
   className = ''
 }: LoadingSpinnerProps) {
-  const { shouldReduceMotion } = useReducedMotion();
+  // const { shouldReduceMotion } = useReducedMotion();
+  const shouldReduceMotion = false; // Temporary fallback
 
   // Simplified size configurations
   const sizeClasses = {

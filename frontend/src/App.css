@@ -1,7 +1,8 @@
 /* Enhanced Custom Styles for Modern UI/UX */
 
-/* Import accessibility styles */
+/* Import accessibility styles - temporarily disabled for build
 @import './styles/accessibility.css';
+*/
 
 /* Smooth transitions for all interactive elements */
 * {

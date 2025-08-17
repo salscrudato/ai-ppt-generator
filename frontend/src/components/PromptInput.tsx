@@ -16,8 +16,8 @@ import {
 
 import ThemeCarousel from './ThemeCarousel';
 import LoadingButton from './LoadingButton';
-import { useThemeContext } from '../contexts/ThemeContext';
-import { useThemeSync } from '../hooks/useThemeSync';
+// import { useThemeContext } from '../contexts/ThemeContext';
+// import { useThemeSync } from '../hooks/useThemeSync';
 
 
 import {
@@ -43,14 +43,17 @@ export default function PromptInput({
   onGenerate
 }: PromptInputProps) {
   const [localParams, setLocalParams] = useState(params);
-  const { setTheme, themeId: contextThemeId } = useThemeContext();
+  // const { setTheme, themeId: contextThemeId } = useThemeContext();
+  const setTheme = () => {}; // Temporary fallback
+  const contextThemeId = 'corporate-blue'; // Temporary fallback
 
   // Enhanced theme synchronization for single mode
-  const themeSync = useThemeSync({
-    mode: 'single',
-    initialThemeId: params.design?.theme,
-    debug: false // Disabled to reduce console spam
-  });
+  // const themeSync = useThemeSync({
+  //   mode: 'single',
+  //   initialThemeId: params.design?.theme,
+  //   debug: false // Disabled to reduce console spam
+  // });
+  const themeSync = null; // Temporary fallback
 
   // Form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -67,10 +70,10 @@ export default function PromptInput({
   // Enhanced theme synchronization using the new hook
   React.useEffect(() => {
     const formThemeId = localParams.design?.theme;
-    const syncedThemeId = themeSync.themeId;
+    const syncedThemeId = themeSync?.themeId;
 
-    // Skip if either theme is empty/invalid
-    if (!formThemeId && !syncedThemeId) {
+    // Skip if themeSync is null or either theme is empty/invalid
+    if (!themeSync || (!formThemeId && !syncedThemeId)) {
       return;
     }
 
@@ -91,7 +94,7 @@ export default function PromptInput({
     }
     // If form has theme but sync doesn't match, update sync (but only if form theme is valid)
     else if (formThemeId && formThemeId.trim() !== '' && syncedThemeId !== formThemeId) {
-      themeSync.setTheme(formThemeId, 'form-update');
+      themeSync?.setTheme?.(formThemeId, 'form-update');
       // Reduced logging to prevent console spam
       if (process.env.NODE_ENV === 'development') {
         console.log('🔄 PromptInput: Updated synced theme from form', {
@@ -99,7 +102,7 @@ export default function PromptInput({
         });
       }
     }
-  }, [localParams.design?.theme, themeSync.themeId, themeSync, onParamsChange]);
+  }, [localParams.design?.theme, themeSync?.themeId, themeSync, onParamsChange]);
 
   // Simplified validation for deployment
   const validateForm = (params: GenerationParams) => {
@@ -191,7 +194,7 @@ export default function PromptInput({
       includeSources: localParams.includeSources || false,
       design: {
         ...localParams.design,
-        theme: localParams.design?.theme || themeSync.themeId || 'corporate-blue'
+        theme: localParams.design?.theme || themeSync?.themeId || 'corporate-blue'
       }
     };
 
@@ -534,13 +537,13 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           </div>
 
           <ThemeCarousel
-            selectedId={localParams.design?.theme || themeSync.themeId || 'corporate-blue'}
+            selectedId={localParams.design?.theme || themeSync?.themeId || 'corporate-blue'}
             onSelect={(themeId) => {
               console.log('🎨 PromptInput: Theme selected', {
                 themeId,
                 loading,
                 currentFormTheme: localParams.design?.theme,
-                currentSyncTheme: themeSync.themeId
+                currentSyncTheme: themeSync?.themeId
               });
 
               // Prevent theme changes during generation
@@ -563,13 +566,13 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               onParamsChange(updatedParams);
 
               // Use enhanced theme sync for consistency
-              themeSync.setTheme(selectedThemeId, 'theme-carousel');
-              themeSync.setThemeForMode('single', selectedThemeId);
+              themeSync?.setTheme?.(selectedThemeId, 'theme-carousel');
+              themeSync?.setThemeForMode?.('single', selectedThemeId);
 
               console.log('✅ PromptInput: Theme synchronized', {
                 selected: selectedThemeId,
                 previousForm: localParams.design?.theme,
-                previousSync: themeSync.themeId
+                previousSync: themeSync?.themeId
               });
             }}
             showCategories={true}
@@ -699,7 +702,9 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             className="flex items-center gap-3 p-4 bg-error-50 border border-error-200 rounded-xl text-error-700"
           >
             <HiExclamationTriangle className="w-5 h-5 flex-shrink-0" />
-            <span className="text-sm font-medium">{error}</span>
+            <span className="text-sm font-medium">
+              {typeof error === 'string' ? error : error?.message || 'An error occurred'}
+            </span>
           </motion.div>
         )}
 

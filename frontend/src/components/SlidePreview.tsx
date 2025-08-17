@@ -1,15 +1,16 @@
 /**
  * Live Slide Preview Component
- * 
+ *
  * Provides real-time preview of slides that mirrors the final PowerPoint output.
  * Maintains 16:9 aspect ratio and uses exact spacing constants from the backend generator.
- * 
+ *
  * @version 1.0.0
  * @author AI PowerPoint Generator Team
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
+// import { PreviewOptionsProvider } from '../contexts/PreviewOptionsContext';
 import clsx from 'clsx';
 
 // Types and constants
@@ -19,24 +20,25 @@ import { PREVIEW_LAYOUT, PREVIEW_TYPOGRAPHY, PREVIEW_ANIMATION } from '../consta
 
 // Hooks
 import { useDebouncedSlideSpec } from '../hooks/useDebounced';
+// import { usePreviewOptions } from '../contexts/PreviewOptionsContext';
 
 // Layout renderers
-import { TitleLayout } from './preview/TitleLayout';
-import { TitleBulletsLayout } from './preview/TitleBulletsLayout';
-import { TitleParagraphLayout } from './preview/TitleParagraphLayout';
-import { TwoColumnLayout } from './preview/TwoColumnLayout';
-import { ImageLeftLayout } from './preview/ImageLeftLayout';
-import { ImageRightLayout } from './preview/ImageRightLayout';
-import { ImageFullLayout } from './preview/ImageFullLayout';
-import { QuoteLayout } from './preview/QuoteLayout';
-import { ChartLayout } from './preview/ChartLayout';
-import { ComparisonTableLayout } from './preview/ComparisonTableLayout';
-import { TimelineLayout } from './preview/TimelineLayout';
-import { ProcessFlowLayout } from './preview/ProcessFlowLayout';
-import { MixedContentLayout } from './preview/MixedContentLayout';
-import { ProblemSolutionLayout } from './preview/ProblemSolutionLayout';
-import { BeforeAfterLayout } from './preview/BeforeAfterLayout';
-import { AgendaLayout } from './preview/AgendaLayout';
+import TitleLayout from './layouts/TitleLayout';
+import TitleBulletsLayout from './layouts/TitleBulletsLayout';
+import TitleParagraphLayout from './layouts/TitleParagraphLayout';
+import TwoColumnLayout from './layouts/TwoColumnLayout';
+import ImageLeftLayout from './layouts/ImageLeftLayout';
+import ImageRightLayout from './layouts/ImageRightLayout';
+import ImageFullLayout from './layouts/ImageFullLayout';
+import QuoteLayout from './layouts/QuoteLayout';
+import ChartLayout from './layouts/ChartLayout';
+import ComparisonTableLayout from './layouts/ComparisonTableLayout';
+import TimelineLayout from './layouts/TimelineLayout';
+import ProcessFlowLayout from './layouts/ProcessFlowLayout';
+import MixedContentLayout from './layouts/MixedContentLayout';
+import ProblemSolutionLayout from './layouts/ProblemSolutionLayout';
+import BeforeAfterLayout from './layouts/BeforeAfterLayout';
+import AgendaLayout from './layouts/AgendaLayout';
 
 /**
  * Props for SlidePreview component
@@ -56,7 +58,7 @@ export interface SlidePreviewProps {
 
 /**
  * Main SlidePreview component
- * 
+ *
  * Renders a live preview of a slide that matches the final PowerPoint output.
  * Updates in real-time as the user edits content and switches themes.
  */
@@ -64,11 +66,34 @@ export function SlidePreview({
   spec,
   theme,
   className,
-  debug = false,
+  debug = true,
   aspectRatio = 16 / 9
 }: SlidePreviewProps) {
   // Debounce spec updates for smooth performance
   const debouncedSpec = useDebouncedSlideSpec(spec, PREVIEW_ANIMATION.UPDATE_DELAY);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('SlidePreview received spec:', spec);
+    console.log('SlidePreview debounced spec:', debouncedSpec);
+  }, [spec, debouncedSpec]);
+
+  // Test data fallback for debugging
+  const testSpec = React.useMemo(() => {
+    if (!debouncedSpec.title || debouncedSpec.title.trim() === '') {
+      return {
+        ...debouncedSpec,
+        title: 'Test Slide Title',
+        layout: 'title-bullets' as const,
+        bullets: [
+          'This is a test bullet point',
+          'Another test bullet to verify rendering',
+          'Third bullet point for good measure'
+        ]
+      };
+    }
+    return debouncedSpec;
+  }, [debouncedSpec]);
 
   // Generate theme-aware CSS variables
   const themeStyles = useMemo(() => ({
@@ -93,10 +118,33 @@ export function SlidePreview({
   } as React.CSSProperties), [theme]);
 
   // Render the appropriate layout component
-  const renderLayout = () => {
-    const layoutProps = { spec: debouncedSpec, theme };
+  // Typography scaling (frontend mirror of backend logic)
+  // const { compactMode, typographyScale } = usePreviewOptions();
+  const compactMode = false; // Temporary fallback
+  const typographyScale = 'medium'; // Temporary fallback
+  const density: 'low' | 'medium' | 'high' = useMemo(() => {
+    const len = (testSpec?.paragraph?.length || 0) + (testSpec?.bullets?.join(' ')?.length || 0);
+    if (len < 120) return 'low';
+    if (len > 380) return 'high';
+    return 'medium';
+  }, [testSpec]);
 
-    switch (debouncedSpec.layout) {
+  const scaleFor = (role: 'title'|'subtitle'|'body'|'bullets') => {
+    let mult = 1.0;
+    if (typographyScale === 'large') mult = 1.1;
+    else if (typographyScale === 'compact') mult = 0.95;
+    else if (typographyScale === 'auto') {
+      if (density === 'low') mult = role === 'title' ? 1.12 : 1.06;
+      if (density === 'high') mult = (role === 'body' || role === 'bullets') ? 0.96 : 0.98;
+    }
+    if (compactMode && density === 'high') mult *= (role === 'body' || role === 'bullets') ? 0.97 : 0.99;
+    return mult;
+  };
+
+  const renderLayout = () => {
+    const layoutProps = { spec: testSpec, theme, scaleFor };
+
+    switch (testSpec.layout) {
       case 'title':
         return <TitleLayout {...layoutProps} />;
       case 'title-bullets':
@@ -138,11 +186,13 @@ export function SlidePreview({
   return (
     <motion.div
       className={clsx(
-        'slide-preview relative w-full bg-white rounded-lg shadow-sm border overflow-hidden',
+        'slide-preview relative w-full rounded-lg shadow-sm border overflow-hidden',
         className
       )}
       style={{
         aspectRatio: `${aspectRatio}`,
+        backgroundColor: theme.colors.background,
+        color: theme.colors.text.primary,
         ...themeStyles,
         transition: `all ${PREVIEW_ANIMATION.THEME_TRANSITION} ease-in-out`,
       }}
@@ -151,43 +201,16 @@ export function SlidePreview({
       transition={{ duration: 0.3 }}
     >
       {/* Slide Background */}
-      <div 
+      <div
         className="absolute inset-0"
         style={{ backgroundColor: 'var(--theme-background)' }}
       />
 
-      {/* Slide Title */}
+      {/* Slide Content - Let layout components handle all rendering */}
       <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-start"
+        className="absolute inset-0"
         style={{
-          height: `${PREVIEW_LAYOUT.contentY}%`,
-          paddingLeft: `${PREVIEW_LAYOUT.contentPadding}%`,
-          paddingRight: `${PREVIEW_LAYOUT.contentPadding}%`,
-          paddingTop: '4%',
-        }}
-      >
-        <h1
-          className="font-bold leading-tight w-full"
-          style={{
-            fontSize: PREVIEW_TYPOGRAPHY.titleSize,
-            fontFamily: 'var(--theme-heading-font)',
-            color: 'var(--theme-text-primary)',
-            lineHeight: '1.2',
-          }}
-        >
-          {debouncedSpec.title || 'Slide Title'}
-        </h1>
-      </div>
-
-      {/* Slide Content */}
-      <div
-        className="absolute"
-        style={{
-          top: `${PREVIEW_LAYOUT.contentY}%`,
-          left: `${PREVIEW_LAYOUT.contentPadding}%`,
-          right: `${PREVIEW_LAYOUT.contentPadding}%`,
-          bottom: '3%',
-          height: `${100 - PREVIEW_LAYOUT.contentY - 3}%`,
+          padding: `${PREVIEW_LAYOUT.contentPadding}%`,
         }}
       >
         {renderLayout()}
@@ -195,10 +218,16 @@ export function SlidePreview({
 
       {/* Debug Information */}
       {debug && (
-        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
-          <div>Layout: {debouncedSpec.layout}</div>
+        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded max-w-xs">
+          <div>Layout: {testSpec.layout}</div>
           <div>Theme: {theme.name}</div>
           <div>Aspect: {aspectRatio.toFixed(2)}</div>
+          <div>Title: {testSpec.title?.substring(0, 20)}...</div>
+          <div>Bullets: {testSpec.bullets?.length || 0}</div>
+          <div>Paragraph: {testSpec.paragraph?.length || 0} chars</div>
+          <div>Density: {density}</div>
+          <div>Scale: {typographyScale}</div>
+          <div>Compact: {compactMode ? 'Yes' : 'No'}</div>
         </div>
       )}
     </motion.div>
