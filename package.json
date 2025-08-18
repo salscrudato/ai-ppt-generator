@@ -1,13 +1,18 @@
 {
   "name": "ai-ppt-generator",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "AI-powered PowerPoint presentation generator with professional themes and layouts",
   "private": true,
   "scripts": {
     "dev": "./start-dev.sh",
+    "build": "npm run build:functions && npm run build:frontend",
+    "build:functions": "cd functions && npm run build",
+    "build:frontend": "cd frontend && npm run build",
     "test": "node test-basic-functionality.js",
     "clean": "rm -rf functions/lib frontend/dist node_modules/.cache test-output",
-    "setup": "./setup-local-dev.sh"
+    "setup": "./setup-local-dev.sh",
+    "deploy": "npm run build && firebase deploy",
+    "validate": "npm run build && echo 'Build validation successful!'"
   },
   "repository": {
     "type": "git",

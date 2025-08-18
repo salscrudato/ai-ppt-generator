@@ -519,7 +519,7 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
   },
 
   {
-    id: 'royal-purple',
+    id: 'royal-authority',
     name: 'Royal Authority',
     category: 'corporate',
     description: 'Regal, authoritative design for high-impact presentations',

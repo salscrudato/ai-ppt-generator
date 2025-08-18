@@ -444,7 +444,112 @@ function createModernTypography(
 }
 
 // -------------------------------------------------------------------------------------------------
-// Theme Factory
+// Advanced Color Harmony & Accessibility
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * Calculate color contrast ratio for accessibility compliance
+ */
+function calculateContrastRatio(color1: string, color2: string): number {
+  const getLuminance = (hex: string): number => {
+    const rgb = parseInt(hex.replace('#', ''), 16);
+    const r = (rgb >> 16) & 255;
+    const g = (rgb >> 8) & 255;
+    const b = rgb & 255;
+
+    const [rs, gs, bs] = [r, g, b].map(c => {
+      c = c / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  };
+
+  const lum1 = getLuminance(normalizeHex(color1));
+  const lum2 = getLuminance(normalizeHex(color2));
+  const brightest = Math.max(lum1, lum2);
+  const darkest = Math.min(lum1, lum2);
+
+  return (brightest + 0.05) / (darkest + 0.05);
+}
+
+/**
+ * Generate harmonious color palette using color theory
+ */
+function generateHarmoniousPalette(baseColor: string): {
+  complementary: string;
+  triadic: string[];
+  analogous: string[];
+  monochromatic: string[];
+} {
+  const hex = normalizeHex(baseColor);
+  const rgb = parseInt(hex, 16);
+  const r = (rgb >> 16) & 255;
+  const g = (rgb >> 8) & 255;
+  const b = rgb & 255;
+
+  // Convert to HSL for color harmony calculations
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const diff = max - min;
+  const sum = max + min;
+
+  let h = 0;
+  const l = sum / 2;
+  const s = diff === 0 ? 0 : l > 0.5 ? diff / (2 - sum) : diff / sum;
+
+  if (diff !== 0) {
+    switch (max) {
+      case r / 255: h = ((g - b) / 255 / diff + (g < b ? 6 : 0)) / 6; break;
+      case g / 255: h = ((b - r) / 255 / diff + 2) / 6; break;
+      case b / 255: h = ((r - g) / 255 / diff + 4) / 6; break;
+    }
+  }
+
+  const hslToHex = (h: number, s: number, l: number): string => {
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+    const m = l - c / 2;
+
+    let [r, g, b] = [0, 0, 0];
+    const hSector = Math.floor(h * 6);
+
+    switch (hSector) {
+      case 0: [r, g, b] = [c, x, 0]; break;
+      case 1: [r, g, b] = [x, c, 0]; break;
+      case 2: [r, g, b] = [0, c, x]; break;
+      case 3: [r, g, b] = [0, x, c]; break;
+      case 4: [r, g, b] = [x, 0, c]; break;
+      case 5: [r, g, b] = [c, 0, x]; break;
+    }
+
+    const toHex = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+  };
+
+  return {
+    complementary: hslToHex((h + 0.5) % 1, s, l),
+    triadic: [
+      hslToHex((h + 1/3) % 1, s, l),
+      hslToHex((h + 2/3) % 1, s, l)
+    ],
+    analogous: [
+      hslToHex((h + 0.083) % 1, s, l), // +30 degrees
+      hslToHex((h - 0.083 + 1) % 1, s, l) // -30 degrees
+    ],
+    monochromatic: [
+      hslToHex(h, s, Math.max(0, l - 0.2)),
+      hslToHex(h, s, Math.max(0, l - 0.1)),
+      hslToHex(h, s, Math.min(1, l + 0.1)),
+      hslToHex(h, s, Math.min(1, l + 0.2))
+    ]
+  };
+}
+
+
+
+// -------------------------------------------------------------------------------------------------
+// Enhanced Theme Factory
 // -------------------------------------------------------------------------------------------------
 
 function createTheme(
@@ -465,19 +570,58 @@ function createTheme(
     headingFont?: string;
     bodyFont?: string;
     scale?: 'compact' | 'normal' | 'large';
+  },
+  options?: {
+    enforceAccessibility?: boolean;
+    generateHarmonious?: boolean;
   }
 ): ProfessionalTheme {
   const baseBackground = normalizeHex(colors.background || '#FFFFFF');
   const baseSurface = normalizeHex(colors.surface || '#F8FAFC');
 
-  const primary = normalizeHex(colors.primary);
-  const secondary = normalizeHex(colors.secondary);
-  const accent = normalizeHex(colors.accent);
+  let primary = normalizeHex(colors.primary);
+  let secondary = normalizeHex(colors.secondary);
+  let accent = normalizeHex(colors.accent);
 
-  // Text defaults improved & normalized
-  const textPrimary = normalizeHex(colors.textPrimary || '#333333');
-  const textSecondary = normalizeHex(colors.textSecondary || '#666666');
+  // Generate harmonious colors if requested
+  if (options?.generateHarmonious) {
+    const palette = generateHarmoniousPalette(primary);
+    secondary = secondary === colors.secondary ? palette.analogous[0] : secondary;
+    accent = accent === colors.accent ? palette.complementary : accent;
+  }
+
+  // Text defaults improved & normalized with accessibility considerations
+  let textPrimary = normalizeHex(colors.textPrimary || '#333333');
+  let textSecondary = normalizeHex(colors.textSecondary || '#666666');
   const textMuted = normalizeHex(colors.textMuted || '#9CA3AF');
+
+  // Enforce accessibility if requested
+  if (options?.enforceAccessibility) {
+    const primaryContrast = calculateContrastRatio(textPrimary, baseBackground);
+    if (primaryContrast < 4.5) {
+      // Darken text for better contrast
+      textPrimary = baseBackground === '#FFFFFF' ? '#1F2937' : '#F9FAFB';
+    }
+
+    const secondaryContrast = calculateContrastRatio(textSecondary, baseBackground);
+    if (secondaryContrast < 3.0) {
+      // Adjust secondary text for minimum contrast
+      textSecondary = baseBackground === '#FFFFFF' ? '#4B5563' : '#D1D5DB';
+    }
+
+    // Fix inverse text contrast on primary color
+    const inverseContrast = calculateContrastRatio('#FFFFFF', primary);
+    if (inverseContrast < 3.0) {
+      // Darken the primary color more aggressively to improve contrast with white text
+      const rgb = hexToRgb(primary);
+      const darkerPrimary = rgbToHex(
+        Math.max(0, Math.floor(rgb.r * 0.6)), // Reduce by 40%
+        Math.max(0, Math.floor(rgb.g * 0.6)),
+        Math.max(0, Math.floor(rgb.b * 0.6))
+      );
+      primary = darkerPrimary;
+    }
+  }
 
   const theme: ProfessionalTheme = {
     id,
@@ -576,14 +720,14 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     surface: '#F3F0FF',
   }),
   createTheme('executive-dark', 'Executive Dark', 'corporate', {
-    primary: '#1F2937',
-    secondary: '#374151',
-    accent: '#F59E0B',
-    background: '#111827',
-    surface: '#1F2937',
-    textPrimary: '#F9FAFB',
-    textSecondary: '#D1D5DB',
-    textMuted: '#9CA3AF',
+    primary: '#3B82F6',
+    secondary: '#64748B',
+    accent: '#10B981',
+    background: '#1E293B',
+    surface: '#334155',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#CBD5E1',
+    textMuted: '#94A3B8',
   }),
   createTheme('finance-green', 'Financial Growth', 'finance', {
     primary: '#059669',
@@ -672,7 +816,7 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     textMuted: '#0F766E',
   }),
 
-  // 2024 Modern Themes
+  // 2024 Modern Themes - ACCESSIBILITY FIXED
   createTheme(
     'peach-fuzz-2024',
     'Warm Harmony (Pantone 2024)',
@@ -680,14 +824,58 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     {
       primary: '#FFBE98', // Peach Fuzz inspired
       secondary: '#FFDAB9',
-      accent: '#FF6B35',
+      accent: '#D97706', // Fixed: Better contrast ratio
       background: '#FFF8F5',
       surface: '#FFE8E0',
-      textPrimary: '#4A3520',
-      textSecondary: '#6B4E31',
-      textMuted: '#A07D5C',
     },
-    { scale: 'large', headingFont: MODERN_FONT_STACKS.modernSans }
+    { scale: 'large', headingFont: MODERN_FONT_STACKS.modernSans },
+    { enforceAccessibility: true } // Auto-fix accessibility issues
+  ),
+
+  // New Professional Themes for 2024
+  createTheme(
+    'midnight-professional',
+    'Midnight Professional',
+    'corporate',
+    {
+      primary: '#1E293B',
+      secondary: '#334155',
+      accent: '#3B82F6',
+      background: '#0F172A',
+      surface: '#1E293B',
+      textPrimary: '#F8FAFC',
+      textSecondary: '#CBD5E1',
+      textMuted: '#94A3B8',
+    },
+    { headingFont: MODERN_FONT_STACKS.modernSans, scale: 'large' }
+  ),
+
+  createTheme(
+    'emerald-growth',
+    'Emerald Growth',
+    'natural',
+    {
+      primary: '#059669',
+      secondary: '#10B981',
+      accent: '#F59E0B',
+      background: '#ECFDF5',
+      surface: '#D1FAE5',
+    },
+    { headingFont: MODERN_FONT_STACKS.modernSans, scale: 'normal' }
+  ),
+
+  createTheme(
+    'royal-purple',
+    'Royal Purple',
+    'creative',
+    {
+      primary: '#6B21A8',
+      secondary: '#8B5CF6',
+      accent: '#F59E0B',
+      background: '#FAF5FF',
+      surface: '#F3E8FF',
+    },
+    { headingFont: MODERN_FONT_STACKS.elegantSerif, scale: 'large' }
   ),
   createTheme(
     'earth-luxe',
@@ -712,36 +900,20 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     {
       primary: '#0EA5E9',
       secondary: '#38BDF8',
-      accent: '#F0F9FF',
+      accent: '#0284C7', // Fixed: Better contrast
       background: '#F0F9FF',
       surface: '#E0F2FE',
-      textPrimary: '#0C4A6E',
-      textSecondary: '#0369A1',
-      textMuted: '#0284C7',
     },
-    { scale: 'normal' }
+    { scale: 'normal' },
+    { enforceAccessibility: true } // Auto-fix accessibility issues
   ),
   createTheme('sunset-gradient', 'Sunset Professional', 'vibrant', {
     primary: '#F97316',
     secondary: '#FB923C',
-    accent: '#FED7AA',
+    accent: '#D97706', // Fixed: Better contrast
     background: '#FFF7ED',
     surface: '#FFEDD5',
-    textPrimary: '#9A3412',
-    textSecondary: '#C2410C',
-    textMuted: '#EA580C',
-  }),
-  createTheme('forest-modern', 'Modern Forest', 'natural', {
-    primary: '#166534',
-    secondary: '#22C55E',
-    accent: '#84CC16',
-    background: '#F0FDF4',
-    surface: '#DCFCE7',
-    textPrimary: '#14532D',
-    textSecondary: '#166534',
-    textMuted: '#15803D',
-  }),
-
+  }, undefined, { enforceAccessibility: true }), // Auto-fix accessibility issues
   // Sophisticated Professional Themes
   createTheme(
     'platinum-elegance',
@@ -759,7 +931,7 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     },
     { headingFont: MODERN_FONT_STACKS.elegantSerif, scale: 'large' }
   ),
-  createTheme('royal-purple', 'Royal Authority', 'corporate', {
+  createTheme('royal-authority', 'Royal Authority', 'corporate', {
     primary: '#581C87',
     secondary: '#7C3AED',
     accent: '#C4B5FD',
@@ -791,57 +963,8 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     textSecondary: '#E2E8F0',
     textMuted: '#CBD5E1',
   }),
-  createTheme(
-    'work-sans-modern',
-    'Work Sans Modern',
-    'modern',
-    {
-      primary: '#111827',
-      secondary: '#4B5563',
-      accent: '#10B981',
-      background: '#FFFFFF',
-      surface: '#F9FAFB',
-    },
-    {
-      headingFont: MODERN_FONT_STACKS.workSans,
-      bodyFont: MODERN_FONT_STACKS.workSans,
-      scale: 'normal',
-    }
-  ),
-  createTheme(
-    'ibm-plex-clean',
-    'IBM Plex Clean',
-    'technology',
-    {
-      primary: '#111827',
-      secondary: '#4338CA',
-      accent: '#14B8A6',
-      background: '#FFFFFF',
-      surface: '#F8FAFC',
-    },
-    {
-      headingFont: MODERN_FONT_STACKS.ibmPlexSans,
-      bodyFont: MODERN_FONT_STACKS.ibmPlexSans,
-      scale: 'normal',
-    }
-  ),
-  createTheme(
-    'dm-sans-elegant',
-    'DM Sans Elegant',
-    'modern',
-    {
-      primary: '#0F172A',
-      secondary: '#475569',
-      accent: '#F59E0B',
-      background: '#FFFFFF',
-      surface: '#F8FAFC',
-    },
-    {
-      headingFont: MODERN_FONT_STACKS.dmSans,
-      bodyFont: MODERN_FONT_STACKS.dmSans,
-      scale: 'large',
-    }
-  ),
+  // Removed duplicate themes: work-sans-modern, ibm-plex-clean, dm-sans-elegant
+  // These were too similar to consulting-charcoal theme
   createTheme('aurora-gradient', 'Aurora Professional', 'creative', {
     primary: '#EC4899',
     secondary: '#F472B6',
@@ -901,12 +1024,46 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
   createTheme('soft-pastels', 'Soft Professional', 'modern', {
     primary: '#A7C7E7',
     secondary: '#B8E6B8',
-    accent: '#FFB6C1',
+    accent: '#3B82F6', // Fixed: Better contrast
     background: '#F8F9FA',
     surface: '#F1F3F4',
-    textPrimary: '#2C3E50',
-    textSecondary: '#34495E',
-    textMuted: '#7F8C8D',
+  }, undefined, { enforceAccessibility: true }), // Auto-fix accessibility issues
+
+  // Additional Professional Themes for Enhanced Variety
+  createTheme('executive-platinum', 'Executive Platinum', 'corporate', {
+    primary: '#2C3E50',
+    secondary: '#34495E',
+    accent: '#E74C3C',
+    background: '#FFFFFF',
+    surface: '#F7F9FC',
+  }),
+  createTheme('innovation-blue', 'Innovation Blue', 'technology', {
+    primary: '#0066CC',
+    secondary: '#4A90E2',
+    accent: '#FF6B35',
+    background: '#FFFFFF',
+    surface: '#F0F7FF',
+  }),
+  createTheme('financial-green', 'Financial Growth', 'finance', {
+    primary: '#2E7D32',
+    secondary: '#4CAF50',
+    accent: '#FFC107',
+    background: '#FFFFFF',
+    surface: '#F1F8E9',
+  }),
+  createTheme('consulting-elite', 'Consulting Elite', 'consulting', {
+    primary: '#37474F',
+    secondary: '#546E7A',
+    accent: '#FF5722',
+    background: '#FFFFFF',
+    surface: '#FAFAFA',
+  }),
+  createTheme('healthcare-professional', 'Healthcare Professional', 'healthcare', {
+    primary: '#00695C',
+    secondary: '#26A69A',
+    accent: '#FF9800',
+    background: '#FFFFFF',
+    surface: '#E0F2F1',
   }),
 ];
 
@@ -976,8 +1133,43 @@ export function getThemeRecommendations(params: {
 }
 
 /**
- * Dynamic theme selection based on content and audience.
+ * Create an accessibility-compliant theme with automatic color adjustments
+ */
+export function createAccessibleTheme(
+  id: string,
+  name: string,
+  category: ProfessionalTheme['category'],
+  baseColors: {
+    primary: string;
+    secondary?: string;
+    accent?: string;
+    background?: string;
+  }
+): ProfessionalTheme {
+  const palette = generateHarmoniousPalette(baseColors.primary);
+
+  return createTheme(
+    id,
+    name,
+    category,
+    {
+      primary: baseColors.primary,
+      secondary: baseColors.secondary || palette.analogous[0],
+      accent: baseColors.accent || palette.complementary,
+      background: baseColors.background || '#FFFFFF'
+    },
+    undefined,
+    {
+      enforceAccessibility: true,
+      generateHarmonious: !baseColors.secondary || !baseColors.accent
+    }
+  );
+}
+
+/**
+ * Enhanced dynamic theme selection based on content and audience.
  * Prefers explicit industry matches; otherwise picks by tone/type; falls back to default.
+ * Now includes accessibility and content-type considerations.
  */
 export function selectThemeForContent(params: {
   audience?: string;
@@ -986,7 +1178,30 @@ export function selectThemeForContent(params: {
   tone?: string;
   isDataHeavy?: boolean;
   isCreative?: boolean;
+  requireAccessibility?: boolean;
+  contentComplexity?: 'simple' | 'moderate' | 'complex';
 }): ProfessionalTheme {
+  // Accessibility-first selection if required
+  if (params.requireAccessibility) {
+    const accessibleThemes = PROFESSIONAL_THEMES.filter(theme => {
+      const validation = validateThemeAccessibility(theme);
+      return validation.wcagLevel === 'AA' || validation.wcagLevel === 'AAA';
+    });
+
+    if (accessibleThemes.length > 0) {
+      // Select from accessible themes based on other criteria
+      if (params.isDataHeavy) {
+        const dataTheme = accessibleThemes.find(t => t.category === 'finance' || t.id === 'corporate-blue');
+        if (dataTheme) return dataTheme;
+      }
+      if (params.isCreative) {
+        const creativeTheme = accessibleThemes.find(t => t.category === 'creative');
+        if (creativeTheme) return creativeTheme;
+      }
+      return accessibleThemes[0];
+    }
+  }
+
   if (params.isDataHeavy) return getThemeById('finance-navy');
   if (params.isCreative) return getThemeById('creative-purple');
 
@@ -1068,35 +1283,46 @@ export function customizeTheme(
 }
 
 /**
- * Validate theme color contrast for accessibility (WCAG AA heuristics)
+ * Enhanced theme accessibility validation with comprehensive WCAG compliance
  * - Checks body text vs background (>= 4.5:1)
  * - Checks inverse text vs primary (>= 3:1 assumption for large type/hero)
  * - Flags low-contrast secondary text as a suggestion
+ * - Validates accent colors and semantic colors
+ * - Provides detailed contrast ratios and improvement suggestions
  */
 export function validateThemeAccessibility(theme: ProfessionalTheme): {
   isAccessible: boolean;
   issues: string[];
   suggestions: string[];
+  contrastRatios: Record<string, number>;
+  wcagLevel: 'AAA' | 'AA' | 'A' | 'FAIL';
 } {
   const issues: string[] = [];
   const suggestions: string[] = [];
+  const contrastRatios: Record<string, number> = {};
 
-  const bodyContrast = contrastRatio(
+  // Enhanced contrast ratio calculation using the new function
+  const bodyContrast = calculateContrastRatio(
     theme.colors.text.primary,
     theme.colors.background
   );
+  contrastRatios.bodyText = bodyContrast;
+
   if (bodyContrast < 4.5) {
     issues.push(
       `Body text contrast ${bodyContrast.toFixed(
         2
       )}:1 is below WCAG AA (4.5:1).`
     );
+    suggestions.push('Increase contrast between primary text and background colors');
   }
 
-  const secondaryContrast = contrastRatio(
+  const secondaryContrast = calculateContrastRatio(
     theme.colors.text.secondary,
     theme.colors.background
   );
+  contrastRatios.secondaryText = secondaryContrast;
+
   if (secondaryContrast < 3.0) {
     suggestions.push(
       `Secondary text contrast ${secondaryContrast.toFixed(
@@ -1105,10 +1331,12 @@ export function validateThemeAccessibility(theme: ProfessionalTheme): {
     );
   }
 
-  const inverseOnPrimary = contrastRatio(
+  const inverseOnPrimary = calculateContrastRatio(
     theme.colors.text.inverse,
     theme.colors.primary
   );
+  contrastRatios.inverseText = inverseOnPrimary;
+
   if (inverseOnPrimary < 3.0) {
     suggestions.push(
       `Inverse text on primary is ${inverseOnPrimary.toFixed(
@@ -1117,10 +1345,52 @@ export function validateThemeAccessibility(theme: ProfessionalTheme): {
     );
   }
 
+  // Check accent color contrast
+  const accentContrast = calculateContrastRatio(theme.colors.accent, theme.colors.background);
+  contrastRatios.accent = accentContrast;
+
+  if (accentContrast < 3.0) {
+    suggestions.push(
+      `Accent color contrast ${accentContrast.toFixed(2)}:1 may be insufficient for emphasis elements.`
+    );
+  }
+
+  // Check semantic colors
+  const semanticColors = ['success', 'warning', 'error', 'info'] as const;
+  semanticColors.forEach(colorType => {
+    const semanticContrast = calculateContrastRatio(
+      theme.colors.semantic[colorType],
+      theme.colors.background
+    );
+    contrastRatios[`semantic_${colorType}`] = semanticContrast;
+
+    if (semanticContrast < 3.0) {
+      suggestions.push(
+        `${colorType} color contrast ${semanticContrast.toFixed(2)}:1 may be too low for status indicators.`
+      );
+    }
+  });
+
+  // Determine WCAG compliance level
+  const minContrast = Math.min(bodyContrast, secondaryContrast, inverseOnPrimary);
+  let wcagLevel: 'AAA' | 'AA' | 'A' | 'FAIL';
+
+  if (minContrast >= 7.0) {
+    wcagLevel = 'AAA';
+  } else if (minContrast >= 4.5) {
+    wcagLevel = 'AA';
+  } else if (minContrast >= 3.0) {
+    wcagLevel = 'A';
+  } else {
+    wcagLevel = 'FAIL';
+  }
+
   return {
-    isAccessible: issues.length === 0,
+    isAccessible: issues.length === 0 && wcagLevel !== 'FAIL',
     issues,
     suggestions,
+    contrastRatios,
+    wcagLevel
   };
 }
 

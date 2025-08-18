@@ -38,11 +38,11 @@ import { logger, type LogContext } from '../utils/smartLogger';
 // AI Configuration
 const AI_CONFIG = getTextModelConfig();
 
-// OpenAI client instance
+// OpenAI client instance with connection pooling
 let openaiClient: OpenAI | null = null;
 
 /**
- * Get or create OpenAI client instance
+ * Get or create OpenAI client instance with enhanced configuration
  */
 function getOpenAI(): OpenAI {
   if (!openaiClient) {
@@ -50,7 +50,11 @@ function getOpenAI(): OpenAI {
     if (!apiKey) {
       throw new Error('OpenAI API key not configured');
     }
-    openaiClient = new OpenAI({ apiKey });
+    openaiClient = new OpenAI({
+      apiKey,
+      timeout: 60000, // 60 second timeout
+      maxRetries: 2,  // Built-in retry mechanism
+    });
   }
   return openaiClient;
 }

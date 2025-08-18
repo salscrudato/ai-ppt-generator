@@ -1,6 +1,7 @@
 /**
- * Enhanced API Client with Comprehensive Debugging
- * Provides automatic request/response logging, error tracking, and performance monitoring
+ * Enhanced API Client with Advanced Features
+ * Provides comprehensive request/response handling with intelligent error management,
+ * retry logic, progress tracking, and user-friendly error messages
  */
 
 import { API_ENDPOINTS } from '../config';

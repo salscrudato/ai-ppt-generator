@@ -27,7 +27,7 @@ export interface SlideSpec {
   title: string;
 
   /** The layout type that determines how content is arranged on the slide */
-  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'image-full' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution' | 'mixed-content' | 'agenda';
+  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'image-full' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution' | 'mixed-content' | 'agenda' | 'grid-layout';
 
   /** Bullet points for scannable, list-based content */
   bullets?: string[];
@@ -118,6 +118,20 @@ export interface SlideSpec {
   /** Source citations for credibility */
   sources?: string[];
 
+  /** Grid layout configuration for flexible content arrangement */
+  gridLayout?: {
+    /** Number of columns (1-4) */
+    columns: number;
+    /** Number of rows (1-3) */
+    rows: number;
+    /** Content for each grid cell */
+    cells: GridCell[];
+    /** Whether to show grid borders for visual separation */
+    showBorders?: boolean;
+    /** Spacing between grid cells */
+    cellSpacing?: 'tight' | 'normal' | 'spacious';
+  };
+
   /** Accessibility features */
   accessibility?: {
     /** Alt text for images */
@@ -128,6 +142,49 @@ export interface SlideSpec {
     chartDescription?: string;
     /** Table summary for screen readers */
     tableSummary?: string;
+  };
+}
+
+/**
+ * Represents content within a grid cell
+ */
+export interface GridCell {
+  /** Row position (0-based) */
+  row: number;
+  /** Column position (0-based) */
+  column: number;
+  /** Cell content type */
+  type: 'header' | 'bullets' | 'paragraph' | 'metric' | 'image' | 'chart' | 'empty';
+  /** Cell title/header text */
+  title?: string;
+  /** Bullet points for this cell */
+  bullets?: string[];
+  /** Paragraph content for this cell */
+  paragraph?: string;
+  /** Metric value and label */
+  metric?: {
+    value: string;
+    label: string;
+    trend?: 'up' | 'down' | 'neutral';
+  };
+  /** Image configuration */
+  image?: {
+    src?: string;
+    alt?: string;
+    prompt?: string;
+  };
+  /** Chart configuration */
+  chart?: {
+    type: 'bar' | 'line' | 'pie' | 'donut';
+    data: any[];
+    title?: string;
+  };
+  /** Cell styling options */
+  styling?: {
+    backgroundColor?: string;
+    textColor?: string;
+    emphasis?: 'normal' | 'bold' | 'highlight';
+    alignment?: 'left' | 'center' | 'right';
   };
 }
 
@@ -146,6 +203,18 @@ export interface GenerationParams {
 
   /** Desired content length and detail level */
   contentLength?: 'minimal' | 'brief' | 'moderate' | 'detailed' | 'comprehensive';
+
+  /** Grid layout preferences for content organization */
+  gridPreferences?: {
+    /** Preferred number of columns (1-4) */
+    columns?: number;
+    /** Preferred number of rows (1-3) */
+    rows?: number;
+    /** Whether to allow auto-formatting within grid cells */
+    autoFormat?: boolean;
+    /** Preferred cell spacing */
+    cellSpacing?: 'tight' | 'normal' | 'spacious';
+  };
 
   /** Presentation type for context-aware generation */
   presentationType?: 'general' | 'pitch' | 'report' | 'training' | 'proposal' | 'update' | 'analysis' | 'comparison' | 'timeline' | 'process' | 'strategy';
@@ -187,44 +256,7 @@ export interface GenerationParams {
   includeSources?: boolean;
 }
 
-/**
- * Represents a complete presentation with multiple slides
- */
-export interface Presentation {
-  /** Unique identifier for the presentation */
-  id: string;
 
-  /** Presentation title */
-  title: string;
-
-  /** Array of slides in order */
-  slides: SlideSpec[];
-
-  /** Presentation metadata */
-  metadata: {
-    /** Creation timestamp */
-    createdAt: Date;
-    /** Last modified timestamp */
-    updatedAt: Date;
-    /** Author information */
-    author?: string;
-    /** Presentation description */
-    description?: string;
-  };
-
-  /** Global presentation settings */
-  settings: {
-    /** Default theme for all slides */
-    theme?: string;
-    /** Global brand settings */
-    brand?: {
-      primary?: string;
-      secondary?: string;
-      accent?: string;
-      fontFamily?: string;
-    };
-  };
-}
 
 /**
  * Slide drag and drop context
@@ -243,25 +275,16 @@ export interface SlideDragContext {
  */
 export interface AppState {
   /** Current step in the slide generation workflow */
-  step: 'input' | 'edit' | 'presentation';
-
-  /** Current mode: single slide or multi-slide presentation */
-  mode: 'single' | 'presentation';
+  step: 'input' | 'edit';
 
   /** User input parameters */
   params: GenerationParams;
 
-  /** AI-generated slide draft (single slide mode) */
+  /** AI-generated slide draft */
   draft?: SlideSpec;
 
-  /** User-edited slide specification (single slide mode) */
+  /** User-edited slide specification */
   editedSpec?: SlideSpec;
-
-  /** Current presentation (multi-slide mode) */
-  presentation?: Presentation;
-
-  /** Currently selected slide in presentation mode */
-  selectedSlideId?: string;
 
   /** Loading state indicator */
   loading: boolean;
@@ -294,42 +317,4 @@ export function createNewSlide(overrides: Partial<SlideSpec> = {}): SlideSpec {
   };
 }
 
-/**
- * Create a new presentation with default values
- */
-export function createNewPresentation(
-  title: string = 'New Presentation',
-  options?: {
-    theme?: string;
-    brand?: {
-      primary?: string;
-      secondary?: string;
-      accent?: string;
-      fontFamily?: string;
-    };
-  }
-): Presentation {
-  return {
-    id: `presentation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    title,
-    slides: [createNewSlide({ title: 'Title Slide', layout: 'title' })],
-    metadata: {
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    settings: {
-      theme: options?.theme || 'corporate-blue',
-      brand: options?.brand
-    }
-  };
-}
 
-/**
- * Reorder slides in a presentation
- */
-export function reorderSlides(slides: SlideSpec[], fromIndex: number, toIndex: number): SlideSpec[] {
-  const result = Array.from(slides);
-  const [removed] = result.splice(fromIndex, 1);
-  result.splice(toIndex, 0, removed);
-  return result;
-}

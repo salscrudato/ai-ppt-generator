@@ -1,0 +1,221 @@
+{
+  "development": {
+    "name": "AI PowerPoint Generator - Development Environment",
+    "version": "3.1.0",
+    "description": "Seamless development configuration with hot reloading and integration",
+    
+    "frontend": {
+      "port": 5175,
+      "host": "localhost",
+      "open": true,
+      "cors": true,
+      "hmr": {
+        "enabled": true,
+        "port": 24678
+      },
+      "proxy": {
+        "/api": {
+          "target": "http://localhost:5001/plsfixthx-ai/us-central1",
+          "changeOrigin": true,
+          "secure": false,
+          "timeout": 30000,
+          "retries": 3
+        }
+      }
+    },
+    
+    "backend": {
+      "port": 5001,
+      "host": "localhost",
+      "functions": {
+        "source": "functions",
+        "runtime": "nodejs22",
+        "timeout": "60s",
+        "memory": "1GB"
+      },
+      "emulators": {
+        "ui": {
+          "enabled": true,
+          "port": 4000
+        },
+        "hub": {
+          "port": 4400
+        },
+        "logging": {
+          "port": 4500
+        }
+      },
+      "hotReload": {
+        "enabled": true,
+        "watchPatterns": [
+          "src/**/*.ts",
+          "src/**/*.js"
+        ],
+        "ignorePatterns": [
+          "lib/**/*",
+          "node_modules/**/*",
+          "test/**/*",
+          "*.test.ts"
+        ]
+      }
+    },
+    
+    "integration": {
+      "healthCheck": {
+        "enabled": true,
+        "interval": 10000,
+        "timeout": 5000,
+        "retries": 3
+      },
+      "apiValidation": {
+        "enabled": true,
+        "validateResponses": true,
+        "logRequests": true
+      },
+      "errorHandling": {
+        "showDetailedErrors": true,
+        "logLevel": "debug",
+        "enableSourceMaps": true
+      }
+    },
+    
+    "performance": {
+      "bundleAnalyzer": false,
+      "sourceMaps": true,
+      "minification": false,
+      "compression": false,
+      "caching": {
+        "enabled": true,
+        "strategy": "development"
+      }
+    },
+    
+    "features": {
+      "themeVerification": {
+        "enabled": true,
+        "realTimeUpdates": true,
+        "debugMode": true
+      },
+      "slidePreview": {
+        "enabled": true,
+        "quality": "standard",
+        "updateDelay": 200
+      },
+      "powerPointGeneration": {
+        "enabled": true,
+        "testMode": true,
+        "saveToFile": true
+      }
+    }
+  },
+  
+  "production": {
+    "name": "AI PowerPoint Generator - Production",
+    "version": "3.1.0",
+    
+    "frontend": {
+      "build": {
+        "outDir": "dist",
+        "sourcemap": false,
+        "minify": true,
+        "target": "es2020"
+      },
+      "optimization": {
+        "splitChunks": true,
+        "treeshaking": true,
+        "compression": true
+      }
+    },
+    
+    "backend": {
+      "functions": {
+        "runtime": "nodejs22",
+        "timeout": "60s",
+        "memory": "1GB",
+        "maxInstances": 100
+      },
+      "logging": {
+        "level": "info",
+        "structured": true
+      }
+    },
+    
+    "features": {
+      "themeVerification": {
+        "enabled": true,
+        "realTimeUpdates": true,
+        "debugMode": false
+      },
+      "slidePreview": {
+        "enabled": true,
+        "quality": "high",
+        "updateDelay": 150
+      },
+      "powerPointGeneration": {
+        "enabled": true,
+        "testMode": false,
+        "saveToFile": false
+      }
+    }
+  },
+  
+  "scripts": {
+    "development": {
+      "start": "./start-dev.sh",
+      "frontend": "cd frontend && npm run dev",
+      "backend": "cd functions && npm run dev:watch",
+      "build": "npm run build:frontend && npm run build:backend",
+      "build:frontend": "cd frontend && npm run build",
+      "build:backend": "cd functions && npm run build",
+      "test": "npm run test:frontend && npm run test:backend",
+      "test:frontend": "cd frontend && npm test",
+      "test:backend": "cd functions && npm test",
+      "clean": "./cleanup-codebase.sh",
+      "reset": "npm run clean && npm install"
+    }
+  },
+  
+  "monitoring": {
+    "healthChecks": [
+      {
+        "name": "Frontend Health",
+        "url": "http://localhost:5175",
+        "method": "GET",
+        "expectedStatus": 200
+      },
+      {
+        "name": "Backend Health",
+        "url": "http://localhost:5001/plsfixthx-ai/us-central1/api/health",
+        "method": "GET",
+        "expectedStatus": 200
+      },
+      {
+        "name": "Firebase Emulator UI",
+        "url": "http://localhost:4000",
+        "method": "GET",
+        "expectedStatus": 200
+      }
+    ]
+  },
+  
+  "troubleshooting": {
+    "commonIssues": {
+      "portInUse": {
+        "description": "Port already in use",
+        "solution": "Run 'npm run clean:ports' or change port in configuration"
+      },
+      "buildErrors": {
+        "description": "TypeScript compilation errors",
+        "solution": "Run 'npm run type-check' to identify issues"
+      },
+      "apiConnection": {
+        "description": "Frontend cannot connect to backend",
+        "solution": "Ensure Firebase emulators are running and check proxy configuration"
+      },
+      "hotReloadNotWorking": {
+        "description": "Changes not reflected automatically",
+        "solution": "Restart development servers or check file watchers"
+      }
+    }
+  }
+}

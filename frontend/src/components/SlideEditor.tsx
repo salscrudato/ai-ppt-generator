@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SlideSpec } from '../types';
 import {
@@ -13,16 +13,18 @@ import {
   HiCog6Tooth,
   HiDocumentText,
   HiInformationCircle,
-  HiEye
+  HiEye,
+  HiCheckCircle,
+  HiClipboardDocument
 } from 'react-icons/hi2';
 import clsx from 'clsx';
 
-// Import the new SlidePreview component and theme context
-// import { usePreviewOptions } from '../contexts/PreviewOptionsContext';
-// import { SlidePreview } from './SlidePreview';
-// import { useCurrentTheme } from '../contexts/ThemeContext';
-// import { useThemeSync } from '../hooks/useThemeSync';
 import type { ProfessionalTheme } from '../themes/professionalThemes';
+import { getDefaultTheme } from '../themes/professionalThemes';
+import { useCurrentTheme } from '../contexts/ThemeContext';
+import { useThemeSync } from '../hooks/useThemeSync';
+import SlidePreview from './SlidePreview';
+import ThemeVerificationIndicator from './ThemeVerificationIndicator';
 
 interface SlideEditorProps {
   spec: SlideSpec;
@@ -35,6 +37,12 @@ interface SlideEditorProps {
   theme?: ProfessionalTheme;
 }
 
+interface EditingState {
+  isEditing: boolean;
+  hasUnsavedChanges: boolean;
+  lastSaved: Date | null;
+}
+
 export default function SlideEditor({
   spec,
   loading,
@@ -45,26 +53,50 @@ export default function SlideEditor({
   theme
 }: SlideEditorProps) {
   const [localSpec, setLocalSpec] = useState(spec);
+  const [editingState, setEditingState] = useState<EditingState>({
+    isEditing: false,
+    hasUnsavedChanges: false,
+    lastSaved: null
+  });
 
-  // Debug logging
+  // Get current theme from context
+  const contextTheme = useCurrentTheme();
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (editingState.hasUnsavedChanges) {
+      const timer = setTimeout(() => {
+        onSpecChange(localSpec);
+        setEditingState(prev => ({
+          ...prev,
+          hasUnsavedChanges: false,
+          lastSaved: new Date()
+        }));
+      }, 1000); // Auto-save after 1 second of inactivity
+
+      return () => clearTimeout(timer);
+    }
+  }, [localSpec, editingState.hasUnsavedChanges, onSpecChange]);
+
+  // Enhanced theme synchronization for slide editor
+  const themeSync = useThemeSync({
+    mode: 'presentation', // SlideEditor is typically used in presentation mode
+    debug: false // Disabled to reduce console spam
+  });
+
+  // Preview options with default zoom
+  const previewOptions = { options: { zoom: 100 } };
+
+  // Use provided theme, synchronized theme, context theme, or default theme
+  const activeTheme: ProfessionalTheme = theme || themeSync?.currentTheme || contextTheme || getDefaultTheme();
+
+  // Debug logging (after activeTheme is defined)
   React.useEffect(() => {
     console.log('SlideEditor received spec:', spec);
     console.log('SlideEditor localSpec:', localSpec);
-  }, [spec, localSpec]);
-  // const contextTheme = useCurrentTheme();
-  const contextTheme = null; // Temporary fallback
-
-  // Enhanced theme synchronization for slide editor
-  // const themeSync = useThemeSync({
-  //   mode: 'presentation', // SlideEditor is typically used in presentation mode
-  //   debug: false // Disabled to reduce console spam
-  // });
-  const themeSync = null; // Temporary fallback
-
-  // const previewOptions = usePreviewOptions();
-  const previewOptions = { options: { zoom: 100 } }; // Temporary fallback
-  // Use provided theme, synchronized theme, or fall back to context theme
-  const currentTheme = theme || themeSync?.currentTheme || contextTheme;
+    console.log('SlideEditor theme prop:', theme);
+    console.log('SlideEditor activeTheme:', activeTheme);
+  }, [spec, localSpec, theme, activeTheme]);
 
   const updateSpec = (updates: Partial<SlideSpec>) => {
     const updated = { ...localSpec, ...updates };
@@ -1252,21 +1284,30 @@ export default function SlideEditor({
           className="lg:sticky lg:top-8"
         >
           <div className="card p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <HiEye className="w-5 h-5 text-blue-500" />
-              Live Preview
-            </h3>
-            {/* <SlidePreview
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <HiEye className="w-5 h-5 text-blue-500" />
+                Live Preview
+              </h3>
+              <ThemeVerificationIndicator
+                theme={activeTheme}
+                compact={true}
+              />
+            </div>
+
+            <SlidePreview
               spec={localSpec}
-              theme={currentTheme}
+              theme={activeTheme}
+              size="large"
               className="w-full shadow-lg"
-            /> */}
-            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <div className="text-4xl mb-2">📄</div>
-                <div className="text-sm">Slide Preview</div>
-                <div className="text-xs mt-1">Preview temporarily disabled</div>
-              </div>
+            />
+
+            {/* Detailed Theme Verification */}
+            <div className="mt-4">
+              <ThemeVerificationIndicator
+                theme={activeTheme}
+                showDetails={false}
+              />
             </div>
           </div>
         </motion.div>

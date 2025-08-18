@@ -467,6 +467,35 @@ export class CorruptionDiagnostics {
   getIssuesBySeverity(severity: 'low' | 'medium' | 'high' | 'critical'): CorruptionIssue[] {
     return this.issues.filter(issue => issue.severity === severity);
   }
+
+  /**
+   * Validate a generated PowerPoint file
+   */
+  validateGeneratedFile(buffer: Buffer, context: LogContext = {}): {
+    passed: boolean;
+    issues: CorruptionIssue[];
+    report: DiagnosticReport;
+  } {
+    // Analyze the buffer for issues
+    const issues = this.analyzeBuffer(buffer, context);
+
+    // Generate a diagnostic report
+    const report = this.generateReport(
+      'Generated File Validation',
+      [], // No slide specs available for this validation
+      buffer,
+      context
+    );
+
+    // File passes validation if there are no critical issues
+    const passed = !issues.some(issue => issue.severity === 'critical');
+
+    return {
+      passed,
+      issues,
+      report
+    };
+  }
 }
 
 // ============================================================================

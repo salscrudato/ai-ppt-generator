@@ -1,19 +1,20 @@
 /**
- * Enhanced AI Prompts for Chained PowerPoint Generation
+ * Enhanced AI Prompts for Professional PowerPoint Generation
  *
- * Modular prompts for multi-step AI processing to create high-quality, professional slides.
+ * Advanced modular prompts for multi-step AI processing to create high-quality, professional slides.
  * Steps: Content → Layout → Image → Refinement → Validation.
- * Incorporates 2024 design trends, storytelling frameworks, and accessibility best practices for best-in-class outputs.
+ * Incorporates 2024 design trends, storytelling frameworks, and accessibility best practices.
  *
- * RECENT ENHANCEMENTS:
- * - Improved narrative structure with expert-level storytelling frameworks
- * - Enhanced content quality with minimalism emphasis and word limits
- * - Advanced image prompt generation with batch processing capabilities
- * - Comprehensive error handling and graceful degradation
- * - Performance optimizations and monitoring integration
+ * LATEST ENHANCEMENTS:
+ * - Advanced narrative structure with proven storytelling frameworks
+ * - Enhanced content quality with executive-level precision and clarity
+ * - Intelligent image prompt generation with context-aware descriptions
+ * - Comprehensive error handling with graceful degradation
+ * - Performance optimizations and real-time monitoring
+ * - AI-agent-friendly structure for seamless integration
  *
- * @version 3.6.0-pipeline-enhanced
- * @author AI PowerPoint Generator Team (enhanced by expert co-pilot)
+ * @version 3.7.0-enhanced
+ * @author AI PowerPoint Generator Team
  */
 
 import { SlideSpecSchema, type GenerationParams, type SlideSpec, SLIDE_LAYOUTS } from './schema';
@@ -44,10 +45,23 @@ export const SYSTEM_PROMPT = `You are an elite PowerPoint presentation architect
 2. **Audience Psychology**: What are their pain points, motivations, and decision-making criteria?
 3. **Narrative Architecture**: What story structure will create maximum persuasive impact?
 4. **Visual Hierarchy**: Which layout will guide attention to the most critical information first?
-5. **Quality Assurance**: Does this meet Fortune 500 presentation standards?
+5. **Data Integration**: How can we incorporate compelling metrics and evidence?
+6. **Accessibility Design**: How do we ensure universal comprehension and engagement?
+7. **Quality Assurance**: Does this meet Fortune 500 presentation standards?
+
+## ADVANCED STORYTELLING FRAMEWORKS:
+- **Problem-Solution-Impact**: Identify challenge → Present solution → Quantify results
+- **Before-After-Bridge**: Current state → Desired state → Path to transformation
+- **Feature-Advantage-Benefit**: What it is → Why it matters → How it helps
+- **Situation-Complication-Resolution**: Context → Challenge → Solution
+- **STAR Method**: Situation → Task → Action → Result (for case studies)
 
 ## CRITICAL SUCCESS FACTORS:
 - **Specificity Over Generality**: Use precise metrics, dates, and outcomes instead of vague statements
+- **Action-Oriented Language**: Every bullet point should inspire action or provide clear value
+- **Professional Tone**: Maintain executive-level communication standards throughout
+- **Visual Clarity**: Structure content for immediate comprehension and maximum impact
+- **Accessibility First**: Ensure content is inclusive and accessible to all audiences
 - **Context-Aware Content**: Ensure all data points feel realistic and contextually appropriate
 - **Action-Oriented**: Every slide should drive toward a clear decision or next step
 - **Stakeholder Value**: Focus on what matters most to the specific audience type
@@ -715,11 +729,118 @@ function performQuickQualityCheck(partialSpec: Partial<SlideSpec>, input: Genera
   return { estimatedScore: Math.max(score, 0), issues, strengths };
 }
 
+/**
+ * Analyze prompt context to determine content type and requirements
+ */
+function analyzePromptContext(prompt: string): {
+  contentType: 'data-driven' | 'strategic' | 'process' | 'comparison' | 'narrative';
+  complexity: 'simple' | 'moderate' | 'complex';
+  visualElements: string[];
+  keyThemes: string[];
+} {
+  const lowerPrompt = prompt.toLowerCase();
+
+  // Determine content type
+  let contentType: 'data-driven' | 'strategic' | 'process' | 'comparison' | 'narrative' = 'narrative';
+
+  if (lowerPrompt.includes('data') || lowerPrompt.includes('metrics') || lowerPrompt.includes('results')) {
+    contentType = 'data-driven';
+  } else if (lowerPrompt.includes('strategy') || lowerPrompt.includes('plan') || lowerPrompt.includes('roadmap')) {
+    contentType = 'strategic';
+  } else if (lowerPrompt.includes('process') || lowerPrompt.includes('workflow') || lowerPrompt.includes('steps')) {
+    contentType = 'process';
+  } else if (lowerPrompt.includes('compare') || lowerPrompt.includes('vs') || lowerPrompt.includes('versus')) {
+    contentType = 'comparison';
+  }
+
+  // Determine complexity
+  const complexity = prompt.length > 200 ? 'complex' : prompt.length > 100 ? 'moderate' : 'simple';
+
+  // Identify visual elements needed
+  const visualElements: string[] = [];
+  if (lowerPrompt.includes('chart') || lowerPrompt.includes('graph')) visualElements.push('chart');
+  if (lowerPrompt.includes('table') || lowerPrompt.includes('comparison')) visualElements.push('table');
+  if (lowerPrompt.includes('timeline') || lowerPrompt.includes('schedule')) visualElements.push('timeline');
+  if (lowerPrompt.includes('image') || lowerPrompt.includes('visual')) visualElements.push('image');
+
+  // Extract key themes
+  const keyThemes = extractKeyThemes(prompt);
+
+  return { contentType, complexity, visualElements, keyThemes };
+}
+
+/**
+ * Detect industry context from prompt content
+ */
+function detectIndustryContext(prompt: string): string {
+  const industryKeywords = {
+    technology: ['software', 'app', 'platform', 'digital', 'tech', 'AI', 'machine learning'],
+    healthcare: ['patient', 'medical', 'health', 'clinical', 'treatment', 'diagnosis'],
+    finance: ['revenue', 'profit', 'investment', 'financial', 'budget', 'ROI'],
+    marketing: ['campaign', 'brand', 'customer', 'engagement', 'conversion', 'audience'],
+    education: ['student', 'learning', 'curriculum', 'education', 'training', 'course'],
+    consulting: ['strategy', 'optimization', 'efficiency', 'transformation', 'analysis']
+  };
+
+  const lowerPrompt = prompt.toLowerCase();
+
+  for (const [industry, keywords] of Object.entries(industryKeywords)) {
+    if (keywords.some(keyword => lowerPrompt.includes(keyword))) {
+      return industry;
+    }
+  }
+
+  return 'general';
+}
+
+/**
+ * Identify data requirements from prompt
+ */
+function identifyDataNeeds(prompt: string): {
+  needsMetrics: boolean;
+  needsComparisons: boolean;
+  needsTimeline: boolean;
+  suggestedDataTypes: string[];
+} {
+  const lowerPrompt = prompt.toLowerCase();
+
+  const needsMetrics = /\b(result|performance|metric|kpi|roi|growth|increase|decrease|percent)\b/.test(lowerPrompt);
+  const needsComparisons = /\b(compare|versus|vs|difference|better|worse|advantage)\b/.test(lowerPrompt);
+  const needsTimeline = /\b(timeline|schedule|roadmap|phase|quarter|month|year)\b/.test(lowerPrompt);
+
+  const suggestedDataTypes: string[] = [];
+  if (needsMetrics) suggestedDataTypes.push('performance metrics', 'KPIs', 'percentages');
+  if (needsComparisons) suggestedDataTypes.push('comparative data', 'benchmarks');
+  if (needsTimeline) suggestedDataTypes.push('dates', 'milestones', 'phases');
+
+  return { needsMetrics, needsComparisons, needsTimeline, suggestedDataTypes };
+}
+
+/**
+ * Extract key themes from prompt text
+ */
+function extractKeyThemes(prompt: string): string[] {
+  const words = prompt.toLowerCase().split(/\s+/);
+  const stopWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by']);
+
+  const themes = words
+    .filter(word => word.length > 4 && !stopWords.has(word))
+    .filter(word => /^[a-zA-Z]+$/.test(word))
+    .slice(0, 5);
+
+  return themes;
+}
+
 export function generateContentPrompt(input: GenerationParams): string {
   const { framework, toneGuidance, narrativeStrategy } = selectOptimalFramework(input);
   const audienceGuidance = AUDIENCE_GUIDANCE[input.audience] || AUDIENCE_GUIDANCE.general;
   const toneSpec = TONE_SPECIFICATIONS[input.tone] || TONE_SPECIFICATIONS.professional;
   const lengthSpec = CONTENT_LENGTH_SPECS[input.contentLength] || CONTENT_LENGTH_SPECS.moderate;
+
+  // Enhanced context analysis for better content generation
+  const contentAnalysis = analyzePromptContext(input.prompt);
+  const industryContext = detectIndustryContext(input.prompt);
+  const dataRequirements = identifyDataNeeds(input.prompt);
 
   return `## CONTENT GENERATION TASK
 Create compelling slide content for: "${input.prompt}"
@@ -797,15 +918,42 @@ ${input.presentationType && input.presentationType !== 'general' ? `**Presentati
 ❌ {"date": "1754", "title": "Military stuff", "description": "Did some things"}
 ❌ {"date": "Later", "title": "Became President", "description": "Was important"}
 
+## GRID LAYOUT GUIDANCE:
+If content naturally fits a structured format (comparisons, features, metrics, team info), consider suggesting grid-layout:
+- **Dashboard/Metrics**: 4x1 or 2x2 grid with metric cells
+- **Feature Comparison**: 3x2 grid with headers and bullet points
+- **Team Introduction**: 4x1 or 2x2 grid with image and paragraph cells
+- **Process Steps**: 4x1 or 3x1 grid with numbered headers and descriptions
+- **Before/After**: 2x2 grid showing comparison data
+
+**Grid Layout JSON Structure:**
+\`\`\`json
+{
+  "title": "Grid Layout Title",
+  "layout": "grid-layout",
+  "gridLayout": {
+    "columns": 3,
+    "rows": 2,
+    "cells": [
+      {"row": 0, "column": 0, "type": "header", "title": "Feature A"},
+      {"row": 1, "column": 0, "type": "bullets", "bullets": ["Benefit 1", "Benefit 2"]},
+      {"row": 0, "column": 1, "type": "metric", "metric": {"value": "25%", "label": "Growth"}}
+    ],
+    "cellSpacing": "normal"
+  }
+}
+\`\`\`
+
 ## OUTPUT REQUIREMENTS:
 Create a JSON object with these exact fields:
 {
   "title": "Specific, compelling title with clear benefit/outcome",
-  "layout": "title-paragraph", // Will be optimized in next step
+  "layout": "title-paragraph", // Will be optimized in next step - consider "grid-layout" for structured content
   "paragraph": "Engaging narrative content (if using paragraph format)",
   "bullets": ["Specific, metric-driven bullet points"],
   "notes": "Speaker delivery guidance and key talking points",
-  "sources": ["Credible source references if applicable"]
+  "sources": ["Credible source references if applicable"],
+  "gridLayout": { /* Only include if layout should be "grid-layout" */ }
 }
 
 ## FINAL QUALITY CHECK:
@@ -885,6 +1033,14 @@ ${input.audience === 'executives' ? '- Prioritize high-impact visuals with minim
 
 ### AVAILABLE LAYOUTS & SELECTION CRITERIA:
 **Primary Layouts**: ${SLIDE_LAYOUTS.join(', ')}
+
+**GRID LAYOUT SYSTEM**:
+- **grid-layout**: Flexible grid system for organizing content in columns and rows
+  - Supports 1-4 columns and 1-3 rows (max 12 cells)
+  - Each cell can contain: header, bullets, paragraph, metric, image, chart, or be empty
+  - Perfect for dashboards, feature comparisons, team introductions, or structured data
+  - Auto-formats content within each cell while maintaining grid structure
+  - Example: 3x2 grid for feature showcase, 2x2 for comparison matrix, 4x1 for metrics dashboard
 
 **LAYOUT SELECTION CRITERIA**:
 ${Object.entries(LAYOUT_SELECTION_GUIDE).slice(0, 8).map(([layout, guide]) => `**${layout}**: ${guide}`).join('\n')}

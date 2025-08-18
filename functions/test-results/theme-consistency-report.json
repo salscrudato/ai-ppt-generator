@@ -1,0 +1,276 @@
+{
+  "summary": {
+    "totalTests": 29,
+    "passedTests": 29,
+    "failedTests": 0,
+    "successRate": 100,
+    "totalIssues": 0,
+    "criticalIssues": 0
+  },
+  "themeResults": [
+    {
+      "themeId": "corporate-blue",
+      "themeName": "Corporate Professional",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 38
+    },
+    {
+      "themeId": "creative-purple",
+      "themeName": "Creative Studio",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 18
+    },
+    {
+      "themeId": "executive-dark",
+      "themeName": "Executive Dark",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 17
+    },
+    {
+      "themeId": "finance-green",
+      "themeName": "Financial Growth",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "tech-gradient",
+      "themeName": "Technology Forward",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "finance-navy",
+      "themeName": "Finance Navy",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 16
+    },
+    {
+      "themeId": "healthcare-teal",
+      "themeName": "Healthcare Teal",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "education-green",
+      "themeName": "Education Green",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "startup-orange",
+      "themeName": "Startup Orange",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 17
+    },
+    {
+      "themeId": "consulting-charcoal",
+      "themeName": "Consulting Charcoal",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "marketing-magenta",
+      "themeName": "Marketing Magenta",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "vibrant-eco",
+      "themeName": "Vibrant Eco",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "peach-fuzz-2024",
+      "themeName": "Warm Harmony (Pantone 2024)",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    },
+    {
+      "themeId": "earth-luxe",
+      "themeName": "Luxe Earth Tones",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "ocean-breeze",
+      "themeName": "Ocean Breeze (2024)",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    },
+    {
+      "themeId": "sunset-gradient",
+      "themeName": "Sunset Professional",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "forest-modern",
+      "themeName": "Modern Forest",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    },
+    {
+      "themeId": "platinum-elegance",
+      "themeName": "Platinum Elegance",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "royal-purple",
+      "themeName": "Royal Authority",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "crimson-power",
+      "themeName": "Crimson Authority",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    },
+    {
+      "themeId": "neon-cyber",
+      "themeName": "Cyber Innovation",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 17
+    },
+    {
+      "themeId": "work-sans-modern",
+      "themeName": "Work Sans Modern",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    },
+    {
+      "themeId": "ibm-plex-clean",
+      "themeName": "IBM Plex Clean",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    },
+    {
+      "themeId": "dm-sans-elegant",
+      "themeName": "DM Sans Elegant",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 15
+    },
+    {
+      "themeId": "aurora-gradient",
+      "themeName": "Aurora Professional",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 13
+    },
+    {
+      "themeId": "medical-trust",
+      "themeName": "Medical Professional",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 17
+    },
+    {
+      "themeId": "academic-sage",
+      "themeName": "Academic Wisdom",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 13
+    },
+    {
+      "themeId": "minimal-zen",
+      "themeName": "Zen Minimalism",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 16
+    },
+    {
+      "themeId": "soft-pastels",
+      "themeName": "Soft Professional",
+      "passed": true,
+      "colorConsistency": 100,
+      "typographyConsistency": 100,
+      "issueCount": 0,
+      "generationTime": 14
+    }
+  ],
+  "issues": [],
+  "recommendations": [],
+  "timestamp": "2025-08-17T23:06:42.035Z"
+}

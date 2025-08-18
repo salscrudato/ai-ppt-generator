@@ -16,16 +16,15 @@ import {
 
 import ThemeCarousel from './ThemeCarousel';
 import LoadingButton from './LoadingButton';
-// import { useThemeContext } from '../contexts/ThemeContext';
-// import { useThemeSync } from '../hooks/useThemeSync';
+import { useThemeContext } from '../contexts/ThemeContext';
+import { useThemeSync } from '../hooks/useThemeSync';
 
 
-import {
-  AUDIENCE_OPTIONS,
-  TONE_OPTIONS,
-  CONTENT_LENGTH_OPTIONS,
-  PRESENTATION_TYPE_OPTIONS
-} from '../validation/clientSchema';
+// Define options directly since validation system was removed
+const AUDIENCE_OPTIONS = ['general', 'executives', 'technical', 'sales', 'investors', 'students'] as const;
+const TONE_OPTIONS = ['professional', 'casual', 'persuasive', 'educational', 'inspiring'] as const;
+const CONTENT_LENGTH_OPTIONS = ['brief', 'moderate', 'detailed'] as const;
+const PRESENTATION_TYPE_OPTIONS = ['business', 'academic', 'sales', 'training', 'report'] as const;
 
 interface PromptInputProps {
   params: GenerationParams;
@@ -43,17 +42,14 @@ export default function PromptInput({
   onGenerate
 }: PromptInputProps) {
   const [localParams, setLocalParams] = useState(params);
-  // const { setTheme, themeId: contextThemeId } = useThemeContext();
-  const setTheme = () => {}; // Temporary fallback
-  const contextThemeId = 'corporate-blue'; // Temporary fallback
+  const { setTheme, themeId: contextThemeId } = useThemeContext();
 
   // Enhanced theme synchronization for single mode
-  // const themeSync = useThemeSync({
-  //   mode: 'single',
-  //   initialThemeId: params.design?.theme,
-  //   debug: false // Disabled to reduce console spam
-  // });
-  const themeSync = null; // Temporary fallback
+  const themeSync = useThemeSync({
+    mode: 'single',
+    initialThemeId: params.design?.theme,
+    debug: false // Disabled to reduce console spam
+  });
 
   // Form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -567,7 +563,6 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
 
               // Use enhanced theme sync for consistency
               themeSync?.setTheme?.(selectedThemeId, 'theme-carousel');
-              themeSync?.setThemeForMode?.('single', selectedThemeId);
 
               console.log('✅ PromptInput: Theme synchronized', {
                 selected: selectedThemeId,
@@ -578,6 +573,123 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             showCategories={true}
             title=""
           />
+        </motion.div>
+
+        {/* Grid Layout Preferences */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.28 }}
+          className="space-y-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg">
+              <HiRectangleStack className="w-5 h-5 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">Grid Layout Preferences</h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            {/* Columns Selection */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <HiRectangleStack className="w-4 h-4" />
+                Preferred Columns
+              </label>
+              <select
+                name="gridColumns"
+                value={localParams.gridPreferences?.columns || 'auto'}
+                onChange={(e) => {
+                  const value = e.target.value === 'auto' ? undefined : parseInt(e.target.value);
+                  updateParam('gridPreferences', {
+                    ...localParams.gridPreferences,
+                    columns: value
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="auto">Auto-detect</option>
+                <option value="1">1 Column</option>
+                <option value="2">2 Columns</option>
+                <option value="3">3 Columns</option>
+                <option value="4">4 Columns</option>
+              </select>
+              <p className="text-xs text-gray-500">Number of columns for grid layouts</p>
+            </div>
+
+            {/* Rows Selection */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <HiRectangleStack className="w-4 h-4 rotate-90" />
+                Preferred Rows
+              </label>
+              <select
+                name="gridRows"
+                value={localParams.gridPreferences?.rows || 'auto'}
+                onChange={(e) => {
+                  const value = e.target.value === 'auto' ? undefined : parseInt(e.target.value);
+                  updateParam('gridPreferences', {
+                    ...localParams.gridPreferences,
+                    rows: value
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="auto">Auto-detect</option>
+                <option value="1">1 Row</option>
+                <option value="2">2 Rows</option>
+                <option value="3">3 Rows</option>
+              </select>
+              <p className="text-xs text-gray-500">Number of rows for grid layouts</p>
+            </div>
+
+            {/* Cell Spacing Selection */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <HiPhoto className="w-4 h-4" />
+                Cell Spacing
+              </label>
+              <select
+                name="gridSpacing"
+                value={localParams.gridPreferences?.cellSpacing || 'normal'}
+                onChange={(e) => {
+                  updateParam('gridPreferences', {
+                    ...localParams.gridPreferences,
+                    cellSpacing: e.target.value as 'tight' | 'normal' | 'spacious'
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="tight">Tight</option>
+                <option value="normal">Normal</option>
+                <option value="spacious">Spacious</option>
+              </select>
+              <p className="text-xs text-gray-500">Spacing between grid cells</p>
+            </div>
+          </div>
+
+          {/* Auto-format toggle */}
+          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <input
+              type="checkbox"
+              id="autoFormat"
+              checked={localParams.gridPreferences?.autoFormat !== false}
+              onChange={(e) => {
+                updateParam('gridPreferences', {
+                  ...localParams.gridPreferences,
+                  autoFormat: e.target.checked
+                });
+              }}
+              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <label htmlFor="autoFormat" className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <HiSparkles className="w-4 h-4 text-blue-600" />
+              Enable auto-formatting within grid cells
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 ml-7">
+            When enabled, content within each grid cell will be automatically formatted for optimal readability
+          </p>
         </motion.div>
 
         {/* Additional Parameters */}

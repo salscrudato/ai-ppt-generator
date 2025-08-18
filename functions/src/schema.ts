@@ -137,6 +137,7 @@ export const SLIDE_LAYOUTS = [
   'card-grid',
   'split-content',
   'accent-quote',
+  'grid-layout',
 ] as const;
 
 export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
@@ -152,6 +153,50 @@ const ContentItemSchema = z.object({
   color: VALIDATION_PATTERNS.colorHex.optional(),
   iconName: z.string().max(50, 'Icon name too long').optional(), // Support for icon names
 });
+
+// Grid Layout Schemas
+const GridCellSchema = z.object({
+  row: z.number().int().min(0).max(2, 'Maximum 3 rows supported'),
+  column: z.number().int().min(0).max(3, 'Maximum 4 columns supported'),
+  type: z.enum(['header', 'bullets', 'paragraph', 'metric', 'image', 'chart', 'empty']),
+  title: VALIDATION_PATTERNS.shortText.optional(),
+  bullets: z.array(VALIDATION_PATTERNS.shortText).max(5, 'Maximum 5 bullets per cell').optional(),
+  paragraph: VALIDATION_PATTERNS.longText.optional(),
+  metric: z.object({
+    value: z.string().max(20, 'Metric value too long'),
+    label: z.string().max(50, 'Metric label too long'),
+    trend: z.enum(['up', 'down', 'neutral']).optional(),
+  }).optional(),
+  image: z.object({
+    src: z.string().url().optional(),
+    alt: z.string().max(100, 'Alt text too long').optional(),
+    prompt: z.string().max(200, 'Image prompt too long').optional(),
+  }).optional(),
+  chart: z.object({
+    type: z.enum(['bar', 'line', 'pie', 'donut']),
+    data: z.array(z.any()).max(10, 'Maximum 10 data points per chart'),
+    title: z.string().max(50, 'Chart title too long').optional(),
+  }).optional(),
+  styling: z.object({
+    backgroundColor: VALIDATION_PATTERNS.colorHex.optional(),
+    textColor: VALIDATION_PATTERNS.colorHex.optional(),
+    emphasis: z.enum(['normal', 'bold', 'highlight']).optional(),
+    alignment: z.enum(['left', 'center', 'right']).optional(),
+  }).optional(),
+});
+
+const GridLayoutSchema = z.object({
+  columns: z.number().int().min(1).max(4, 'Maximum 4 columns supported'),
+  rows: z.number().int().min(1).max(3, 'Maximum 3 rows supported'),
+  cells: z.array(GridCellSchema).max(12, 'Maximum 12 cells supported'),
+  showBorders: z.boolean().optional(),
+  cellSpacing: z.enum(['tight', 'normal', 'spacious']).optional(),
+}).refine((data) => {
+  // Validate that all cells fit within the grid dimensions
+  return data.cells.every(cell =>
+    cell.row < data.rows && cell.column < data.columns
+  );
+}, 'All cells must fit within the specified grid dimensions');
 
 /* -------------------------------------------------------------------------------------------------
  * Slide Spec (Primary Schema used by the current generator)
@@ -361,6 +406,12 @@ export const SlideSpecSchema = z
     brandCompliant: z.boolean().optional(),
     table: z.any().optional(), // Kept intentionally permissive for backwards compatibility
     timelineData: z.any().optional(),
+
+    /** Speaker notes for presentation guidance */
+    speakerNotes: z.string().max(1000, 'Speaker notes should be concise for effective presentation').optional(),
+
+    /** Grid layout configuration for flexible content arrangement */
+    gridLayout: GridLayoutSchema.optional(),
   })
   .superRefine((spec, ctx) => {
     // two-column layout must include both sides
@@ -397,6 +448,23 @@ export const SlideSpecSchema = z
         path: ['comparisonTable'],
         message: 'comparison-table layout requires comparisonTable data.',
       });
+    }
+
+    // "grid-layout" layout requires gridLayout configuration
+    if (spec.layout === 'grid-layout') {
+      if (!spec.gridLayout) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['gridLayout'],
+          message: 'Grid layout requires gridLayout configuration.',
+        });
+      } else if (spec.gridLayout.cells.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['gridLayout', 'cells'],
+          message: 'Grid layout requires at least one cell with content.',
+        });
+      }
     }
 
     // "process-flow" layout requires ≥ 2 steps

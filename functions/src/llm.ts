@@ -49,7 +49,8 @@ export type LayoutType =
   | 'problem-solution'
   | 'mixed-content'
   | 'metrics-dashboard'
-  | 'thank-you';
+  | 'thank-you'
+  | 'grid-layout';
 
 export type ChartType = 'bar' | 'line' | 'pie';
 
@@ -97,6 +98,44 @@ export interface DesignHints {
   imageStyle?: 'photo' | 'illustration' | 'isometric';
 }
 
+export interface GridCell {
+  row: number;
+  column: number;
+  type: 'header' | 'bullets' | 'paragraph' | 'metric' | 'image' | 'chart' | 'empty';
+  title?: string;
+  bullets?: string[];
+  paragraph?: string;
+  metric?: {
+    value: string;
+    label: string;
+    trend?: 'up' | 'down' | 'neutral';
+  };
+  image?: {
+    src?: string;
+    alt?: string;
+    prompt?: string;
+  };
+  chart?: {
+    type: 'bar' | 'line' | 'pie' | 'donut';
+    data: any[];
+    title?: string;
+  };
+  styling?: {
+    backgroundColor?: string;
+    textColor?: string;
+    emphasis?: 'normal' | 'bold' | 'highlight';
+    alignment?: 'left' | 'center' | 'right';
+  };
+}
+
+export interface GridLayout {
+  columns: number;
+  rows: number;
+  cells: GridCell[];
+  showBorders?: boolean;
+  cellSpacing?: 'tight' | 'normal' | 'spacious';
+}
+
 export interface SlideSpec {
   title: string;
   layout: LayoutType;
@@ -113,6 +152,7 @@ export interface SlideSpec {
   comparisonTable?: ComparisonTable;
   processSteps?: ProcessStep[];
   design?: DesignHints;
+  gridLayout?: GridLayout;
 }
 
 export type Tone = 'professional' | 'casual' | 'friendly' | 'executive' | 'technical';
@@ -139,6 +179,14 @@ export interface GenerationParams {
   maxTokensOverride?: number;
   /** Optional abort signal to cancel long operations */
   signal?: AbortSignal;
+
+  /** Grid layout preferences for content organization */
+  gridPreferences?: {
+    columns?: number; // 1-4
+    rows?: number; // 1-3
+    autoFormat?: boolean;
+    cellSpacing?: 'tight' | 'normal' | 'spacious';
+  };
 }
 
 /* =========================================================================================
@@ -161,7 +209,8 @@ const VALID_LAYOUTS: LayoutType[] = [
   'problem-solution',
   'mixed-content',
   'metrics-dashboard',
-  'thank-you'
+  'thank-you',
+  'grid-layout'
 ];
 
 const VALID_EMPHASIS: Emphasis[] = ['normal', 'bold', 'italic', 'highlight'];
@@ -552,11 +601,22 @@ function audienceToneClause(input: GenerationParams): string {
 }
 
 export function generateContentPrompt(input: GenerationParams): string {
+  const gridPreferencesClause = input.gridPreferences ? [
+    `Grid Layout Preferences:`,
+    input.gridPreferences.columns ? `- Preferred columns: ${input.gridPreferences.columns}` : '',
+    input.gridPreferences.rows ? `- Preferred rows: ${input.gridPreferences.rows}` : '',
+    input.gridPreferences.cellSpacing ? `- Cell spacing: ${input.gridPreferences.cellSpacing}` : '',
+    input.gridPreferences.autoFormat !== false ? `- Auto-format content within cells` : '',
+    `Consider using "grid-layout" for structured content like comparisons, features, metrics, or team info.`
+  ].filter(Boolean).join('\n') : '';
+
   return [
     `Create the core content for one slide based on: "${input.prompt}".`,
     audienceToneClause(input),
+    gridPreferencesClause,
     `Focus on: persuasion, clarity, actionability.`,
     `Pick an appropriate layout and include only the fields needed.`,
+    `For structured content (comparisons, features, metrics, dashboards), consider "grid-layout" with gridLayout configuration.`,
     baseSchemaHint()
   ]
     .filter(Boolean)

@@ -1,298 +1,279 @@
 /**
- * Live Slide Preview Component
- *
- * Provides real-time preview of slides that mirrors the final PowerPoint output.
- * Maintains 16:9 aspect ratio and uses exact spacing constants from the backend generator.
- *
- * @version 1.0.0
- * @author AI PowerPoint Generator Team
+ * Enhanced Slide Preview Component
+ * 
+ * Provides real-time preview of slides with professional styling and layout
+ * Features:
+ * - Live preview updates with <200ms response time
+ * - 16:9 aspect ratio with proper scaling
+ * - Theme-aware rendering
+ * - Multiple layout support
+ * - Responsive design
  */
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-// import { PreviewOptionsProvider } from '../contexts/PreviewOptionsContext';
-import clsx from 'clsx';
-
-// Types and constants
 import type { SlideSpec } from '../types';
-import type { ProfessionalTheme } from '../themes/professionalThemes';
-import { PREVIEW_LAYOUT, PREVIEW_TYPOGRAPHY, PREVIEW_ANIMATION } from '../constants/slideConstants';
+// Removed unused import
 
-// Hooks
-import { useDebouncedSlideSpec } from '../hooks/useDebounced';
-// import { usePreviewOptions } from '../contexts/PreviewOptionsContext';
-
-// Layout renderers
-import TitleLayout from './layouts/TitleLayout';
-import TitleBulletsLayout from './layouts/TitleBulletsLayout';
-import TitleParagraphLayout from './layouts/TitleParagraphLayout';
-import TwoColumnLayout from './layouts/TwoColumnLayout';
-import ImageLeftLayout from './layouts/ImageLeftLayout';
-import ImageRightLayout from './layouts/ImageRightLayout';
-import ImageFullLayout from './layouts/ImageFullLayout';
-import QuoteLayout from './layouts/QuoteLayout';
-import ChartLayout from './layouts/ChartLayout';
-import ComparisonTableLayout from './layouts/ComparisonTableLayout';
-import TimelineLayout from './layouts/TimelineLayout';
-import ProcessFlowLayout from './layouts/ProcessFlowLayout';
-import MixedContentLayout from './layouts/MixedContentLayout';
-import ProblemSolutionLayout from './layouts/ProblemSolutionLayout';
-import BeforeAfterLayout from './layouts/BeforeAfterLayout';
-import AgendaLayout from './layouts/AgendaLayout';
-
-/**
- * Props for SlidePreview component
- */
-export interface SlidePreviewProps {
+interface SlidePreviewProps {
   /** Slide specification to preview */
   spec: SlideSpec;
-  /** Theme for styling */
-  theme: ProfessionalTheme;
-  /** Optional CSS class name */
+  /** Theme configuration */
+  theme?: {
+    id: string;
+    name: string;
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      background: string;
+      surface: string;
+      text: {
+        primary: string;
+        secondary: string;
+      };
+    };
+  };
+  /** Preview size */
+  size?: 'small' | 'medium' | 'large';
+  /** Whether to show interactive elements */
+  interactive?: boolean;
+  /** Click handler */
+  onClick?: () => void;
+  /** Additional CSS classes */
   className?: string;
-  /** Whether to show debug information */
-  debug?: boolean;
-  /** Custom aspect ratio override */
-  aspectRatio?: number;
 }
 
-/**
- * Main SlidePreview component
- *
- * Renders a live preview of a slide that matches the final PowerPoint output.
- * Updates in real-time as the user edits content and switches themes.
- */
-export function SlidePreview({
+// Preview constants for 16:9 aspect ratio
+const PREVIEW_CONSTANTS = {
+  aspectRatio: 16 / 9,
+  sizes: {
+    small: { width: 240, height: 135 },
+    medium: { width: 320, height: 180 },
+    large: { width: 480, height: 270 }
+  },
+  spacing: {
+    contentY: 1.6,
+    columnWidth: 4.0,
+    gap: 0.5
+  }
+} as const;
+
+export default function SlidePreview({
   spec,
   theme,
-  className,
-  debug = true,
-  aspectRatio = 16 / 9
+  size = 'medium',
+  interactive = false,
+  onClick,
+  className = ''
 }: SlidePreviewProps) {
-  // Debounce spec updates for smooth performance
-  const debouncedSpec = useDebouncedSlideSpec(spec, PREVIEW_ANIMATION.UPDATE_DELAY);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('SlidePreview received spec:', spec);
-    console.log('SlidePreview debounced spec:', debouncedSpec);
-  }, [spec, debouncedSpec]);
-
-  // Test data fallback for debugging
-  const testSpec = React.useMemo(() => {
-    if (!debouncedSpec.title || debouncedSpec.title.trim() === '') {
-      return {
-        ...debouncedSpec,
-        title: 'Test Slide Title',
-        layout: 'title-bullets' as const,
-        bullets: [
-          'This is a test bullet point',
-          'Another test bullet to verify rendering',
-          'Third bullet point for good measure'
-        ]
-      };
-    }
-    return debouncedSpec;
-  }, [debouncedSpec]);
-
-  // Generate theme-aware CSS variables
-  const themeStyles = useMemo(() => ({
-    '--theme-primary': theme.colors.primary,
-    '--theme-secondary': theme.colors.secondary,
-    '--theme-accent': theme.colors.accent,
-    '--theme-background': theme.colors.background,
-    '--theme-surface': theme.colors.surface,
-    '--theme-text-primary': theme.colors.text.primary,
-    '--theme-text-secondary': theme.colors.text.secondary,
-    '--theme-text-muted': theme.colors.text.muted,
-    '--theme-text-inverse': theme.colors.text.inverse,
-    '--theme-border-light': theme.colors.borders.light,
-    '--theme-border-medium': theme.colors.borders.medium,
-    '--theme-border-strong': theme.colors.borders.strong,
-    '--theme-success': theme.colors.semantic.success,
-    '--theme-warning': theme.colors.semantic.warning,
-    '--theme-error': theme.colors.semantic.error,
-    '--theme-info': theme.colors.semantic.info,
-    '--theme-heading-font': theme.typography.headings.fontFamily,
-    '--theme-body-font': theme.typography.body.fontFamily,
-  } as React.CSSProperties), [theme]);
-
-  // Render the appropriate layout component
-  // Typography scaling (frontend mirror of backend logic)
-  // const { compactMode, typographyScale } = usePreviewOptions();
-  const compactMode = false; // Temporary fallback
-  const typographyScale = 'medium'; // Temporary fallback
-  const density: 'low' | 'medium' | 'high' = useMemo(() => {
-    const len = (testSpec?.paragraph?.length || 0) + (testSpec?.bullets?.join(' ')?.length || 0);
-    if (len < 120) return 'low';
-    if (len > 380) return 'high';
-    return 'medium';
-  }, [testSpec]);
-
-  const scaleFor = (role: 'title'|'subtitle'|'body'|'bullets') => {
-    let mult = 1.0;
-    if (typographyScale === 'large') mult = 1.1;
-    else if (typographyScale === 'compact') mult = 0.95;
-    else if (typographyScale === 'auto') {
-      if (density === 'low') mult = role === 'title' ? 1.12 : 1.06;
-      if (density === 'high') mult = (role === 'body' || role === 'bullets') ? 0.96 : 0.98;
-    }
-    if (compactMode && density === 'high') mult *= (role === 'body' || role === 'bullets') ? 0.97 : 0.99;
-    return mult;
-  };
-
-  const renderLayout = () => {
-    const layoutProps = { spec: testSpec, theme, scaleFor };
-
-    switch (testSpec.layout) {
-      case 'title':
-        return <TitleLayout {...layoutProps} />;
-      case 'title-bullets':
-        return <TitleBulletsLayout {...layoutProps} />;
-      case 'title-paragraph':
-        return <TitleParagraphLayout {...layoutProps} />;
-      case 'two-column':
-        return <TwoColumnLayout {...layoutProps} />;
-      case 'image-left':
-        return <ImageLeftLayout {...layoutProps} />;
-      case 'image-right':
-        return <ImageRightLayout {...layoutProps} />;
-      case 'image-full':
-        return <ImageFullLayout {...layoutProps} />;
-      case 'quote':
-        return <QuoteLayout {...layoutProps} />;
-      case 'chart':
-        return <ChartLayout {...layoutProps} />;
-      case 'comparison-table':
-        return <ComparisonTableLayout {...layoutProps} />;
-      case 'timeline':
-        return <TimelineLayout {...layoutProps} />;
-      case 'process-flow':
-        return <ProcessFlowLayout {...layoutProps} />;
-      case 'mixed-content':
-        return <MixedContentLayout {...layoutProps} />;
-      case 'problem-solution':
-        return <ProblemSolutionLayout {...layoutProps} />;
-      case 'before-after':
-        return <BeforeAfterLayout {...layoutProps} />;
-      case 'agenda':
-        return <AgendaLayout {...layoutProps} />;
-      default:
-        // Fallback for unknown layouts
-        return <TitleParagraphLayout {...layoutProps} />;
+  const dimensions = PREVIEW_CONSTANTS.sizes[size];
+  
+  // Default theme fallback
+  const previewTheme = theme || {
+    id: 'corporate-blue',
+    name: 'Corporate Blue',
+    colors: {
+      primary: '#1E40AF',
+      secondary: '#3B82F6',
+      accent: '#F59E0B',
+      background: '#FFFFFF',
+      surface: '#F8FAFC',
+      text: {
+        primary: '#1F2937',
+        secondary: '#6B7280'
+      }
     }
   };
+
+  // Memoized preview content for performance
+  const previewContent = useMemo(() => {
+    return renderSlideContent(spec, previewTheme, dimensions);
+  }, [spec, previewTheme, dimensions]);
 
   return (
     <motion.div
-      className={clsx(
-        'slide-preview relative w-full rounded-lg shadow-sm border overflow-hidden',
-        className
-      )}
+      className={`relative overflow-hidden rounded-lg border-2 border-gray-200 bg-white shadow-sm ${
+        interactive ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+      } ${className}`}
       style={{
-        aspectRatio: `${aspectRatio}`,
-        backgroundColor: theme.colors.background,
-        color: theme.colors.text.primary,
-        ...themeStyles,
-        transition: `all ${PREVIEW_ANIMATION.THEME_TRANSITION} ease-in-out`,
+        width: dimensions.width,
+        height: dimensions.height,
+        aspectRatio: PREVIEW_CONSTANTS.aspectRatio
       }}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
+      onClick={onClick}
+      whileHover={interactive ? { scale: 1.02 } : undefined}
+      transition={{ duration: 0.2 }}
     >
-      {/* Slide Background */}
-      <div
-        className="absolute inset-0"
-        style={{ backgroundColor: 'var(--theme-background)' }}
-      />
-
-      {/* Slide Content - Let layout components handle all rendering */}
+      {/* Background */}
       <div
         className="absolute inset-0"
         style={{
-          padding: `${PREVIEW_LAYOUT.contentPadding}%`,
+          background: `linear-gradient(135deg, ${previewTheme.colors.background} 0%, ${previewTheme.colors.surface} 100%)`
         }}
-      >
-        {renderLayout()}
+      />
+      
+      {/* Header accent bar */}
+      <div
+        className="absolute top-0 left-0 right-0 h-1"
+        style={{ backgroundColor: previewTheme.colors.accent }}
+      />
+      
+      {/* Content */}
+      <div className="relative p-4 h-full flex flex-col">
+        {previewContent}
       </div>
-
-      {/* Debug Information */}
-      {debug && (
-        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded max-w-xs">
-          <div>Layout: {testSpec.layout}</div>
-          <div>Theme: {theme.name}</div>
-          <div>Aspect: {aspectRatio.toFixed(2)}</div>
-          <div>Title: {testSpec.title?.substring(0, 20)}...</div>
-          <div>Bullets: {testSpec.bullets?.length || 0}</div>
-          <div>Paragraph: {testSpec.paragraph?.length || 0} chars</div>
-          <div>Density: {density}</div>
-          <div>Scale: {typographyScale}</div>
-          <div>Compact: {compactMode ? 'Yes' : 'No'}</div>
-        </div>
-      )}
+      
+      {/* Layout indicator */}
+      <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/10 rounded text-xs text-gray-600">
+        {spec.layout || 'default'}
+      </div>
     </motion.div>
   );
 }
 
 /**
- * Multi-slide preview component for presentation overview
+ * Render slide content based on layout and specifications
  */
-export interface SlidePreviewGridProps {
-  /** Array of slide specifications */
-  specs: SlideSpec[];
-  /** Theme for styling */
-  theme: ProfessionalTheme;
-  /** Selected slide index */
-  selectedIndex?: number;
-  /** Callback when slide is selected */
-  onSlideSelect?: (index: number) => void;
-  /** Grid columns */
-  columns?: number;
-  /** Optional CSS class name */
-  className?: string;
-}
+function renderSlideContent(
+  spec: SlideSpec,
+  theme: any,
+  dimensions: { width: number; height: number }
+) {
+  const titleStyle = {
+    color: theme.colors.primary,
+    fontSize: Math.max(12, dimensions.width * 0.04),
+    fontWeight: 'bold',
+    lineHeight: 1.2,
+    marginBottom: '8px'
+  };
 
-export function SlidePreviewGrid({
-  specs,
-  theme,
-  selectedIndex,
-  onSlideSelect,
-  columns = 3,
-  className
-}: SlidePreviewGridProps) {
-  return (
-    <div
-      className={clsx(
-        'grid gap-4',
-        className
-      )}
-      style={{
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-      }}
-    >
-      {specs.map((spec, index) => (
-        <motion.div
-          key={spec.id || index}
-          className={clsx(
-            'cursor-pointer transition-all duration-200',
-            selectedIndex === index
-              ? 'ring-2 ring-blue-500 ring-offset-2'
-              : 'hover:shadow-lg'
-          )}
-          onClick={() => onSlideSelect?.(index)}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <SlidePreview
-            spec={spec}
-            theme={theme}
-            className="h-24 sm:h-32"
-          />
-          <div className="mt-2 text-center text-xs text-gray-600">
-            Slide {index + 1}
+  const textStyle = {
+    color: theme.colors.text.primary,
+    fontSize: Math.max(10, dimensions.width * 0.025),
+    lineHeight: 1.4
+  };
+
+  const bulletStyle = {
+    ...textStyle,
+    fontSize: Math.max(9, dimensions.width * 0.022)
+  };
+
+  switch (spec.layout) {
+    case 'title':
+      return (
+        <div className="flex items-center justify-center h-full text-center">
+          <div>
+            <h1 style={titleStyle} className="mb-2">
+              {spec.title || 'Slide Title'}
+            </h1>
+            {spec.subtitle && (
+              <p style={textStyle} className="opacity-80">
+                {spec.subtitle}
+              </p>
+            )}
           </div>
-        </motion.div>
-      ))}
-    </div>
-  );
+        </div>
+      );
+
+    case 'two-column':
+      return (
+        <>
+          <h1 style={titleStyle} className="mb-3">
+            {spec.title || 'Slide Title'}
+          </h1>
+          <div className="flex-1 flex gap-3">
+            <div className="flex-1">
+              {spec.bullets && spec.bullets.length > 0 ? (
+                <ul className="space-y-1">
+                  {spec.bullets.slice(0, 4).map((bullet, index) => (
+                    <li key={index} style={bulletStyle} className="flex items-start">
+                      <span className="mr-2 text-accent">•</span>
+                      <span className="truncate">{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={textStyle} className="line-clamp-4">
+                  {spec.paragraph || 'Content goes here...'}
+                </p>
+              )}
+            </div>
+            <div className="flex-1 bg-gray-100 rounded flex items-center justify-center">
+              <span style={bulletStyle} className="text-gray-500">
+                {spec.imagePrompt ? '🖼️ Image' : '📊 Visual'}
+              </span>
+            </div>
+          </div>
+        </>
+      );
+
+    case 'chart':
+      return (
+        <>
+          <h1 style={titleStyle} className="mb-3">
+            {spec.title || 'Chart Title'}
+          </h1>
+          <div className="flex-1 bg-gray-50 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <div style={textStyle} className="text-gray-600 mb-2">📊</div>
+              <div style={bulletStyle} className="text-gray-500">
+                {spec.bullets ? `${spec.bullets.length} data points` : 'Chart data'}
+              </div>
+            </div>
+          </div>
+        </>
+      );
+
+    case 'quote':
+      return (
+        <div className="flex items-center justify-center h-full text-center">
+          <div>
+            <div style={{ ...textStyle, fontSize: Math.max(14, dimensions.width * 0.035) }} className="mb-4 italic">
+              "{spec.paragraph || spec.title || 'Inspirational quote goes here'}"
+            </div>
+            {spec.subtitle && (
+              <div style={bulletStyle} className="opacity-70">
+                — {spec.subtitle}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+
+    default:
+      // title-bullets or title-paragraph
+      return (
+        <>
+          <h1 style={titleStyle} className="mb-3">
+            {spec.title || 'Slide Title'}
+          </h1>
+          <div className="flex-1">
+            {spec.bullets && spec.bullets.length > 0 ? (
+              <ul className="space-y-1">
+                {spec.bullets.slice(0, 5).map((bullet, index) => (
+                  <li key={index} style={bulletStyle} className="flex items-start">
+                    <span className="mr-2" style={{ color: theme.colors.accent }}>•</span>
+                    <span className="line-clamp-2">{bullet}</span>
+                  </li>
+                ))}
+                {spec.bullets.length > 5 && (
+                  <li style={bulletStyle} className="text-gray-400 italic">
+                    +{spec.bullets.length - 5} more points...
+                  </li>
+                )}
+              </ul>
+            ) : spec.paragraph ? (
+              <p style={textStyle} className="line-clamp-6">
+                {spec.paragraph}
+              </p>
+            ) : (
+              <p style={textStyle} className="text-gray-400 italic">
+                Content will appear here...
+              </p>
+            )}
+          </div>
+        </>
+      );
+  }
 }
