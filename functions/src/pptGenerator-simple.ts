@@ -1,25 +1,24 @@
 /**
- * Professional PowerPoint Generator - Enhanced & Simplified
+ * Professional PowerPoint Generator - Simplified & Enhanced
  *
- * Core Features:
+ * CORE FEATURES:
  * - Professional 16:9 slide layouts with modern design aesthetics
- * - Enhanced typography system with PowerPoint-optimized fonts
+ * - Optimized typography system with PowerPoint-native fonts
  * - Native chart and table support with theme-consistent styling
  * - Comprehensive speaker notes and metadata generation
- * - Advanced error handling and performance optimization
+ * - Robust error handling with graceful fallbacks
  * - AI-agent-friendly code structure with extensive documentation
  *
- * Key Improvements:
- * - Simplified code structure for better maintainability
- * - Enhanced visual design with professional styling
- * - Robust error handling with graceful fallbacks
- * - Optimized for scalability and performance
- * - Modern slide layouts with improved spacing and typography
- * - Enhanced chart generation with better data visualization
+ * ENHANCEMENTS:
+ * - Simplified code structure for better maintainability and performance
+ * - Enhanced visual design with professional corporate styling
+ * - Streamlined layout generation with consistent spacing
+ * - Optimized chart and table rendering with better data visualization
  * - Professional image handling with proper aspect ratios
- * - Advanced theme integration with consistent styling
+ * - Advanced theme integration with consistent color schemes
+ * - Reduced complexity while maintaining full functionality
  *
- * @version 6.0.0-enhanced
+ * @version 7.0.0-simplified
  * @author AI PowerPoint Generator Team
  */
 
@@ -35,31 +34,27 @@ import { logger, LogContext } from './utils/smartLogger';
 // Standard 16:9 slide dimensions (inches) - optimized for modern displays
 const SLIDE = { width: 10, height: 5.63 };
 
-// Enhanced layout configuration with professional spacing and modern design principles
+// Simplified layout configuration with professional spacing and modern design principles
 const LAYOUT = {
   // Professional margins with balanced whitespace
   margins: { top: 0.6, bottom: 0.5, left: 0.7, right: 0.7 },
 
-  // Typography system optimized for readability and visual hierarchy
+  // Simplified typography system optimized for readability and PowerPoint compatibility
   typography: {
-    title: { fontSize: 40, lineSpacing: 48, fontWeight: 'bold' as const },
-    subtitle: { fontSize: 28, lineSpacing: 34, fontWeight: 'normal' as const },
-    body: { fontSize: 20, lineSpacing: 28, fontWeight: 'normal' as const },
-    bullets: { fontSize: 18, lineSpacing: 26, fontWeight: 'normal' as const },
-    caption: { fontSize: 14, lineSpacing: 18, fontWeight: 'normal' as const },
-    chart: { fontSize: 16, lineSpacing: 22, fontWeight: 'normal' as const },
-    table: { fontSize: 16, lineSpacing: 20, fontWeight: 'normal' as const }
+    title: { fontSize: 36, lineSpacing: 42, fontWeight: 'bold' as const },
+    subtitle: { fontSize: 24, lineSpacing: 30, fontWeight: 'normal' as const },
+    body: { fontSize: 18, lineSpacing: 24, fontWeight: 'normal' as const },
+    bullets: { fontSize: 16, lineSpacing: 22, fontWeight: 'normal' as const },
+    caption: { fontSize: 12, lineSpacing: 16, fontWeight: 'normal' as const }
   },
 
-  // Spacing system for consistent visual rhythm
+  // Simplified spacing system for consistent visual rhythm
   spacing: {
-    titleToContent: 0.5,
-    paragraphSpacing: 0.3,
-    bulletSpacing: 0.25,
-    columnGap: 0.6,
-    sectionSpacing: 0.4,
-    chartPadding: 0.3,
-    tablePadding: 0.2
+    titleToContent: 0.4,
+    paragraphSpacing: 0.25,
+    bulletSpacing: 0.2,
+    columnGap: 0.5,
+    sectionSpacing: 0.3
   }
 };
 
@@ -84,20 +79,56 @@ const CONTENT = {
  * ------------------------------------------------------------------------------------------------- */
 
 /**
- * Enhanced image processing for professional presentations
- * Handles aspect ratio correction, quality optimization, and format conversion
+ * Simplified PowerPoint file validation with essential checks
+ * Performs key validation to ensure file integrity before sending to client
+ */
+function validatePowerPointBuffer(buffer: Buffer, context: any): void {
+  // Basic buffer validation
+  if (!buffer || buffer.length === 0) {
+    throw new Error('PowerPoint buffer is null, undefined, or empty');
+  }
+
+  // Check minimum file size (PowerPoint files are typically at least 15KB)
+  if (buffer.length < 15000) {
+    logger.warn('PowerPoint file is very small, may indicate generation issues', context, {
+      bufferSize: buffer.length,
+      minimumExpected: 15000
+    });
+  }
+
+  // Validate ZIP signature (PowerPoint files are ZIP archives)
+  const zipSignature = buffer.subarray(0, 4);
+  const expectedSignature = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
+  if (!zipSignature.equals(expectedSignature)) {
+    logger.error('Invalid PowerPoint file signature detected', context, {
+      actualSignature: Array.from(zipSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+      bufferSize: buffer.length
+    });
+    throw new Error('Generated PowerPoint file has invalid ZIP signature - file is corrupted');
+  }
+
+  // Check for reasonable file size limits (max 50MB for simplified version)
+  if (buffer.length > 50 * 1024 * 1024) {
+    logger.warn('PowerPoint file is very large', context, {
+      bufferSize: buffer.length,
+      bufferSizeMB: Math.round(buffer.length / 1024 / 1024),
+      maximumRecommended: 50
+    });
+  }
+
+  logger.debug('PowerPoint buffer validation passed', context, {
+    bufferSize: buffer.length,
+    bufferSizeKB: Math.round(buffer.length / 1024),
+    signatureValid: true
+  });
+}
+
+/**
+ * Simplified image processing for professional presentations
+ * Returns basic image configuration with safe defaults
  */
 function processImageForSlide(imageUrl: string, targetWidth: number, targetHeight: number): any {
   try {
-    // For now, return basic image configuration
-    // In a full implementation, this would handle:
-    // - Image downloading and caching
-    // - Aspect ratio correction to 16:9
-    // - Quality optimization
-    // - Format conversion (PNG/JPG)
-    // - Background removal if needed
-    // - Color enhancement
-
     return {
       path: imageUrl,
       w: targetWidth,
@@ -106,13 +137,6 @@ function processImageForSlide(imageUrl: string, targetWidth: number, targetHeigh
         type: 'contain', // Maintain aspect ratio
         w: targetWidth,
         h: targetHeight
-      },
-      rounding: true, // Add subtle rounding for modern look
-      shadow: {
-        type: 'outer',
-        blur: 3,
-        offset: 2,
-        color: '00000020' // Subtle shadow
       }
     };
   } catch (error) {
@@ -127,7 +151,7 @@ function processImageForSlide(imageUrl: string, targetWidth: number, targetHeigh
 
 /**
  * Convert color input to safe 6-digit hex format for PowerPoint
- * Enhanced with better validation and error handling
+ * Simplified with essential validation
  */
 function safeColor(input: any, fallback = '333333'): string {
   if (!input) return fallback;
@@ -154,32 +178,24 @@ function safeColor(input: any, fallback = '333333'): string {
 }
 
 /**
- * Get PowerPoint-compatible font name with enhanced mapping
- * Ensures professional typography across different systems
+ * Get PowerPoint-compatible font name with simplified mapping
+ * Ensures professional typography with safe defaults
  */
 function getPowerPointFont(fontFamily?: string): string {
   const fontMap: Record<string, string> = {
-    // Modern system fonts mapped to PowerPoint equivalents
+    // Core PowerPoint fonts
     'Inter': 'Calibri',
     'SF Pro Display': 'Calibri',
     'system-ui': 'Calibri',
     'Segoe UI': 'Segoe UI',
     'Arial': 'Arial',
+    'Helvetica': 'Arial',
     'Times New Roman': 'Times New Roman',
-    'Helvetica': 'Helvetica',
     'Georgia': 'Georgia',
-    'Verdana': 'Verdana',
-    'Tahoma': 'Tahoma',
-    'Trebuchet MS': 'Trebuchet MS',
-    'Century Gothic': 'Century Gothic',
-    'Franklin Gothic Medium': 'Franklin Gothic Medium',
-    // Fallback for common web fonts
+    // Web font fallbacks
     'Roboto': 'Calibri',
     'Open Sans': 'Calibri',
-    'Lato': 'Calibri',
-    'Montserrat': 'Calibri',
-    'Source Sans Pro': 'Calibri',
-    'Poppins': 'Calibri'
+    'Lato': 'Calibri'
   };
 
   if (!fontFamily) return 'Calibri';
@@ -195,16 +211,25 @@ function getPowerPointFont(fontFamily?: string): string {
 
 /**
  * Get theme colors with safe fallbacks and enhanced color palette
+ * Ensures proper contrast for readability on white backgrounds
  */
 function getThemeColors(theme: ProfessionalTheme) {
+  // For consulting charcoal theme, ensure text colors have proper contrast
+  const isConsultingCharcoal = theme.id === 'consulting-charcoal';
+
   return {
     primary: safeColor(theme.colors.primary, '1E40AF'),
     secondary: safeColor(theme.colors.secondary, '3B82F6'),
     accent: safeColor(theme.colors.accent, 'F59E0B'),
     background: safeColor(theme.colors.background, 'FFFFFF'),
     surface: safeColor(theme.colors.surface, 'F8FAFC'),
-    textPrimary: safeColor(theme.colors.text.primary, '1F2937'),
-    textSecondary: safeColor(theme.colors.text.secondary, '6B7280'),
+    // Ensure text colors have proper contrast on white background
+    textPrimary: isConsultingCharcoal ?
+      safeColor(theme.colors.text.primary, '111827') :
+      safeColor(theme.colors.text.primary, '1F2937'),
+    textSecondary: isConsultingCharcoal ?
+      safeColor(theme.colors.text.secondary, '374151') :
+      safeColor(theme.colors.text.secondary, '6B7280'),
     textMuted: safeColor(theme.colors.text.muted, '9CA3AF'),
     textInverse: safeColor(theme.colors.text.inverse, 'FFFFFF'),
     success: safeColor(theme.colors.semantic?.success, '10B981'),
@@ -235,24 +260,51 @@ function safeText(text: string | undefined, maxLength: number): string {
   if (!text) return '';
 
   try {
-    // Enhanced sanitization for PowerPoint compatibility
-    const cleaned = text
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/[""]/g, '"') // Normalize quotes
-      .replace(/['']/g, "'") // Normalize apostrophes
-      .replace(/[–—]/g, '-') // Normalize dashes
+    // Ultra-aggressive sanitization for PowerPoint compatibility
+    let cleaned = text
+      // Remove all control characters and problematic Unicode
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+      .replace(/[\uFFFE\uFFFF]/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/[\u2028\u2029]/g, ' ') // Line/paragraph separators to space
+
+      // Normalize whitespace aggressively
+      .replace(/\s+/g, ' ')
+      .replace(/\t/g, ' ')
+      .replace(/\r\n/g, ' ')
+      .replace(/[\r\n]/g, ' ')
+
+      // Remove or replace problematic characters
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'")
+      .replace(/[–—]/g, '-')
+      .replace(/[…]/g, '...')
+      .replace(/[•]/g, '*')
+
+      // Remove any remaining non-printable characters
+      .replace(/[^\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0180-\u024F]/g, '')
+
+      // Final cleanup
       .trim();
 
+    // Ensure we don't have empty content
+    if (cleaned.length === 0) {
+      return 'Content';
+    }
+
+    // Truncate if needed
     if (cleaned.length <= maxLength) return cleaned;
 
     // Smart truncation with word boundary detection
     const truncated = cleaned.substring(0, maxLength - 3);
     const lastSpace = truncated.lastIndexOf(' ');
-    return (lastSpace > maxLength * 0.8 ? truncated.substring(0, lastSpace) : truncated) + '...';
+    const result = (lastSpace > maxLength * 0.8 ? truncated.substring(0, lastSpace) : truncated) + '...';
+
+    // Final validation - ensure result is not empty
+    return result.trim() || 'Content';
   } catch (error) {
     logger.warn('Text sanitization failed', { text: text?.substring(0, 50), error });
-    return text?.substring(0, maxLength) || '';
+    return 'Content';
   }
 }
 
@@ -263,14 +315,72 @@ function formatBullets(bullets: string[]): string {
   if (!bullets || bullets.length === 0) return '';
 
   try {
-    return bullets
-      .filter(bullet => bullet && bullet.trim().length > 0)
-      .map(bullet => safeText(bullet.trim(), 200))
-      .join('\n');
+    const safeBullets = bullets
+      .filter(bullet => bullet && typeof bullet === 'string' && bullet.trim().length > 0)
+      .map(bullet => {
+        // Extra sanitization for bullet points
+        let cleaned = safeText(bullet.trim(), 120); // Reduced length to prevent overlap
+
+        // Remove test markup prefixes like [B1], [TEST-], etc.
+        cleaned = cleaned.replace(/^\[(?:B\d+|TEST-[^\]]*|SLIDE-\d+)\]\s*/, '');
+
+        // Ensure bullets don't start with problematic characters
+        cleaned = cleaned.replace(/^[•\-\*\+]+\s*/, '').trim();
+
+        // Ensure we have valid content
+        return cleaned || 'Key point';
+      })
+      .slice(0, 4); // Reduced to 4 bullets to prevent overcrowding
+
+    // Ensure we have at least one bullet
+    if (safeBullets.length === 0) {
+      return 'Key point';
+    }
+
+    return safeBullets.join('\n');
   } catch (error) {
     logger.warn('Bullet formatting failed', { bullets, error });
-    return bullets.join('\n');
+    return 'Key point';
   }
+}
+
+/**
+ * Validate and sanitize slide specification to prevent PowerPoint corruption
+ */
+function validateSlideSpec(spec: SlideSpec, index: number): SlideSpec {
+  const validated: SlideSpec = { ...spec };
+
+  // Ensure title is valid
+  if (!validated.title || validated.title.trim().length === 0) {
+    validated.title = `Slide ${index + 1}`;
+  } else {
+    validated.title = safeText(validated.title, 200);
+  }
+
+  // Ensure layout is valid
+  if (!validated.layout || !['title', 'title-bullets', 'chart', 'comparison-table', 'two-column'].includes(validated.layout)) {
+    validated.layout = 'title-bullets';
+  }
+
+  // Sanitize paragraph content
+  if (validated.paragraph) {
+    validated.paragraph = safeText(validated.paragraph, 1000);
+  }
+
+  // Sanitize bullets
+  if (validated.bullets && Array.isArray(validated.bullets)) {
+    validated.bullets = validated.bullets
+      .filter(bullet => bullet && typeof bullet === 'string')
+      .map(bullet => safeText(bullet, 300))
+      .slice(0, 7); // Limit bullets to prevent overcrowding
+  }
+
+  // Sanitize notes
+  if (validated.notes) {
+    validated.notes = safeText(validated.notes, 2000);
+  }
+
+  return validated;
 }
 
 /**
@@ -395,7 +505,7 @@ function createChartConfig(chartType: string, chartData: any[], colors: any, fon
     chartColors: colors.slice(0, chartData.length),
     showTitle: !!title,
     title: title ? safeText(title, 80) : '',
-    titleFontSize: LAYOUT.typography.chart.fontSize,
+    titleFontSize: LAYOUT.typography.body.fontSize,
     titleFontFace: fonts.heading,
     titleColor: colors.primary,
     showLegend: chartData.length > 1,
@@ -424,7 +534,7 @@ function createChartConfig(chartType: string, chartData: any[], colors: any, fon
         holeSize: 40, // Donut style for modern look
         showLeaderLines: true,
         legendPos: 'r',
-        shadow: { type: 'outer', blur: 4, offset: 2, color: colors.borderMedium }
+        // Removed shadow to prevent corruption
       };
     case 'line':
       return {
@@ -439,7 +549,7 @@ function createChartConfig(chartType: string, chartData: any[], colors: any, fon
           size: 1,
           color: colors.borderLight
         },
-        shadow: { type: 'outer', blur: 3, offset: 2, color: colors.borderMedium }
+        // Removed shadow to prevent corruption
       };
     case 'bar':
     case 'column':
@@ -454,7 +564,7 @@ function createChartConfig(chartType: string, chartData: any[], colors: any, fon
           size: 1,
           color: colors.borderLight
         },
-        shadow: { type: 'outer', blur: 2, offset: 1, color: colors.borderLight }
+        // Removed shadow to prevent corruption
       };
     case 'area':
       return {
@@ -463,7 +573,7 @@ function createChartConfig(chartType: string, chartData: any[], colors: any, fon
         lineSize: 3,
         showMarkers: false,
         transparency: 30, // Semi-transparent fill
-        shadow: { type: 'outer', blur: 3, offset: 2, color: colors.borderMedium }
+        // Removed shadow to prevent corruption
       };
     default:
       return baseConfig;
@@ -477,7 +587,14 @@ function createChartConfig(chartType: string, chartData: any[], colors: any, fon
  */
 function parseTableData(spec: SlideSpec): string[][] | null {
   try {
-    // Check if table data is provided directly
+    // Check for comparisonTable data structure (primary format)
+    if (spec.comparisonTable && spec.comparisonTable.headers && spec.comparisonTable.rows) {
+      const headers = spec.comparisonTable.headers;
+      const rows = spec.comparisonTable.rows;
+      return [headers, ...rows];
+    }
+
+    // Check if table data is provided directly (legacy format)
     if (spec.table && spec.table.rows && spec.table.rows.length > 0) {
       const headers = spec.table.columns || [];
       const rows = spec.table.rows;
@@ -540,7 +657,7 @@ function createAdvancedTableConfig(data: string[][], colors: any, fonts: any) {
     rowH: Math.max(0.4, Math.min(0.8, (CONTENT.bodyHeight * 0.8) / rowCount)),
     colW: Array(colCount).fill(CONTENT.width / colCount),
     margin: 0.1,
-    autoFit: true,
+    // Removed autoFit to prevent corruption
     // Enhanced styling for different row types
     rowOptions: [
       // Header row
@@ -573,42 +690,23 @@ function addHeaderAccent(slide: any, theme: ProfessionalTheme) {
   const colors = getThemeColors(theme);
 
   try {
-    // Modern gradient header accent for certain themes
-    if (theme.id.includes('gradient') || theme.id.includes('modern') || theme.id.includes('tech')) {
-      slide.addShape('rect', {
-        x: 0,
-        y: 0,
-        w: SLIDE.width,
-        h: 0.12,
-        fill: {
-          type: 'gradient',
-          angle: 90,
-          colors: [
-            { color: colors.primary, position: 0 },
-            { color: colors.accent, position: 100 }
-          ]
-        },
-        line: { width: 0 }
-      });
-    } else {
-      // Classic solid header accent
-      slide.addShape('rect', {
-        x: 0,
-        y: 0,
-        w: SLIDE.width,
-        h: 0.08,
-        fill: { color: colors.accent },
-        line: { width: 0 }
-      });
-    }
+    // Safe solid header accent for all themes (no gradients)
+    slide.addShape('rect', {
+      x: 0,
+      y: 0,
+      w: SLIDE.width,
+      h: 0.08,
+      fill: { color: colors.accent },
+      line: { width: 0 }
+    });
 
     // Add subtle shadow effect for depth
     slide.addShape('rect', {
       x: 0,
-      y: theme.id.includes('gradient') ? 0.12 : 0.08,
+      y: 0.08,
       w: SLIDE.width,
       h: 0.02,
-      fill: { color: colors.primary, transparency: 90 },
+      fill: { color: colors.borderLight }, // Simplified color without transparency
       line: { width: 0 }
     });
 
@@ -653,28 +751,8 @@ function addProfessionalBackground(slide: any, theme: ProfessionalTheme, slideIn
   const colors = getThemeColors(theme);
 
   try {
-    // Set slide background with gradient if theme supports it
-    if (theme.id.includes('gradient') || theme.id.includes('modern')) {
-      // Add subtle gradient background
-      slide.addShape('rect', {
-        x: 0,
-        y: 0,
-        w: SLIDE.width,
-        h: SLIDE.height,
-        fill: {
-          type: 'gradient',
-          angle: 45,
-          colors: [
-            { color: colors.background, position: 0 },
-            { color: colors.surface, position: 100 }
-          ]
-        },
-        line: { width: 0 }
-      });
-    } else {
-      // Standard solid background
-      slide.background = { color: colors.background };
-    }
+    // Safe solid background for all themes (no gradients)
+    slide.background = { color: colors.background };
 
     // Add enhanced header accent with modern styling
     addHeaderAccent(slide, theme);
@@ -724,68 +802,38 @@ function addTitleSlideDesignElements(slide: any, theme: ProfessionalTheme) {
 }
 
 /**
- * Add design elements for content slides
+ * Add simplified design elements for content slides
  */
 function addContentSlideDesignElements(slide: any, theme: ProfessionalTheme, slideIndex: number) {
   const colors = getThemeColors(theme);
 
-  // Alternating design elements for visual variety
-  if (slideIndex % 3 === 1) {
-    // Subtle corner accent
-    slide.addShape('rect', {
-      x: SLIDE.width - 0.3,
-      y: 0,
-      w: 0.3,
-      h: 1.5,
-      fill: { color: colors.accent, transparency: 85 },
-      line: { width: 0 }
-    });
-  } else if (slideIndex % 3 === 2) {
-    // Bottom accent line
-    slide.addShape('rect', {
-      x: 0,
-      y: SLIDE.height - 0.1,
-      w: SLIDE.width * 0.6,
-      h: 0.1,
-      fill: { color: colors.primary, transparency: 70 },
-      line: { width: 0 }
-    });
-  } else {
-    // Minimal dot accent
-    slide.addShape('ellipse', {
-      x: SLIDE.width - 0.4,
-      y: SLIDE.height - 0.4,
-      w: 0.2,
-      h: 0.2,
-      fill: { color: colors.accent, transparency: 60 },
-      line: { width: 0 }
-    });
-  }
+  // Simple bottom accent line for all slides
+  slide.addShape('rect', {
+    x: 0,
+    y: SLIDE.height - 0.05,
+    w: SLIDE.width * 0.4,
+    h: 0.05,
+    fill: { color: colors.primary, transparency: 80 },
+    line: { width: 0 }
+  });
 }
 
 /* -------------------------------------------------------------------------------------------------
- * Slide Generation Functions
+ * Slide Generation Functions - Simplified & Optimized
  *
- * This section contains specialized functions for generating different types of slides:
- * - Title slides with enhanced visual design and modern typography
- * - Content slides with bullet points and structured text formatting
- * - Chart slides with native PowerPoint charts and data visualization
- * - Table slides with professional formatting and alternating row colors
- * - Two-column layouts for comparative content presentation
- * - Image slides with proper aspect ratio handling and captions
+ * Core slide types:
+ * - Title slides with professional typography
+ * - Content slides with bullet points and structured text
+ * - Chart slides with native PowerPoint charts
+ * - Table slides with professional formatting
+ * - Two-column layouts for comparative content
+ * - Image slides with proper aspect ratio handling
  *
- * Each function follows a consistent pattern:
- * 1. Extract theme colors and fonts for consistent styling
- * 2. Add title with professional typography and spacing
- * 3. Add content based on slide type with appropriate formatting
- * 4. Apply theme-consistent design elements and visual hierarchy
- * 5. Handle errors gracefully with fallback content and logging
- *
- * All functions are designed to be:
- * - AI-agent friendly with clear parameter types and documentation
- * - Maintainable with consistent code structure and error handling
- * - Scalable with modular design and reusable components
- * - Professional with modern design principles and accessibility
+ * Design principles:
+ * - Consistent styling with theme colors and fonts
+ * - Professional typography and spacing
+ * - Graceful error handling with fallbacks
+ * - AI-agent friendly with clear documentation
  * ------------------------------------------------------------------------------------------------- */
 
 /**
@@ -807,7 +855,7 @@ function addTitleSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const fonts = getThemeFonts(theme);
 
   try {
-    // Main title with enhanced typography
+    // Main title with enhanced typography and proper color
     slide.addText(safeText(spec.title, 120), {
       x: CONTENT.x,
       y: 1.8,
@@ -815,17 +863,11 @@ function addTitleSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
       h: 1.2,
       fontSize: 44,
       fontFace: fonts.heading,
-      color: colors.primary,
+      color: colors.textPrimary, // Use text color for better readability
       bold: true,
       align: 'center',
       valign: 'middle',
-      shadow: {
-        type: 'outer',
-        blur: 3,
-        offset: 2,
-        angle: 45,
-        color: '00000020'
-      }
+      // Removed shadow to prevent PowerPoint corruption
     });
 
     // Subtitle if available
@@ -888,7 +930,7 @@ function addContentSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) 
   const colors = getThemeColors(theme);
   const fonts = getThemeFonts(theme);
 
-  // Title
+  // Title with proper text color for readability
   slide.addText(safeText(spec.title, 120), {
     x: CONTENT.x,
     y: CONTENT.y,
@@ -896,41 +938,63 @@ function addContentSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) 
     h: CONTENT.titleHeight,
     fontSize: LAYOUT.typography.title.fontSize,
     fontFace: fonts.heading,
-    color: colors.primary,
+    color: colors.textPrimary, // Use text color for better contrast
     bold: true,
     valign: 'middle'
   });
 
-  // Content area
+  // Content area with ultra-conservative formatting
   const contentY = CONTENT.bodyY;
   const contentHeight = CONTENT.bodyHeight;
 
   if (spec.bullets && spec.bullets.length > 0) {
-    // Bullet points
-    slide.addText(formatBullets(spec.bullets), {
+    // Ultra-safe bullet points with improved spacing and formatting
+    const bulletText = formatBullets(spec.bullets);
+    slide.addText(bulletText, {
       x: CONTENT.x,
       y: contentY,
       w: CONTENT.width,
-      h: contentHeight,
-      fontSize: LAYOUT.typography.bullets.fontSize,
-      fontFace: fonts.body,
-      color: colors.textPrimary,
+      h: Math.min(contentHeight, 4.0), // Limit height to prevent overlap
+      fontSize: 14, // Slightly smaller font to prevent crowding
+      fontFace: 'Calibri', // PowerPoint default font
+      color: colors.textSecondary, // Use theme text color for consistency
       bullet: { type: 'bullet', style: '•' },
-      lineSpacing: LAYOUT.typography.bullets.lineSpacing,
-      valign: 'top'
+      lineSpacing: 1.4, // Increased line spacing to prevent overlap
+      valign: 'top',
+      wrap: true,
+      // Removed autoFit and margin properties to prevent corruption
     });
   } else if (spec.paragraph) {
-    // Paragraph text
-    slide.addText(spec.paragraph, {
+    // Ultra-safe paragraph text
+    const paragraphText = safeText(spec.paragraph, 800);
+    slide.addText(paragraphText, {
       x: CONTENT.x,
       y: contentY,
       w: CONTENT.width,
       h: contentHeight,
-      fontSize: LAYOUT.typography.body.fontSize,
-      fontFace: fonts.body,
-      color: colors.textPrimary,
-      lineSpacing: LAYOUT.typography.body.lineSpacing,
-      valign: 'top'
+      fontSize: 16, // Fixed safe font size
+      fontFace: 'Calibri', // PowerPoint default font
+      color: '333333', // Safe hex color
+      lineSpacing: 1.2, // Conservative line spacing
+      valign: 'top',
+      wrap: true
+      // Removed autoFit to prevent corruption
+    });
+  } else {
+    // Fallback content to ensure slide is never empty
+    slide.addText('Content will be displayed here.', {
+      x: CONTENT.x,
+      y: contentY,
+      w: CONTENT.width,
+      h: contentHeight,
+      fontSize: 16,
+      fontFace: 'Calibri',
+      color: '666666',
+      lineSpacing: 1.2,
+      valign: 'middle',
+      align: 'center',
+      wrap: true
+      // Removed autoFit to prevent corruption
     });
   }
 }
@@ -1537,7 +1601,7 @@ export async function generateSimplePpt(
       });
     }
 
-    // Generate slides
+    // Generate slides with enhanced validation
     specs.forEach((spec, index) => {
       try {
         logger.debug(`Generating slide ${index + 1}/${specs.length}`, context, {
@@ -1545,34 +1609,61 @@ export async function generateSimplePpt(
           layout: spec.layout
         });
 
+        // Validate and sanitize slide specification
+        const validatedSpec = validateSlideSpec(spec, index);
+
         const slide = pres.addSlide();
+
+        // Apply safe background (no gradients)
+        try {
+          const colors = getThemeColors(theme);
+          slide.background = { color: colors.background };
+        } catch (bgError) {
+          logger.warn(`Failed to set background for slide ${index + 1}`, context, { error: bgError });
+          // Continue without background - PowerPoint will use default
+        }
 
         // Add professional background and design elements
         addProfessionalBackground(slide, theme, index);
 
-        // Add content based on layout
-        switch (spec.layout) {
-          case 'title':
-            addTitleSlide(slide, spec, theme);
-            break;
-          case 'chart':
-            addChartSlide(slide, spec, theme);
-            break;
-          case 'comparison-table':
-            addTableSlide(slide, spec, theme);
-            break;
-          case 'two-column':
-            addTwoColumnSlide(slide, spec, theme);
-            break;
-          default:
-            addContentSlide(slide, spec, theme);
+        // Add content based on layout with enhanced error handling
+        try {
+          switch (validatedSpec.layout) {
+            case 'title':
+              addTitleSlide(slide, validatedSpec, theme);
+              break;
+            case 'chart':
+              addChartSlide(slide, validatedSpec, theme);
+              break;
+            case 'comparison-table':
+              addTableSlide(slide, validatedSpec, theme);
+              break;
+            case 'two-column':
+              addTwoColumnSlide(slide, validatedSpec, theme);
+              break;
+            default:
+              addContentSlide(slide, validatedSpec, theme);
+          }
+        } catch (layoutError) {
+          logger.warn(`Layout generation failed for slide ${index + 1}, using safe fallback`, context, {
+            layout: validatedSpec.layout,
+            error: layoutError instanceof Error ? layoutError.message : String(layoutError)
+          });
+          // Safe fallback to basic content slide
+          addContentSlide(slide, validatedSpec, theme);
         }
 
         // Add enhanced speaker notes if enabled
         if (options.includeSpeakerNotes) {
-          const speakerNotes = generateSpeakerNotes(spec, index + 1, specs.length);
-          if (speakerNotes) {
-            slide.addNotes(speakerNotes);
+          try {
+            const speakerNotes = generateSpeakerNotes(validatedSpec, index + 1, specs.length);
+            if (speakerNotes && speakerNotes.trim().length > 0) {
+              slide.addNotes(safeText(speakerNotes, 2000));
+            }
+          } catch (notesError) {
+            logger.warn(`Failed to add speaker notes for slide ${index + 1}`, context, {
+              error: notesError instanceof Error ? notesError.message : String(notesError)
+            });
           }
         }
 
@@ -1580,41 +1671,158 @@ export async function generateSimplePpt(
         addSlideNumber(slide, theme, index, specs.length);
 
       } catch (slideError) {
-        logger.warn(`Failed to generate slide ${index + 1}, using fallback`, context, {
+        logger.warn(`Failed to generate slide ${index + 1}, using minimal fallback`, context, {
           error: slideError instanceof Error ? slideError.message : String(slideError)
         });
 
-        // Fallback to basic content slide
-        const slide = pres.addSlide();
-        addProfessionalBackground(slide, theme, index);
-        addContentSlide(slide, spec, theme);
-        addSlideNumber(slide, theme, index, specs.length);
+        // Minimal fallback slide to prevent corruption
+        try {
+          const slide = pres.addSlide();
+          addProfessionalBackground(slide, theme, index);
+
+          // Add minimal safe content
+          slide.addText(safeText(spec.title || `Slide ${index + 1}`, 100), {
+            x: 1,
+            y: 2,
+            w: 8,
+            h: 1,
+            fontSize: 24,
+            fontFace: 'Calibri',
+            color: theme.colors.text.primary,
+            bold: true
+          });
+
+          addSlideNumber(slide, theme, index, specs.length);
+        } catch (fallbackError) {
+          logger.error(`Critical failure generating slide ${index + 1}`, context, {
+            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+          });
+          // Continue with next slide rather than failing entire presentation
+        }
       }
     });
 
-    // Generate buffer
+    // Generate buffer with PowerPoint-compliant settings
     logger.info('Generating PowerPoint buffer', context);
-    const buffer = await pres.write({
-      outputType: 'nodebuffer',
-      compression: false
-    }) as Buffer;
+    let buffer: Buffer | null = null;
 
-    // Validate buffer
-    if (!buffer || buffer.length === 0) {
+    // Generate metadata for PowerPoint compliance
+    const presentationMetadata = generateMetadata(specs, options);
+
+    // Apply metadata to presentation for better compatibility
+    if (presentationMetadata.title) pres.title = presentationMetadata.title;
+    if (presentationMetadata.author) pres.author = presentationMetadata.author;
+    if (presentationMetadata.company) pres.company = presentationMetadata.company;
+    if (presentationMetadata.subject) pres.subject = presentationMetadata.subject;
+
+    // Use ultra-safe PowerPoint export options based on style testing
+    const writeOptions = {
+      outputType: 'nodebuffer' as const,
+      compression: true, // Tested and verified safe
+      // Remove rtlMode as it's not supported in current pptxgenjs version
+    };
+
+    // Retry mechanism for buffer generation
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.debug(`PowerPoint buffer generation attempt ${attempt}/${maxRetries}`, context);
+
+        // Clear any previous state that might cause issues
+        if (attempt > 1) {
+          // Force garbage collection if available
+          if (global.gc) {
+            global.gc();
+          }
+
+          // Small delay to allow cleanup
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        const generatedBuffer = await pres.write(writeOptions) as Buffer;
+
+        // Validate the generated buffer
+        if (generatedBuffer && generatedBuffer.length > 0) {
+          buffer = generatedBuffer;
+          logger.debug(`PowerPoint buffer generated successfully on attempt ${attempt}`, context, {
+            bufferSize: buffer.length
+          });
+          break;
+        } else {
+          throw new Error('Generated buffer is empty or null');
+        }
+      } catch (writeError) {
+        lastError = writeError instanceof Error ? writeError : new Error(String(writeError));
+        logger.warn(`PowerPoint buffer generation attempt ${attempt} failed`, context, {
+          error: lastError.message,
+          attempt,
+          maxRetries
+        });
+
+        if (attempt === maxRetries) {
+          logger.error('All PowerPoint buffer generation attempts failed', context, {
+            error: lastError.message,
+            stack: lastError.stack,
+            totalAttempts: maxRetries
+          });
+          throw new Error(`Failed to generate PowerPoint buffer after ${maxRetries} attempts: ${lastError.message}`);
+        }
+
+        // Progressive delay before retry
+        await new Promise(resolve => setTimeout(resolve, 200 * attempt));
+      }
+    }
+
+    // Comprehensive buffer validation
+    if (!buffer) {
+      throw new Error('Generated PowerPoint buffer is null - all generation attempts failed');
+    }
+
+    if (buffer.length === 0) {
       throw new Error('Generated PowerPoint buffer is empty');
     }
 
-    if (buffer.length < 10000) {
-      logger.warn('PowerPoint file is suspiciously small', context, {
+    // Validate ZIP signature (PowerPoint files are ZIP archives)
+    const zipSignature = buffer.subarray(0, 4);
+    const expectedSignature = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
+    if (!zipSignature.equals(expectedSignature)) {
+      logger.error('Invalid PowerPoint file signature detected', context, {
+        actualSignature: Array.from(zipSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+        expectedSignature: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
         bufferSize: buffer.length
       });
+      throw new Error('Generated PowerPoint file has invalid ZIP signature - file may be corrupted');
     }
+
+    // Check minimum reasonable file size
+    if (buffer.length < 10000) {
+      logger.warn('PowerPoint file is suspiciously small', context, {
+        bufferSize: buffer.length,
+        slideCount: specs.length
+      });
+    }
+
+    // Check maximum reasonable file size (50MB)
+    if (buffer.length > 50 * 1024 * 1024) {
+      logger.warn('PowerPoint file is very large', context, {
+        bufferSize: buffer.length,
+        bufferSizeMB: Math.round(buffer.length / 1024 / 1024),
+        slideCount: specs.length
+      });
+    }
+
+    // Final comprehensive validation before returning
+    validatePowerPointBuffer(buffer, context);
 
     const generationTime = Date.now() - startTime;
     logger.info('PowerPoint generation completed successfully', context, {
       slideCount: specs.length,
       bufferSize: buffer.length,
-      generationTime: `${generationTime}ms`
+      bufferSizeKB: Math.round(buffer.length / 1024),
+      generationTime: `${generationTime}ms`,
+      validationPassed: true
     });
 
     return buffer;

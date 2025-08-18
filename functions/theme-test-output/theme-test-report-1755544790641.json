@@ -1,0 +1,238 @@
+{
+  "timestamp": "2025-08-18T19:19:50.641Z",
+  "totalTests": 12,
+  "passedTests": 12,
+  "failedTests": 0,
+  "results": [
+    {
+      "testId": "theme-corporate-basic",
+      "themeId": "corporate-blue",
+      "passed": true,
+      "fileSize": 59582,
+      "hasValidSignature": true,
+      "generationTime": 22,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes"
+      ]
+    },
+    {
+      "testId": "theme-corporate-advanced",
+      "themeId": "corporate-blue",
+      "passed": true,
+      "fileSize": 75186,
+      "hasValidSignature": true,
+      "generationTime": 4,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes",
+        "charts",
+        "tables",
+        "shapes",
+        "backgrounds"
+      ]
+    },
+    {
+      "testId": "theme-modern-basic",
+      "themeId": "modern-gradient",
+      "passed": true,
+      "fileSize": 59582,
+      "hasValidSignature": true,
+      "generationTime": 3,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes"
+      ]
+    },
+    {
+      "testId": "theme-modern-advanced",
+      "themeId": "modern-gradient",
+      "passed": true,
+      "fileSize": 75186,
+      "hasValidSignature": true,
+      "generationTime": 3,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes",
+        "charts",
+        "tables",
+        "shapes",
+        "backgrounds"
+      ]
+    },
+    {
+      "testId": "theme-tech-basic",
+      "themeId": "tech-innovation",
+      "passed": true,
+      "fileSize": 59582,
+      "hasValidSignature": true,
+      "generationTime": 3,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes"
+      ]
+    },
+    {
+      "testId": "theme-tech-advanced",
+      "themeId": "tech-innovation",
+      "passed": true,
+      "fileSize": 75186,
+      "hasValidSignature": true,
+      "generationTime": 4,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes",
+        "charts",
+        "tables",
+        "shapes",
+        "backgrounds"
+      ]
+    },
+    {
+      "testId": "theme-consulting-basic",
+      "themeId": "consulting-charcoal",
+      "passed": true,
+      "fileSize": 59582,
+      "hasValidSignature": true,
+      "generationTime": 2,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes"
+      ]
+    },
+    {
+      "testId": "theme-consulting-advanced",
+      "themeId": "consulting-charcoal",
+      "passed": true,
+      "fileSize": 75186,
+      "hasValidSignature": true,
+      "generationTime": 2,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes",
+        "charts",
+        "tables",
+        "shapes",
+        "backgrounds"
+      ]
+    },
+    {
+      "testId": "theme-creative-basic",
+      "themeId": "creative-teal",
+      "passed": true,
+      "fileSize": 59582,
+      "hasValidSignature": true,
+      "generationTime": 2,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes"
+      ]
+    },
+    {
+      "testId": "theme-creative-advanced",
+      "themeId": "creative-teal",
+      "passed": true,
+      "fileSize": 75186,
+      "hasValidSignature": true,
+      "generationTime": 2,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes",
+        "charts",
+        "tables",
+        "shapes",
+        "backgrounds"
+      ]
+    },
+    {
+      "testId": "theme-financial-basic",
+      "themeId": "financial-green",
+      "passed": true,
+      "fileSize": 59582,
+      "hasValidSignature": true,
+      "generationTime": 2,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes"
+      ]
+    },
+    {
+      "testId": "theme-financial-advanced",
+      "themeId": "financial-green",
+      "passed": true,
+      "fileSize": 75186,
+      "hasValidSignature": true,
+      "generationTime": 4,
+      "features": [
+        "title-slide",
+        "bullet-points",
+        "speaker-notes",
+        "charts",
+        "tables",
+        "shapes",
+        "backgrounds"
+      ]
+    }
+  ],
+  "themeAnalysis": {
+    "corporate-blue": {
+      "totalTests": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "riskLevel": "low"
+    },
+    "modern-gradient": {
+      "totalTests": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "riskLevel": "low"
+    },
+    "tech-innovation": {
+      "totalTests": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "riskLevel": "low"
+    },
+    "consulting-charcoal": {
+      "totalTests": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "riskLevel": "low"
+    },
+    "creative-teal": {
+      "totalTests": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "riskLevel": "low"
+    },
+    "financial-green": {
+      "totalTests": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "riskLevel": "low"
+    }
+  },
+  "recommendations": [
+    "Use these safe themes for production: corporate-blue, modern-gradient, tech-innovation, consulting-charcoal, creative-teal, financial-green"
+  ],
+  "safeThemes": [
+    "corporate-blue",
+    "modern-gradient",
+    "tech-innovation",
+    "consulting-charcoal",
+    "creative-teal",
+    "financial-green"
+  ],
+  "problematicThemes": []
+}

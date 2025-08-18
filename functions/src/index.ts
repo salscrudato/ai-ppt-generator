@@ -875,28 +875,49 @@ app.post("/generate/professional", async (req, res) => {
       sizeKB: Math.round(pptBuffer.length / 1024)
     });
 
-    // Configure response headers
+    // Validate buffer before sending
+    if (!pptBuffer || pptBuffer.length === 0) {
+      throw new Error('Generated PowerPoint buffer is empty or invalid');
+    }
+
+    // Check for valid ZIP signature (PowerPoint files are ZIP archives)
+    const zipSignature = pptBuffer.subarray(0, 4);
+    const expectedSignature = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
+    if (!zipSignature.equals(expectedSignature)) {
+      logger.error('Invalid PowerPoint file signature detected', context, {
+        actualSignature: Array.from(zipSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+        expectedSignature: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+        bufferSize: pptBuffer.length
+      });
+      throw new Error('Generated PowerPoint file has invalid format signature');
+    }
+
+    // Configure response headers with proper encoding
     const firstSpec = spec[0];
     const sanitizedTitle =
       firstSpec.title?.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_") || "presentation";
     const filename = `${sanitizedTitle}_professional.pptx`;
 
+    // Set headers in correct order and format
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    );
     res.setHeader("Content-Length", pptBuffer.length.toString());
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
     endPerformanceTracking(performanceMetric, true);
     logger.info("Professional PowerPoint generated successfully", {
       slideCount,
       colorPalette,
       bufferSize: pptBuffer.length,
-      filename
+      filename,
+      signatureValid: true
     });
 
-    return res.send(pptBuffer);
+    // Send buffer directly without any encoding transformations
+    res.end(pptBuffer);
+    return;
   } catch (error) {
     logger.error("Professional PowerPoint generation failed", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -1075,8 +1096,8 @@ app.post("/generate", async (req, res) => {
     // Auto-select theme if not provided or invalid
     if (!req.body.themeId) {
       const firstSpec = Array.isArray(spec) ? (spec as SlideSpec[])[0] : (spec as SlideSpec);
-      const contentAnalysis = { presentationType: firstSpec.layout };
-      themeUsed = selectThemeForContent(contentAnalysis).id;
+      const contentForAnalysis = `${firstSpec.title || ''} ${firstSpec.paragraph || ''} ${firstSpec.layout || ''}`;
+      themeUsed = selectThemeForContent(contentForAnalysis).id;
       logger.info(`Auto-selected theme: ${themeUsed}`);
     } else {
       const exists = PROFESSIONAL_THEMES.some((t) => t.id === req.body.themeId);
@@ -1085,8 +1106,8 @@ app.post("/generate", async (req, res) => {
           themeId: req.body.themeId
         });
         const firstSpec = Array.isArray(spec) ? (spec as SlideSpec[])[0] : (spec as SlideSpec);
-        const contentAnalysis = { presentationType: firstSpec.layout };
-        themeUsed = selectThemeForContent(contentAnalysis).id;
+        const contentForAnalysis = `${firstSpec.title || ''} ${firstSpec.paragraph || ''} ${firstSpec.layout || ''}`;
+        themeUsed = selectThemeForContent(contentForAnalysis).id;
       } else {
         themeUsed = req.body.themeId;
       }
@@ -1145,23 +1166,45 @@ app.post("/generate", async (req, res) => {
       firstSpec.title?.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_") || "presentation";
     const filename = `${sanitizedTitle}.pptx`;
 
+    // Validate buffer before sending
+    if (!pptBuffer || pptBuffer.length === 0) {
+      throw new Error('Generated PowerPoint buffer is empty or invalid');
+    }
+
+    // Check for valid ZIP signature (PowerPoint files are ZIP archives)
+    const zipSignature = pptBuffer.subarray(0, 4);
+    const expectedSignature = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
+    if (!zipSignature.equals(expectedSignature)) {
+      logger.error('Invalid PowerPoint file signature detected', {
+        actualSignature: Array.from(zipSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+        expectedSignature: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+        bufferSize: pptBuffer.length
+      });
+      throw new Error('Generated PowerPoint file has invalid format signature');
+    }
+
+    // Set headers in correct order and format
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    );
     res.setHeader("Content-Length", pptBuffer.length.toString());
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
     logger.info("PowerPoint generation successful", {
       filename,
       fileSize: pptBuffer.length,
       slideTitle: sanitizedTitle,
       slideCount,
-      themeUsed
+      themeUsed,
+      signatureValid: true
     });
 
     endPerformanceTracking(performanceMetric, true, undefined, { slideCount, themeUsed, aiSteps: 4 });
-    return res.send(pptBuffer);
+
+    // Send buffer directly without any encoding transformations
+    res.end(pptBuffer);
+    return;
   } catch (error) {
     let status = 500;
     let code = "PPT_GENERATION_ERROR";

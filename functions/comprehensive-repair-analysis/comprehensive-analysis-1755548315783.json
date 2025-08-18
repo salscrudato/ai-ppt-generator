@@ -1,0 +1,189 @@
+{
+  "timestamp": "2025-08-18T20:18:35.783Z",
+  "summary": {
+    "total": 12,
+    "successful": 10,
+    "failed": 2,
+    "successRate": 83
+  },
+  "results": [
+    {
+      "name": "absolute-minimal-empty",
+      "success": false,
+      "fileSize": 0,
+      "duration": 2,
+      "hash": "",
+      "signature": "",
+      "error": "PowerPoint Service Error: Slide validation failed: No slides provided"
+    },
+    {
+      "name": "absolute-minimal-title-only",
+      "success": true,
+      "fileSize": 48660,
+      "duration": 18,
+      "hash": "633da3abf437f401f19c6d25d87a1865",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "minimal-no-theme",
+      "success": false,
+      "fileSize": 0,
+      "duration": 4,
+      "hash": "",
+      "signature": "",
+      "error": "PowerPoint Service Error: Cannot read properties of null (reading 'name')"
+    },
+    {
+      "name": "minimal-no-metadata",
+      "success": true,
+      "fileSize": 48660,
+      "duration": 3,
+      "hash": "633da3abf437f401f19c6d25d87a1865",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "minimal-ascii-only",
+      "success": true,
+      "fileSize": 48660,
+      "duration": 2,
+      "hash": "633da3abf437f401f19c6d25d87a1865",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "minimal-unicode-test",
+      "success": true,
+      "fileSize": 48660,
+      "duration": 3,
+      "hash": "633da3abf437f401f19c6d25d87a1865",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "feature-bullets-simple",
+      "success": true,
+      "fileSize": 48760,
+      "duration": 3,
+      "hash": "b1f0bc5ab0d43131a32a763f7bd0dca6",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "feature-bullets-complex",
+      "success": true,
+      "fileSize": 48809,
+      "duration": 2,
+      "hash": "634745a0efab1afdf3edb909b45ede3d",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "feature-paragraph-simple",
+      "success": true,
+      "fileSize": 48396,
+      "duration": 2,
+      "hash": "db9e37a7ecce74a5e20f8d99929f7218",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "feature-two-column",
+      "success": true,
+      "fileSize": 49582,
+      "duration": 3,
+      "hash": "0ce79d35c03f00a4277b027bf188b388",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "data-table-minimal",
+      "success": true,
+      "fileSize": 48397,
+      "duration": 3,
+      "hash": "ff0d22f4b6c4afd3bd9e1fe130409b57",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    },
+    {
+      "name": "data-chart-minimal",
+      "success": true,
+      "fileSize": 71185,
+      "duration": 7,
+      "hash": "41eabd2faec2bb5cdcaeee58da08d650",
+      "signature": "504b03040a000000",
+      "bufferAnalysis": {
+        "hasValidZipSignature": true,
+        "hasValidOOXMLStructure": false,
+        "corruptionMarkers": [
+          "null_bytes"
+        ]
+      }
+    }
+  ],
+  "analysis": {
+    "signatures": [
+      "504b03040a000000"
+    ],
+    "sizeStats": {
+      "min": 48396,
+      "max": 71185,
+      "avg": 50977
+    }
+  }
+}

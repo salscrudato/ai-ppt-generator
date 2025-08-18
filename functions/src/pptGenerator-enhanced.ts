@@ -122,28 +122,40 @@ function safeFontFace(fontFace: string | undefined, fallback: string = 'Arial'):
     return fallback;
   }
 
-  // List of safe, widely supported fonts
+  // List of safe, widely supported fonts (including modern system fonts)
   const safeFonts = [
+    // Classic safe fonts
     'Arial', 'Helvetica', 'Times New Roman', 'Times', 'Courier New', 'Courier',
     'Verdana', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS',
     'Trebuchet MS', 'Arial Black', 'Impact', 'Lucida Sans Unicode', 'Tahoma',
     'Lucida Console', 'Monaco', 'Bradley Hand ITC', 'Brush Script MT',
-    'Lucida Handwriting', 'Copperplate', 'Papyrus'
+    'Lucida Handwriting', 'Copperplate', 'Papyrus',
+
+    // Modern system fonts (widely available)
+    'Segoe UI', 'Roboto', 'Helvetica Neue', 'SF Pro Display', 'SF Pro Text',
+    'SF Mono', 'system-ui', '-apple-system', 'BlinkMacSystemFont',
+
+    // Modern web fonts (commonly available)
+    'Inter', 'Inter var', 'Work Sans', 'IBM Plex Sans', 'DM Sans',
+    'Charter', 'Bitstream Charter', 'Sitka Text', 'Cambria',
+    'Cascadia Code', 'Roboto Mono', 'Consolas', 'Playfair Display'
   ];
 
-  // Clean the font name
-  const cleanFont = fontFace.trim().replace(/['"]/g, '');
+  // Handle font stacks (comma-separated fonts)
+  const fontStack = fontFace.split(',').map(f => f.trim().replace(/['"]/g, ''));
 
-  // Check if it's a safe font (case insensitive)
-  const isSafeFont = safeFonts.some(font =>
-    font.toLowerCase() === cleanFont.toLowerCase()
-  );
+  // Find the first safe font in the stack
+  for (const font of fontStack) {
+    const isSafeFont = safeFonts.some(safeFont =>
+      safeFont.toLowerCase() === font.toLowerCase()
+    );
 
-  if (isSafeFont) {
-    return cleanFont;
+    if (isSafeFont) {
+      return font;
+    }
   }
 
-  // For unknown fonts, use fallback to prevent corruption
+  // If no safe font found in stack, use fallback
   logger.debug('Unknown font face, using fallback', { requested: fontFace, fallback });
   return fallback;
 }
@@ -452,12 +464,44 @@ function addChartSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
 // Removed generateChartColors - no longer needed
 
 /**
- * Add table slide with reliable fallback to content
+ * Add table slide with safe table rendering or fallback to bullets
  */
 function addTableSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
-  // Tables can be problematic - use content slide instead for reliability
-  logger.info('Table layout requested, using content slide for reliability');
-  addContentSlide(slide, spec, theme);
+  logger.info('Table layout requested, converting to bullet format for reliability');
+
+  // Convert table data to bullet points for safe rendering
+  if (spec.comparisonTable) {
+    const { headers, rows } = spec.comparisonTable;
+
+    // Create bullet points from table data
+    const bullets: string[] = [];
+
+    // Add header as first bullet
+    if (headers && headers.length > 0) {
+      bullets.push(`Headers: ${headers.join(' | ')}`);
+    }
+
+    // Add each row as a bullet
+    if (rows && rows.length > 0) {
+      rows.forEach((row: string[], index: number) => {
+        if (row && row.length > 0) {
+          bullets.push(`Row ${index + 1}: ${row.join(' | ')}`);
+        }
+      });
+    }
+
+    // Create a new spec with bullets instead of table
+    const bulletSpec = {
+      ...spec,
+      bullets: bullets.length > 0 ? bullets : ['No table data available'],
+      comparisonTable: undefined // Remove table data to prevent any issues
+    };
+
+    addContentSlide(slide, bulletSpec, theme);
+  } else {
+    // No table data, just use regular content slide
+    addContentSlide(slide, spec, theme);
+  }
 }
 
 // Removed parseTableDataFromBullets - no longer needed

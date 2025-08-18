@@ -1,0 +1,190 @@
+{
+  "timestamp": "2025-08-18T20:03:15.344Z",
+  "totalTests": 4,
+  "passedTests": 3,
+  "failedTests": 1,
+  "results": [
+    {
+      "testId": "real-basic-corporate",
+      "passed": true,
+      "statusCode": 200,
+      "responseTime": 22,
+      "fileSize": 65255,
+      "hasValidSignature": true,
+      "responseHeaders": {
+        "access-control-allow-credentials": "true",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "connection": "keep-alive",
+        "content-disposition": "attachment; filename=\"Q4_Business_Review.pptx\"",
+        "content-length": "65255",
+        "content-security-policy": "default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data: https:;connect-src 'self' https://api.openai.com;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests",
+        "content-type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "date": "Mon, 18 Aug 2025 20:03:15 GMT",
+        "expires": "0",
+        "keep-alive": "timeout=5",
+        "origin-agent-cluster": "?1",
+        "pragma": "no-cache",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+        "vary": "Origin",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": "Express",
+        "x-request-id": "req_1755547395250_nwvff2o79",
+        "x-xss-protection": "0"
+      }
+    },
+    {
+      "testId": "real-complex-modern",
+      "passed": false,
+      "statusCode": 400,
+      "responseTime": 2,
+      "fileSize": 0,
+      "hasValidSignature": false,
+      "errorDetails": "HTTP 400: {\"error\":\"Invalid slide specifications provided\",\"code\":\"INVALID_SPEC_ERROR\",\"details\":[[\"chart.series.0.data: Required\"]]}",
+      "responseHeaders": {
+        "access-control-allow-credentials": "true",
+        "connection": "keep-alive",
+        "content-length": "123",
+        "content-security-policy": "default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data: https:;connect-src 'self' https://api.openai.com;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests",
+        "content-type": "application/json; charset=utf-8",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "date": "Mon, 18 Aug 2025 20:03:15 GMT",
+        "etag": "W/\"7b-SijpuSr7NmO85V6LsNrK03LrFMY\"",
+        "keep-alive": "timeout=5",
+        "origin-agent-cluster": "?1",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+        "vary": "Origin, Accept-Encoding",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": "Express",
+        "x-request-id": "req_1755547395283_tz680lg61",
+        "x-xss-protection": "0"
+      }
+    },
+    {
+      "testId": "real-failing-content",
+      "passed": true,
+      "statusCode": 200,
+      "responseTime": 7,
+      "fileSize": 67289,
+      "hasValidSignature": true,
+      "responseHeaders": {
+        "access-control-allow-credentials": "true",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "connection": "keep-alive",
+        "content-disposition": "attachment; filename=\"Launch_Success_New_Product_to_Drive_25_Revenue_Growth.pptx\"",
+        "content-length": "67289",
+        "content-security-policy": "default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data: https:;connect-src 'self' https://api.openai.com;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests",
+        "content-type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "date": "Mon, 18 Aug 2025 20:03:15 GMT",
+        "expires": "0",
+        "keep-alive": "timeout=5",
+        "origin-agent-cluster": "?1",
+        "pragma": "no-cache",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+        "vary": "Origin",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": "Express",
+        "x-request-id": "req_1755547395285_fwn8m40ts",
+        "x-xss-protection": "0"
+      }
+    },
+    {
+      "testId": "real-professional-endpoint",
+      "passed": true,
+      "statusCode": 200,
+      "responseTime": 20,
+      "fileSize": 60112,
+      "hasValidSignature": true,
+      "responseHeaders": {
+        "access-control-allow-credentials": "true",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "connection": "keep-alive",
+        "content-disposition": "attachment; filename=\"Executive_Dashboard_professional.pptx\"",
+        "content-length": "60112",
+        "content-security-policy": "default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self';img-src 'self' data: https:;connect-src 'self' https://api.openai.com;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests",
+        "content-type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "date": "Mon, 18 Aug 2025 20:03:15 GMT",
+        "expires": "0",
+        "keep-alive": "timeout=5",
+        "origin-agent-cluster": "?1",
+        "pragma": "no-cache",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+        "vary": "Origin",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": "Express",
+        "x-request-id": "req_1755547395305_3mmz75w80",
+        "x-xss-protection": "0"
+      }
+    }
+  ],
+  "endpointAnalysis": {
+    "/generate": {
+      "totalTests": 3,
+      "passedTests": 2,
+      "failedTests": 1,
+      "averageResponseTime": 15,
+      "averageFileSize": 66272
+    },
+    "/generate/professional": {
+      "totalTests": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "averageResponseTime": 20,
+      "averageFileSize": 60112
+    }
+  },
+  "themeAnalysis": {
+    "corporate-blue": {
+      "totalTests": 1,
+      "passedTests": 1,
+      "failedTests": 0
+    },
+    "modern-gradient": {
+      "totalTests": 1,
+      "passedTests": 0,
+      "failedTests": 1
+    },
+    "tech-innovation": {
+      "totalTests": 1,
+      "passedTests": 1,
+      "failedTests": 0
+    },
+    "consulting-charcoal": {
+      "totalTests": 1,
+      "passedTests": 1,
+      "failedTests": 0
+    }
+  },
+  "recommendations": [
+    "Some API endpoints are failing - check server logs for details",
+    "Fix issues with /generate endpoint (1 failures)",
+    "Some themes are causing failures - consider simplifying theme selection",
+    "Problematic themes: modern-gradient"
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "timestamp": "2025-08-18T19:48:44.280Z",
+  "totalTests": 7,
+  "passedTests": 7,
+  "failedTests": 0,
+  "results": [
+    {
+      "testId": "pipeline-api-basic",
+      "passed": true,
+      "fileSize": 49933,
+      "hasValidSignature": true,
+      "generationTime": 18
+    },
+    {
+      "testId": "pipeline-api-complex",
+      "passed": true,
+      "fileSize": 66244,
+      "hasValidSignature": true,
+      "generationTime": 4
+    },
+    {
+      "testId": "pipeline-theme-corporate",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 3
+    },
+    {
+      "testId": "pipeline-theme-modern",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 2
+    },
+    {
+      "testId": "pipeline-theme-tech",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 3
+    },
+    {
+      "testId": "pipeline-theme-consulting",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 2
+    },
+    {
+      "testId": "pipeline-volume-large",
+      "passed": true,
+      "fileSize": 175951,
+      "hasValidSignature": true,
+      "generationTime": 7
+    }
+  ],
+  "apiCallResults": [
+    {
+      "testId": "pipeline-api-basic",
+      "passed": true,
+      "fileSize": 49933,
+      "hasValidSignature": true,
+      "generationTime": 18
+    },
+    {
+      "testId": "pipeline-api-complex",
+      "passed": true,
+      "fileSize": 66244,
+      "hasValidSignature": true,
+      "generationTime": 4
+    }
+  ],
+  "themeResults": [
+    {
+      "testId": "pipeline-theme-corporate",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 3
+    },
+    {
+      "testId": "pipeline-theme-modern",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 2
+    },
+    {
+      "testId": "pipeline-theme-tech",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 3
+    },
+    {
+      "testId": "pipeline-theme-consulting",
+      "passed": true,
+      "fileSize": 49881,
+      "hasValidSignature": true,
+      "generationTime": 2
+    }
+  ],
+  "volumeResults": [
+    {
+      "testId": "pipeline-volume-large",
+      "passed": true,
+      "fileSize": 175951,
+      "hasValidSignature": true,
+      "generationTime": 7
+    }
+  ],
+  "recommendations": [
+    "All pipeline tests passed - your data processing is working correctly"
+  ]
+}

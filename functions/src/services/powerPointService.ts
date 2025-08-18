@@ -12,7 +12,7 @@
  * - Richer structured logging with context
  */
 
-import { generatePpt } from '../pptGenerator-enhanced';
+import { generateSimplePpt } from '../pptGenerator-simple';
 import { type SlideSpec } from '../schema';
 import { type ProfessionalTheme } from '../professionalThemes';
 import { logger, type LogContext } from '../utils/smartLogger';
@@ -165,7 +165,7 @@ export class PowerPointService implements IPowerPointService {
       const { result: rawBuffer, attempts } = await this.withRetry<Buffer>(
         async () => {
           checkAbort('generate');
-          return await generatePpt(processedSlides as SlideSpec[], true);
+          return await generateSimplePpt(processedSlides as SlideSpec[], options.theme?.id);
         },
         opts.retries,
         (attempt, err) => {

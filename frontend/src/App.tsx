@@ -166,49 +166,37 @@ function AppContent() {
     });
   }, []);
 
-  // Enhanced error clearing with better UX and auto-recovery
+  // Simplified error clearing with better UX
   useEffect(() => {
     if (state.error) {
-      // Auto-clear errors after user interaction or time
       const timer = setTimeout(() => {
         updateState({ error: undefined });
-      }, 8000); // Longer timeout for better readability
+      }, 6000); // Reasonable timeout for error visibility
 
       return () => clearTimeout(timer);
     }
   }, [state.error, updateState]);
 
-  // Enhanced error recovery mechanism
+  // Simplified error recovery mechanism
   const handleErrorRecovery = useCallback(() => {
     updateState({
       error: undefined,
       loading: false,
-      step: 'input' // Reset to input step for fresh start
+      step: 'input'
     });
     loadingState.reset();
   }, [updateState, loadingState]);
 
   /**
    * Generate slide draft from user parameters
-   *
-   * Calls the AI backend to create an initial slide specification based on
-   * user input. Handles loading states, error management, and automatic
-   * progression to the edit step upon success.
-   *
-   * @param params - User input parameters for slide generation
+   * Simplified with essential functionality and better error handling
    */
   const generateDraft = async (params: GenerationParams) => {
-    // Debug logging to track when generation is triggered
-    console.log('🚀 App: generateDraft called', {
-      params,
-      currentStep: state.step,
-      currentLoading: state.loading,
-      stackTrace: new Error().stack?.split('\n').slice(1, 5)
-    });
+    console.log('🚀 Generating draft for:', params.prompt.substring(0, 50));
 
     // Prevent multiple simultaneous generations
     if (state.loading) {
-      console.log('🚫 App: Generation already in progress, ignoring request');
+      console.log('🚫 Generation already in progress');
       return;
     }
 
@@ -218,12 +206,11 @@ function AppContent() {
     try {
       // Stage 1: Analyzing input
       loadingState.setStage('analyzing');
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Stage 2: Generate content using AI
       loadingState.setStage('generating');
 
-      // Call the backend API to generate the slide content
       const response = await fetch(API_ENDPOINTS.draft, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,7 +219,7 @@ function AppContent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(errorData.error || `Generation failed (${response.status})`);
       }
 
       const result = await response.json();
@@ -245,36 +232,26 @@ function AppContent() {
 
       // Stage 3: Finalizing
       loadingState.setStage('finalizing');
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       loadingState.completeLoading('Slide ready!');
 
       // Show quality feedback if available
       if (result.quality) {
-        const qualityMessage = `Content quality: ${result.quality.grade} (${result.quality.score}/100)`;
-        // notifications.showSuccess('Draft Generated', qualityMessage);
-        console.log('✅ Draft Generated:', qualityMessage);
+        console.log(`✅ Draft Generated - Quality: ${result.quality.grade} (${result.quality.score}/100)`);
       }
 
       updateState({
         draft: draft,
-        editedSpec: { ...draft }, // Create editable copy
-        step: 'edit', // Go directly to edit step
+        editedSpec: { ...draft },
+        step: 'edit',
         loading: false
       });
     } catch (error) {
-      console.error('Draft generation failed:', error);
-
-      // Use simple error notification (notifications system not available)
-      // notifications.handleApiError(error, 'Draft Generation', () => {
-      //   // Retry function
-      //   generateDraft(state.params);
-      // });
-      console.error('Draft generation error:', error);
-
+      console.error('❌ Draft generation failed:', error);
       loadingState.failLoading('Draft generation failed');
       updateState({
-        error: error instanceof Error ? error.message : 'Draft generation failed',
+        error: error instanceof Error ? error.message : 'Draft generation failed. Please try again.',
         loading: false
       });
     }
@@ -355,16 +332,45 @@ function AppContent() {
         blobType: blob.type
       });
 
-      // Validate blob before download
+      // Comprehensive blob validation
+      if (!blob) {
+        throw new Error('Received null PowerPoint file - server error occurred');
+      }
+
       if (blob.size === 0) {
         throw new Error('Received empty PowerPoint file - generation may have failed');
       }
 
-      if (blob.size < 1000) {
+      if (blob.size < 10000) {
         console.warn('PowerPoint file suspiciously small', {
           fileSize: blob.size,
-          minimumExpected: 1000
+          minimumExpected: 10000
         });
+      }
+
+      // Validate file signature by reading first few bytes
+      try {
+        const arrayBuffer = await blob.slice(0, 4).arrayBuffer();
+        const signature = new Uint8Array(arrayBuffer);
+        const expectedSignature = new Uint8Array([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
+
+        const signatureValid = signature.every((byte, index) => byte === expectedSignature[index]);
+        if (!signatureValid) {
+          console.error('Invalid PowerPoint file signature detected:', {
+            actual: Array.from(signature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+            expected: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+            fileSize: blob.size
+          });
+          throw new Error('Downloaded file has invalid PowerPoint format - file may be corrupted. Please try generating again.');
+        }
+
+        console.log('PowerPoint file signature validation passed', {
+          signature: Array.from(signature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+          fileSize: blob.size
+        });
+      } catch (signatureError) {
+        console.error('Could not validate file signature:', signatureError);
+        throw new Error('Unable to validate PowerPoint file integrity - please try generating again.');
       }
 
       const url = URL.createObjectURL(blob);
