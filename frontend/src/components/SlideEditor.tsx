@@ -43,6 +43,55 @@ interface EditingState {
   lastSaved: Date | null;
 }
 
+interface ValidationState {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// Real-time validation function
+function validateSlideSpec(spec: SlideSpec): ValidationState {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Title validation
+  if (!spec.title || spec.title.trim().length === 0) {
+    errors.push('Title is required');
+  } else if (spec.title.length > 120) {
+    errors.push('Title must be 120 characters or less');
+  }
+
+  // Content validation
+  const hasContent = (spec.bullets && spec.bullets.length > 0) ||
+                    (spec.paragraph && spec.paragraph.trim().length > 0) ||
+                    (spec.left && (spec.left.bullets?.length || spec.left.paragraph)) ||
+                    (spec.right && (spec.right.bullets?.length || spec.right.paragraph));
+
+  if (!hasContent) {
+    warnings.push('Slide has no content - consider adding bullets or paragraph text');
+  }
+
+  // Bullet validation
+  if (spec.bullets && spec.bullets.length > 10) {
+    warnings.push('Consider reducing bullet points to 10 or fewer for better readability');
+  }
+
+  // Layout-specific validation
+  if (spec.layout === 'two-column' && !spec.left && !spec.right) {
+    errors.push('Two-column layout requires left or right content');
+  }
+
+  if (spec.layout === 'chart' && !spec.chart && (!spec.bullets || spec.bullets.length === 0)) {
+    warnings.push('Chart layout works best with data in bullets or chart configuration');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
 export default function SlideEditor({
   spec,
   loading,

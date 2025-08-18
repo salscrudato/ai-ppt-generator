@@ -44,9 +44,12 @@ interface SlidePreviewProps {
   className?: string;
 }
 
-// Preview constants for 16:9 aspect ratio
+// Enhanced preview constants for 16:9 aspect ratio with professional spacing
 const PREVIEW_CONSTANTS = {
   aspectRatio: 16 / 9,
+  contentY: 1.6, // Consistent with backend LAYOUT
+  columnWidth: 4.0,
+  gap: 0.5,
   sizes: {
     small: { width: 240, height: 135 },
     medium: { width: 320, height: 180 },

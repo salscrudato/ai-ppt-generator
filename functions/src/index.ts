@@ -53,7 +53,7 @@ import {
 } from "./llm";
 import { PROFESSIONAL_THEMES, selectThemeForContent } from "./professionalThemes";
 import { logger } from "./utils/smartLogger";
-import { generatePpt } from "./pptGenerator-enhanced";
+import { generatePpt } from "./pptGenerator-simple";
 
 // Import new modular services
 import { aiService } from "./services/aiService";
