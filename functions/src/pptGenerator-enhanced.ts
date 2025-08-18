@@ -45,11 +45,47 @@ const DEFAULT_LAYOUT = {
  * ------------------------------------------------------------------------------------------------- */
 
 /**
- * Safely convert color to valid format
+ * Safely convert color to valid format with comprehensive validation
  */
 function safeColor(color: string | undefined, fallback: string): string {
   if (!color || typeof color !== 'string') return fallback;
-  return color.replace('#', '').toUpperCase();
+
+  // Remove # and ensure uppercase
+  let cleanColor = color.replace('#', '').toUpperCase();
+
+  // Validate hex color format (3 or 6 characters)
+  if (!/^[0-9A-F]{3}$|^[0-9A-F]{6}$/.test(cleanColor)) {
+    return fallback;
+  }
+
+  // Convert 3-char hex to 6-char hex
+  if (cleanColor.length === 3) {
+    cleanColor = cleanColor.split('').map(c => c + c).join('');
+  }
+
+  return cleanColor;
+}
+
+/**
+ * Safely sanitize text content to prevent corruption
+ */
+function safeText(text: string | undefined, maxLength: number = 1000): string {
+  if (!text || typeof text !== 'string') return '';
+
+  // Remove potentially problematic characters
+  let cleanText = text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/[\uFFFE\uFFFF]/g, '') // Remove invalid Unicode
+    .replace(/\r\n/g, '\n') // Normalize line endings
+    .replace(/\r/g, '\n')
+    .trim();
+
+  // Truncate if too long
+  if (cleanText.length > maxLength) {
+    cleanText = cleanText.substring(0, maxLength - 3) + '...';
+  }
+
+  return cleanText;
 }
 
 /**
@@ -115,481 +151,249 @@ function generateSpeakerNotes(spec: SlideSpec, slideIndex: number, totalSlides: 
  * ------------------------------------------------------------------------------------------------- */
 
 /**
- * Add title slide with enhanced visual design
+ * Add title slide with reliable, simple design
  */
 function addTitleSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const contentArea = getContentArea();
   const { typography } = DEFAULT_LAYOUT;
 
-  // Add subtle background gradient
-  slide.addShape('rect', {
-    x: 0,
-    y: 0,
-    w: SLIDE_DIMENSIONS.width,
-    h: SLIDE_DIMENSIONS.height,
-    fill: {
-      type: 'gradient',
-      angle: 45,
-      colors: [
-        { color: safeColor(theme.colors.background, 'FFFFFF'), position: 0 },
-        { color: safeColor(theme.colors.surface, 'F8FAFC'), position: 100 }
-      ]
-    }
-  });
-
-  // Add accent line
-  slide.addShape('line', {
-    x: contentArea.x,
-    y: contentArea.y + 1.3,
-    w: contentArea.width * 0.3,
-    h: 0,
-    line: {
-      color: safeColor(theme.colors.accent, 'F59E0B'),
-      width: 4
-    }
-  });
-
-  // Main title with enhanced typography
-  slide.addText(spec.title || 'Untitled Presentation', {
-    x: contentArea.x,
-    y: contentArea.y + 1.5,
-    w: contentArea.width,
-    h: 1.2,
-    fontSize: typography.title.fontSize + 4, // Slightly larger for title slides
-    fontFace: theme.typography.headings.fontFamily,
-    color: safeColor(theme.colors.text.primary, '1F2937'),
-    bold: true,
-    align: 'center',
-    valign: 'middle',
-    shadow: {
-      type: 'outer',
-      blur: 3,
-      offset: 2,
-      angle: 45,
-      color: '00000015'
-    }
-  });
-
-  // Subtitle with enhanced styling
-  if (spec.paragraph) {
-    slide.addText(spec.paragraph, {
+  try {
+    // Simple, reliable title
+    slide.addText(safeText(spec.title || 'Untitled Presentation', 120), {
       x: contentArea.x,
-      y: contentArea.y + 3,
+      y: contentArea.y + 1.5,
       w: contentArea.width,
-      h: 0.8,
-      fontSize: typography.body.fontSize + 2,
-      fontFace: theme.typography.body.fontFamily,
-      color: safeColor(theme.colors.text.secondary, '6B7280'),
+      h: 1.2,
+      fontSize: typography.title.fontSize,
+      fontFace: theme.typography.headings.fontFamily,
+      color: safeColor(theme.colors.text.primary, '1F2937'),
+      bold: true,
       align: 'center',
-      valign: 'middle',
-      italic: true
+      valign: 'middle'
+    });
+
+    // Simple subtitle if available
+    if (spec.paragraph) {
+      slide.addText(safeText(spec.paragraph, 200), {
+        x: contentArea.x,
+        y: contentArea.y + 3,
+        w: contentArea.width,
+        h: 0.8,
+        fontSize: typography.body.fontSize,
+        fontFace: theme.typography.body.fontFamily,
+        color: safeColor(theme.colors.text.secondary, '6B7280'),
+        align: 'center',
+        valign: 'middle'
+      });
+    }
+
+    // Simple accent line (no complex shapes)
+    slide.addShape('rect', {
+      x: contentArea.x + (contentArea.width - 2) / 2,
+      y: contentArea.y + 1.3,
+      w: 2,
+      h: 0.05,
+      fill: { color: safeColor(theme.colors.accent, 'F59E0B') },
+      line: { width: 0 }
+    });
+
+  } catch (error) {
+    logger.warn('Error adding title slide elements, using fallback', { error });
+    // Fallback: just add basic title
+    slide.addText(safeText(spec.title || 'Untitled Presentation', 120), {
+      x: contentArea.x,
+      y: contentArea.y + 2,
+      w: contentArea.width,
+      h: 1,
+      fontSize: 24,
+      color: '1F2937',
+      bold: true,
+      align: 'center',
+      valign: 'middle'
     });
   }
-
-  // Add decorative elements
-  addDecorativeElements(slide, theme, 'title');
 }
 
 /**
- * Add content slide with enhanced visual design
+ * Add content slide with reliable, simple design
  */
 function addContentSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const contentArea = getContentArea();
   const { typography, spacing } = DEFAULT_LAYOUT;
 
-  // Add subtle background pattern
-  addBackgroundPattern(slide, theme);
-
-  // Title with accent underline
-  slide.addText(spec.title || 'Untitled Slide', {
-    x: contentArea.x,
-    y: contentArea.y,
-    w: contentArea.width,
-    h: 0.8,
-    fontSize: typography.title.fontSize,
-    fontFace: theme.typography.headings.fontFamily,
-    color: safeColor(theme.colors.text.primary, '1F2937'),
-    bold: true,
-    valign: 'middle'
-  });
-
-  // Add accent underline for title
-  slide.addShape('line', {
-    x: contentArea.x,
-    y: contentArea.y + 0.85,
-    w: Math.min(contentArea.width * 0.4, (spec.title?.length || 10) * 0.15),
-    h: 0,
-    line: {
-      color: safeColor(theme.colors.accent, 'F59E0B'),
-      width: 3
-    }
-  });
-
-  let currentY = contentArea.y + 0.8 + spacing.titleToContent;
-
-  // Paragraph content with enhanced styling
-  if (spec.paragraph) {
-    // Add content card background
-    slide.addShape('rect', {
-      x: contentArea.x - 0.1,
-      y: currentY - 0.1,
-      w: contentArea.width + 0.2,
-      h: 1.7,
-      fill: { color: safeColor(theme.colors.surface, 'F8FAFC') },
-      line: { color: safeColor(theme.colors.borders?.light, 'F3F4F6'), width: 1 },
-      rectRadius: 0.1
-    });
-
-    slide.addText(spec.paragraph, {
-      x: contentArea.x + 0.1,
-      y: currentY,
-      w: contentArea.width - 0.2,
-      h: 1.5,
-      fontSize: typography.body.fontSize,
-      fontFace: theme.typography.body.fontFamily,
+  try {
+    // Simple, reliable title
+    slide.addText(safeText(spec.title || 'Untitled Slide', 120), {
+      x: contentArea.x,
+      y: contentArea.y,
+      w: contentArea.width,
+      h: 0.8,
+      fontSize: typography.title.fontSize,
+      fontFace: theme.typography.headings.fontFamily,
       color: safeColor(theme.colors.text.primary, '1F2937'),
-      valign: 'top'
+      bold: true,
+      valign: 'middle'
     });
-    currentY += 1.7 + spacing.paragraphSpacing;
-  }
 
-  // Enhanced bullet points
-  if (spec.bullets && spec.bullets.length > 0) {
-    spec.bullets.forEach((bullet, index) => {
-      // Bullet point background
-      slide.addShape('rect', {
-        x: contentArea.x - 0.05,
-        y: currentY - 0.05,
-        w: contentArea.width + 0.1,
-        h: 0.4,
-        fill: { color: safeColor(theme.colors.background, 'FFFFFF') },
-        line: { color: safeColor(theme.colors.borders?.light, 'F3F4F6'), width: 0.5 },
-        rectRadius: 0.05
-      });
+    let currentY = contentArea.y + 0.8 + spacing.titleToContent;
 
-      // Custom bullet icon
-      slide.addShape('circle', {
-        x: contentArea.x + 0.1,
-        y: currentY + 0.1,
-        w: 0.15,
-        h: 0.15,
-        fill: { color: safeColor(theme.colors.accent, 'F59E0B') }
-      });
-
-      // Bullet text
-      slide.addText(bullet, {
-        x: contentArea.x + 0.35,
+    // Simple paragraph content
+    if (spec.paragraph) {
+      slide.addText(safeText(spec.paragraph, 1000), {
+        x: contentArea.x,
         y: currentY,
-        w: contentArea.width - 0.4,
-        h: 0.4,
+        w: contentArea.width,
+        h: 1.5,
+        fontSize: typography.body.fontSize,
+        fontFace: theme.typography.body.fontFamily,
+        color: safeColor(theme.colors.text.primary, '1F2937'),
+        valign: 'top'
+      });
+      currentY += 1.5 + spacing.paragraphSpacing;
+    }
+
+    // Simple bullet points
+    if (spec.bullets && spec.bullets.length > 0) {
+      const bulletText = spec.bullets
+        .slice(0, 8) // Limit to 8 bullets to prevent overflow
+        .map(bullet => `• ${safeText(bullet, 150)}`)
+        .join('\n');
+
+      slide.addText(bulletText, {
+        x: contentArea.x,
+        y: currentY,
+        w: contentArea.width,
+        h: Math.min(3, spec.bullets.length * 0.4),
         fontSize: typography.bullets.fontSize,
         fontFace: theme.typography.body.fontFamily,
         color: safeColor(theme.colors.text.primary, '1F2937'),
-        valign: 'middle'
+        valign: 'top'
       });
+    }
 
-      currentY += 0.45;
+  } catch (error) {
+    logger.warn('Error adding content slide elements, using fallback', { error });
+    // Fallback: just add basic title and content
+    slide.addText(safeText(spec.title || 'Untitled Slide', 120), {
+      x: contentArea.x,
+      y: contentArea.y,
+      w: contentArea.width,
+      h: 0.8,
+      fontSize: 20,
+      color: '1F2937',
+      bold: true,
+      valign: 'middle'
     });
-  }
 
-  // Add decorative elements
-  addDecorativeElements(slide, theme, 'content');
-}
-
-/**
- * Add chart slide with enhanced data parsing
- */
-function addChartSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
-  const contentArea = getContentArea();
-  const { typography, spacing } = DEFAULT_LAYOUT;
-
-  // Title
-  slide.addText(spec.title || 'Chart', {
-    x: contentArea.x,
-    y: contentArea.y,
-    w: contentArea.width,
-    h: 0.8,
-    fontSize: typography.title.fontSize,
-    fontFace: theme.typography.headings.fontFamily,
-    color: safeColor(theme.colors.text.primary, '1F2937'),
-    bold: true,
-    valign: 'middle'
-  });
-
-  // Enhanced chart data parsing from bullets
-  if (spec.bullets && spec.bullets.length > 0) {
-    const chartData = parseChartDataFromBullets(spec.bullets);
-
-    try {
-      slide.addChart('bar', chartData, {
+    if (spec.paragraph || (spec.bullets && spec.bullets.length > 0)) {
+      const content = spec.paragraph || spec.bullets?.join('\n• ') || '';
+      slide.addText(safeText(content, 800), {
         x: contentArea.x,
-        y: contentArea.y + 0.8 + spacing.titleToContent,
+        y: contentArea.y + 1,
         w: contentArea.width,
         h: 3,
-        chartColors: generateChartColors(theme, chartData.length),
-        showTitle: true,
-        showLegend: true,
-        showValue: true,
-        titleFontSize: 16,
-        titleColor: safeColor(theme.colors.text.primary, '1F2937')
+        fontSize: 14,
+        color: '1F2937',
+        valign: 'top'
       });
-    } catch (error) {
-      // Fallback to text if chart fails
-      addContentSlide(slide, spec, theme);
     }
   }
 }
 
 /**
- * Parse chart data from bullet points with intelligent data extraction
+ * Add chart slide with reliable fallback to content
  */
-function parseChartDataFromBullets(bullets: string[]): any[] {
-  const chartData: any[] = [];
-
-  bullets.forEach((bullet, index) => {
-    // Try to extract numerical data from bullets
-    const numberMatch = bullet.match(/(\d+(?:\.\d+)?)\s*(%|k|m|b)?/i);
-    const labelMatch = bullet.match(/^([^:]+):/);
-
-    let label = labelMatch ? labelMatch[1].trim() : `Item ${index + 1}`;
-    let value = numberMatch ? parseFloat(numberMatch[1]) : Math.random() * 100 + 10;
-
-    // Handle units
-    if (numberMatch && numberMatch[2]) {
-      const unit = numberMatch[2].toLowerCase();
-      if (unit === 'k') value *= 1000;
-      else if (unit === 'm') value *= 1000000;
-      else if (unit === 'b') value *= 1000000000;
-    }
-
-    chartData.push({
-      name: label,
-      labels: [label],
-      values: [value]
-    });
-  });
-
-  return chartData;
+function addChartSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
+  // Charts can be problematic - use content slide instead for reliability
+  logger.info('Chart layout requested, using content slide for reliability');
+  addContentSlide(slide, spec, theme);
 }
 
-/**
- * Generate theme-appropriate chart colors
- */
-function generateChartColors(theme: ProfessionalTheme, count: number): string[] {
-  const baseColors = [
-    safeColor(theme.colors.primary, '3B82F6'),
-    safeColor(theme.colors.secondary, '10B981'),
-    safeColor(theme.colors.accent, 'F59E0B'),
-    safeColor(theme.colors.semantic?.success, '10B981'),
-    safeColor(theme.colors.semantic?.warning, 'F59E0B'),
-    safeColor(theme.colors.semantic?.error, 'EF4444')
-  ];
+// Removed parseChartDataFromBullets - no longer needed
 
-  // Extend colors if needed
-  while (baseColors.length < count) {
-    baseColors.push(...baseColors);
-  }
-
-  return baseColors.slice(0, count);
-}
+// Removed generateChartColors - no longer needed
 
 /**
- * Add table slide with professional formatting
+ * Add table slide with reliable fallback to content
  */
 function addTableSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
-  const contentArea = getContentArea();
-  const { typography, spacing } = DEFAULT_LAYOUT;
-
-  // Title
-  slide.addText(spec.title || 'Table', {
-    x: contentArea.x,
-    y: contentArea.y,
-    w: contentArea.width,
-    h: 0.8,
-    fontSize: typography.title.fontSize,
-    fontFace: theme.typography.headings.fontFamily,
-    color: safeColor(theme.colors.text.primary, '1F2937'),
-    bold: true,
-    valign: 'middle'
-  });
-
-  // Generate table from bullets
-  if (spec.bullets && spec.bullets.length > 0) {
-    const tableData = parseTableDataFromBullets(spec.bullets);
-
-    try {
-      slide.addTable(tableData, {
-        x: contentArea.x,
-        y: contentArea.y + 0.8 + spacing.titleToContent,
-        w: contentArea.width,
-        h: 2.5,
-        fontSize: 12,
-        fontFace: theme.typography.body.fontFamily,
-        color: safeColor(theme.colors.text.primary, '1F2937'),
-        fill: safeColor(theme.colors.surface, 'F8FAFC'),
-        border: { pt: 1, color: safeColor(theme.colors.borders?.medium, 'E5E7EB') },
-        rowH: 0.4,
-        colW: [2, 2, 2] // Adjust based on content
-      });
-    } catch (error) {
-      // Fallback to content slide
-      addContentSlide(slide, spec, theme);
-    }
-  }
+  // Tables can be problematic - use content slide instead for reliability
+  logger.info('Table layout requested, using content slide for reliability');
+  addContentSlide(slide, spec, theme);
 }
 
-/**
- * Parse table data from bullet points
- */
-function parseTableDataFromBullets(bullets: string[]): any[][] {
-  const tableData: any[][] = [];
-
-  // Add header row
-  tableData.push(['Item', 'Value', 'Description']);
-
-  bullets.forEach((bullet, index) => {
-    const parts = bullet.split(':');
-    if (parts.length >= 2) {
-      const item = parts[0].trim();
-      const rest = parts.slice(1).join(':').trim();
-      const valueMatch = rest.match(/(\d+(?:\.\d+)?(?:%|k|m|b)?)/i);
-      const value = valueMatch ? valueMatch[1] : 'N/A';
-      const description = rest.replace(valueMatch?.[0] || '', '').trim() || 'No description';
-
-      tableData.push([item, value, description]);
-    } else {
-      tableData.push([`Item ${index + 1}`, 'N/A', bullet]);
-    }
-  });
-
-  return tableData;
-}
+// Removed parseTableDataFromBullets - no longer needed
 
 /**
- * Add two-column slide layout
+ * Add two-column slide layout with safe implementation
  */
 function addTwoColumnSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const contentArea = getContentArea();
   const { typography, spacing } = DEFAULT_LAYOUT;
 
-  // Title
-  slide.addText(spec.title || 'Two Column Layout', {
-    x: contentArea.x,
-    y: contentArea.y,
-    w: contentArea.width,
-    h: 0.8,
-    fontSize: typography.title.fontSize,
-    fontFace: theme.typography.headings.fontFamily,
-    color: safeColor(theme.colors.text.primary, '1F2937'),
-    bold: true,
-    valign: 'middle'
-  });
-
-  const columnWidth = (contentArea.width - spacing.columnGap) / 2;
-  let currentY = contentArea.y + 0.8 + spacing.titleToContent;
-
-  // Left column - paragraph content
-  if (spec.paragraph) {
-    slide.addText(spec.paragraph, {
+  try {
+    // Title
+    slide.addText(safeText(spec.title || 'Two Column Layout', 120), {
       x: contentArea.x,
-      y: currentY,
-      w: columnWidth,
-      h: 3,
-      fontSize: typography.body.fontSize,
-      fontFace: theme.typography.body.fontFamily,
+      y: contentArea.y,
+      w: contentArea.width,
+      h: 0.8,
+      fontSize: typography.title.fontSize,
+      fontFace: theme.typography.headings.fontFamily,
       color: safeColor(theme.colors.text.primary, '1F2937'),
-      valign: 'top'
+      bold: true,
+      valign: 'middle'
     });
-  }
 
-  // Right column - bullet points
-  if (spec.bullets && spec.bullets.length > 0) {
-    const bulletText = spec.bullets.map(bullet => `• ${bullet}`).join('\n');
-    slide.addText(bulletText, {
-      x: contentArea.x + columnWidth + spacing.columnGap,
-      y: currentY,
-      w: columnWidth,
-      h: 3,
-      fontSize: typography.bullets.fontSize,
-      fontFace: theme.typography.body.fontFamily,
-      color: safeColor(theme.colors.text.primary, '1F2937'),
-      valign: 'top'
-    });
+    const columnWidth = (contentArea.width - spacing.columnGap) / 2;
+    let currentY = contentArea.y + 0.8 + spacing.titleToContent;
+
+    // Left column - paragraph content
+    if (spec.paragraph) {
+      slide.addText(safeText(spec.paragraph, 500), {
+        x: contentArea.x,
+        y: currentY,
+        w: columnWidth,
+        h: 3,
+        fontSize: typography.body.fontSize,
+        fontFace: theme.typography.body.fontFamily,
+        color: safeColor(theme.colors.text.primary, '1F2937'),
+        valign: 'top'
+      });
+    }
+
+    // Right column - bullet points
+    if (spec.bullets && spec.bullets.length > 0) {
+      const bulletText = spec.bullets
+        .slice(0, 6) // Limit bullets for column layout
+        .map(bullet => `• ${safeText(bullet, 100)}`)
+        .join('\n');
+
+      slide.addText(bulletText, {
+        x: contentArea.x + columnWidth + spacing.columnGap,
+        y: currentY,
+        w: columnWidth,
+        h: 3,
+        fontSize: typography.bullets.fontSize,
+        fontFace: theme.typography.body.fontFamily,
+        color: safeColor(theme.colors.text.primary, '1F2937'),
+        valign: 'top'
+      });
+    }
+
+  } catch (error) {
+    logger.warn('Error adding two-column slide, using fallback', { error });
+    addContentSlide(slide, spec, theme);
   }
 }
 
 /**
- * Add image slide with text content
+ * Add image slide with reliable fallback to content
  */
 function addImageSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
-  const contentArea = getContentArea();
-  const { typography, spacing } = DEFAULT_LAYOUT;
-
-  // Title
-  slide.addText(spec.title || 'Image Slide', {
-    x: contentArea.x,
-    y: contentArea.y,
-    w: contentArea.width,
-    h: 0.8,
-    fontSize: typography.title.fontSize,
-    fontFace: theme.typography.headings.fontFamily,
-    color: safeColor(theme.colors.text.primary, '1F2937'),
-    bold: true,
-    valign: 'middle'
-  });
-
-  const imageWidth = contentArea.width * 0.4;
-  const textWidth = contentArea.width * 0.55;
-  const gap = contentArea.width * 0.05;
-  let currentY = contentArea.y + 0.8 + spacing.titleToContent;
-
-  // Image placeholder (left or right based on layout)
-  const imageX = spec.layout === 'image-right' ? contentArea.x + textWidth + gap : contentArea.x;
-  const textX = spec.layout === 'image-right' ? contentArea.x : contentArea.x + imageWidth + gap;
-
-  // Add image placeholder
-  slide.addShape('rect', {
-    x: imageX,
-    y: currentY,
-    w: imageWidth,
-    h: 2.5,
-    fill: { color: safeColor(theme.colors.surface, 'F3F4F6') },
-    line: { color: safeColor(theme.colors.borders?.medium, 'E5E7EB'), width: 1 }
-  });
-
-  // Add image placeholder text
-  slide.addText('Image Placeholder', {
-    x: imageX,
-    y: currentY + 1,
-    w: imageWidth,
-    h: 0.5,
-    fontSize: 14,
-    fontFace: theme.typography.body.fontFamily,
-    color: safeColor(theme.colors.text.secondary, '6B7280'),
-    align: 'center',
-    valign: 'middle'
-  });
-
-  // Add text content
-  let textContent = '';
-  if (spec.paragraph) textContent += spec.paragraph;
-  if (spec.bullets && spec.bullets.length > 0) {
-    if (textContent) textContent += '\n\n';
-    textContent += spec.bullets.map(bullet => `• ${bullet}`).join('\n');
-  }
-
-  if (textContent) {
-    slide.addText(textContent, {
-      x: textX,
-      y: currentY,
-      w: textWidth,
-      h: 2.5,
-      fontSize: typography.body.fontSize,
-      fontFace: theme.typography.body.fontFamily,
-      color: safeColor(theme.colors.text.primary, '1F2937'),
-      valign: 'top'
-    });
-  }
+  // Image layouts can be problematic - use content slide instead for reliability
+  logger.info('Image layout requested, using content slide for reliability');
+  addContentSlide(slide, spec, theme);
 }
 
 /**
@@ -690,131 +494,25 @@ function generateKeywords(specs: SlideSpec[]): string {
  * ------------------------------------------------------------------------------------------------- */
 
 /**
- * Add subtle background pattern to slides
+ * Add simple, reliable footer with slide number
  */
-function addBackgroundPattern(slide: any, theme: ProfessionalTheme) {
-  // Add subtle geometric pattern in the corner
-  const patternSize = 0.3;
-  const patternX = SLIDE_DIMENSIONS.width - patternSize - 0.2;
-  const patternY = SLIDE_DIMENSIONS.height - patternSize - 0.2;
-
-  // Create a subtle pattern using shapes
-  for (let i = 0; i < 3; i++) {
-    slide.addShape('circle', {
-      x: patternX + (i * 0.08),
-      y: patternY + (i * 0.08),
-      w: 0.06,
-      h: 0.06,
-      fill: {
-        color: safeColor(theme.colors.accent, 'F59E0B'),
-        transparency: 85 + (i * 5) // Increasing transparency
-      },
-      line: { width: 0 }
+function addSimpleFooter(slide: any, theme: ProfessionalTheme, slideIndex: number, totalSlides: number) {
+  try {
+    // Simple slide number in bottom right
+    slide.addText(`${slideIndex + 1} / ${totalSlides}`, {
+      x: SLIDE_DIMENSIONS.width - 1,
+      y: SLIDE_DIMENSIONS.height - 0.4,
+      w: 0.8,
+      h: 0.3,
+      fontSize: 10,
+      fontFace: theme.typography.body.fontFamily,
+      color: safeColor(theme.colors.text.secondary, '6B7280'),
+      align: 'right',
+      valign: 'middle'
     });
+  } catch (error) {
+    logger.warn('Error adding footer, skipping', { error });
   }
-}
-
-/**
- * Add decorative elements based on slide type
- */
-function addDecorativeElements(slide: any, theme: ProfessionalTheme, slideType: 'title' | 'content' | 'chart' | 'table') {
-  switch (slideType) {
-    case 'title':
-      // Add corner accent
-      slide.addShape('rect', {
-        x: 0,
-        y: 0,
-        w: 0.3,
-        h: 0.05,
-        fill: { color: safeColor(theme.colors.primary, '3B82F6') }
-      });
-      break;
-
-    case 'content':
-      // Add side accent bar
-      slide.addShape('rect', {
-        x: 0,
-        y: 1,
-        w: 0.02,
-        h: 3,
-        fill: { color: safeColor(theme.colors.accent, 'F59E0B') }
-      });
-      break;
-
-    case 'chart':
-      // Add data visualization accent
-      slide.addShape('rect', {
-        x: SLIDE_DIMENSIONS.width - 0.1,
-        y: 0.5,
-        w: 0.05,
-        h: 2,
-        fill: {
-          type: 'gradient',
-          angle: 90,
-          colors: [
-            { color: safeColor(theme.colors.primary, '3B82F6'), position: 0 },
-            { color: safeColor(theme.colors.accent, 'F59E0B'), position: 100 }
-          ]
-        }
-      });
-      break;
-
-    case 'table':
-      // Add structured data accent
-      slide.addShape('rect', {
-        x: 0.1,
-        y: SLIDE_DIMENSIONS.height - 0.1,
-        w: 2,
-        h: 0.05,
-        fill: { color: safeColor(theme.colors.secondary, '10B981') }
-      });
-      break;
-  }
-}
-
-/**
- * Add professional footer with slide number and branding
- */
-function addProfessionalFooter(slide: any, theme: ProfessionalTheme, slideIndex: number, totalSlides: number) {
-  const footerY = SLIDE_DIMENSIONS.height - 0.3;
-
-  // Footer background
-  slide.addShape('rect', {
-    x: 0,
-    y: footerY,
-    w: SLIDE_DIMENSIONS.width,
-    h: 0.3,
-    fill: {
-      color: safeColor(theme.colors.surface, 'F8FAFC'),
-      transparency: 50
-    },
-    line: {
-      color: safeColor(theme.colors.borders?.light, 'F3F4F6'),
-      width: 0.5
-    }
-  });
-
-  // Slide number
-  slide.addText(`${slideIndex + 1} / ${totalSlides}`, {
-    x: SLIDE_DIMENSIONS.width - 1,
-    y: footerY + 0.05,
-    w: 0.8,
-    h: 0.2,
-    fontSize: 10,
-    fontFace: theme.typography.body.fontFamily,
-    color: safeColor(theme.colors.text.secondary, '6B7280'),
-    align: 'right',
-    valign: 'middle'
-  });
-
-  // Brand accent
-  slide.addShape('rect', {
-    x: 0.2,
-    y: footerY + 0.1,
-    w: 0.5,
-    h: 0.02,
-    fill: { color: safeColor(theme.colors.accent, 'F59E0B') }
-  });
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -970,9 +668,9 @@ export async function generateEnhancedPpt(
           addContentSlide(slide, spec, theme!);
         }
 
-        // Add professional footer
+        // Add simple footer
         try {
-          addProfessionalFooter(slide, theme!, index, specs.length);
+          addSimpleFooter(slide, theme!, index, specs.length);
         } catch (footerError) {
           logger.warn(`Failed to add footer for slide ${index + 1}`, context, {
             error: footerError instanceof Error ? footerError.message : String(footerError)
@@ -1016,11 +714,11 @@ export async function generateEnhancedPpt(
       throw new Error('Failed to generate any slides');
     }
 
-    // Generate buffer with enhanced options
+    // Generate buffer with safe, minimal options
     logger.info('Generating PowerPoint buffer', context);
     const exportOptions = {
       outputType: 'nodebuffer' as const,
-      compression: options.optimizeFileSize !== false,
+      compression: false, // Disable compression to avoid corruption
       rtlMode: false
     };
 
