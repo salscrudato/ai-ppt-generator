@@ -866,7 +866,6 @@ app.post("/generate/professional", async (req, res) => {
 
     const pptBuffer = await generatePpt(
       spec,
-      req.body.withValidation ?? true,
       req.body.themeId,
       generationOptions
     );

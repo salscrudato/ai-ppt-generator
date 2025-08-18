@@ -166,15 +166,27 @@ function AppContent() {
     });
   }, []);
 
-  // Enhanced error clearing with better UX
+  // Enhanced error clearing with better UX and auto-recovery
   useEffect(() => {
-    if (state.error && (state.step === 'input' || state.params.prompt)) {
+    if (state.error) {
+      // Auto-clear errors after user interaction or time
       const timer = setTimeout(() => {
         updateState({ error: undefined });
-      }, 500); // Small delay to prevent flickering
+      }, 8000); // Longer timeout for better readability
+
       return () => clearTimeout(timer);
     }
-  }, [state.step, state.params.prompt, state.error, updateState]);
+  }, [state.error, updateState]);
+
+  // Enhanced error recovery mechanism
+  const handleErrorRecovery = useCallback(() => {
+    updateState({
+      error: undefined,
+      loading: false,
+      step: 'input' // Reset to input step for fresh start
+    });
+    loadingState.reset();
+  }, [updateState, loadingState]);
 
   /**
    * Generate slide draft from user parameters
@@ -542,42 +554,95 @@ function AppContent() {
         </div>
       </motion.main>
 
-      {/* Enhanced loading indicator with progress */}
-      {loadingState.isLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-        >
+      {/* Enhanced loading indicator with detailed progress */}
+      <AnimatePresence>
+        {loadingState.isLoading && (
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl border border-gray-200"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
           >
-            <div className="text-center">
-              <div className="relative mb-6">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mx-auto"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <HiPresentationChartLine className="w-6 h-6 text-indigo-600" />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl border border-gray-200"
+            >
+              <div className="text-center">
+                {/* Enhanced loading animation */}
+                <div className="relative mb-6">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600 mx-auto"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <HiPresentationChartLine className="w-8 h-8 text-indigo-600" />
+                    </motion.div>
+                  </div>
                 </div>
+
+                {/* Dynamic title based on stage */}
+                <motion.h3
+                  key={loadingState.currentStage}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xl font-bold text-gray-900 mb-2"
+                >
+                  {loadingState.currentStage === 'analyzing' ? 'Analyzing Your Request' :
+                   loadingState.currentStage === 'generating' ? 'Creating Content' :
+                   loadingState.currentStage === 'building' ? 'Building Presentation' :
+                   'Generating Your Presentation'}
+                </motion.h3>
+
+                {/* Stage-specific descriptions */}
+                <motion.p
+                  key={`${loadingState.currentStage}-desc`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-gray-600 mb-6 text-sm leading-relaxed"
+                >
+                  {loadingState.currentStage === 'analyzing' ? 'Understanding your requirements and selecting the best approach...' :
+                   loadingState.currentStage === 'generating' ? 'Using AI to create compelling content and structure...' :
+                   loadingState.currentStage === 'building' ? 'Assembling your professional PowerPoint presentation...' :
+                   'Processing your request with advanced AI technology...'}
+                </motion.p>
+
+                {/* Enhanced progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
+                  <motion.div
+                    className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-3 rounded-full shadow-sm"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${loadingState.progress || 0}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                </div>
+
+                {/* Progress percentage */}
+                <div className="text-xs text-gray-500 font-medium">
+                  {Math.round(loadingState.progress || 0)}% Complete
+                </div>
+
+                {/* Estimated time remaining */}
+                {loadingState.progress && loadingState.progress > 10 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-xs text-gray-400 mt-2"
+                  >
+                    Estimated time: {Math.max(1, Math.ceil((100 - loadingState.progress) / 20))} seconds
+                  </motion.div>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Generating Your Presentation
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {typeof loadingState.currentStage === 'string' ? loadingState.currentStage : 'Processing your request...'}
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${loadingState.progress || 0}%` }}
-                ></div>
-              </div>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Success notification */}
       <AnimatePresence>
@@ -605,7 +670,7 @@ function AppContent() {
         )}
       </AnimatePresence>
 
-      {/* Error notification */}
+      {/* Enhanced error notification with retry functionality */}
       <AnimatePresence>
         {state.error && !state.loading && (
           <motion.div
@@ -614,19 +679,41 @@ function AppContent() {
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             className="fixed bottom-6 left-6 z-50"
           >
-            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-start gap-3 max-w-md border border-red-400/20">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-              >
-                <HiExclamationTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />
-              </motion.div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm mb-1">Generation Failed</span>
-                <span className="text-red-100 text-xs leading-relaxed">
-                  {typeof state.error === 'string' ? state.error : 'An unexpected error occurred. Please try again or contact support.'}
-                </span>
+            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-xl shadow-2xl max-w-md border border-red-400/20">
+              <div className="flex items-start gap-3 mb-3">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                >
+                  <HiExclamationTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+                </motion.div>
+                <div className="flex flex-col flex-1">
+                  <span className="font-semibold text-sm mb-1">Generation Failed</span>
+                  <span className="text-red-100 text-xs leading-relaxed">
+                    {typeof state.error === 'string' ? state.error : 'An unexpected error occurred. Please try again or contact support.'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 mt-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleErrorRecovery}
+                  className="flex-1 bg-white/20 hover:bg-white/30 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors duration-200 backdrop-blur-sm"
+                >
+                  Try Again
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => updateState({ error: undefined })}
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors duration-200 backdrop-blur-sm"
+                >
+                  Dismiss
+                </motion.button>
               </div>
             </div>
           </motion.div>

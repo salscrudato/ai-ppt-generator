@@ -22,9 +22,37 @@ class EnvironmentManager {
   private initialized = false;
 
   constructor() {
-    this.config = this.loadConfiguration();
-    this.validateConfiguration();
-    this.initialized = true;
+    try {
+      this.config = this.loadConfiguration();
+      this.validateConfiguration();
+      this.initialized = true;
+
+      logger.info('Environment configuration loaded successfully', {
+        nodeEnv: this.config.nodeEnv,
+        hasOpenAIKey: !!this.config.openaiApiKey && this.config.openaiApiKey !== 'EMULATOR_PLACEHOLDER',
+        isEmulator: process.env.FUNCTIONS_EMULATOR === 'true'
+      });
+    } catch (error) {
+      // In emulator environment, provide more helpful error handling
+      if (process.env.FUNCTIONS_EMULATOR === 'true') {
+        logger.warn('Environment configuration partially loaded in emulator mode', {}, error);
+        // Provide minimal config for emulator
+        this.config = {
+          openaiApiKey: 'EMULATOR_PLACEHOLDER',
+          nodeEnv: (process.env.NODE_ENV || 'development') as EnvironmentConfig['nodeEnv'],
+          isProduction: false,
+          isDevelopment: true,
+          isTest: false,
+          port: parseInt(process.env.PORT || '5001', 10),
+          corsOrigins: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
+          logLevel: (process.env.LOG_LEVEL as EnvironmentConfig['logLevel']) || 'debug'
+        };
+        this.initialized = true;
+      } else {
+        logger.error('Failed to load environment configuration', {}, error);
+        throw error;
+      }
+    }
   }
 
   /**
@@ -50,20 +78,21 @@ class EnvironmentManager {
 
   /**
    * Load OpenAI API key from multiple sources with priority
+   * Enhanced to handle emulator environment gracefully
    */
   private loadOpenAIApiKey(): string {
     // Priority order:
-    // 1. Environment variable (production)
+    // 1. Environment variable (production and development)
     // 2. Firebase config (production)
-    // 3. Local development key (development only)
-    
-    // Check environment variable first
+    // 3. Graceful fallback for emulator environment
+
+    // Check environment variable first (works in all environments)
     if (process.env.OPENAI_API_KEY) {
       logger.info('OpenAI API key loaded from environment variable');
       return process.env.OPENAI_API_KEY;
     }
 
-    // Check Firebase functions config
+    // Check Firebase functions config (production only)
     if (process.env.FUNCTIONS_EMULATOR !== 'true') {
       try {
         const functions = require('firebase-functions');
@@ -77,14 +106,22 @@ class EnvironmentManager {
       }
     }
 
-    // Development fallback - load from environment variable
-    if (process.env.NODE_ENV !== 'production') {
+    // Development and emulator fallback
+    if (process.env.NODE_ENV !== 'production' || process.env.FUNCTIONS_EMULATOR === 'true') {
       const devKey = process.env.OPENAI_API_KEY_DEV || process.env.OPENAI_API_KEY;
       if (devKey) {
         logger.info('OpenAI API key loaded from development environment');
         return devKey;
       }
-      logger.warn('No OpenAI API key found in environment variables');
+
+      // In emulator environment, provide a more helpful warning
+      if (process.env.FUNCTIONS_EMULATOR === 'true') {
+        logger.warn('No OpenAI API key found in emulator environment. Set OPENAI_API_KEY in functions/.env file');
+        // Return a placeholder that will be replaced by the secret system
+        return 'EMULATOR_PLACEHOLDER';
+      } else {
+        logger.warn('No OpenAI API key found in environment variables');
+      }
     }
 
     throw new Error('OpenAI API key not found in any configuration source');
@@ -110,25 +147,38 @@ class EnvironmentManager {
   }
 
   /**
-   * Validate required configuration
+   * Validate required configuration with emulator support
    */
   private validateConfiguration(): void {
     const errors: string[] = [];
+    const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 
+    // OpenAI API key validation with emulator exception
     if (!this.config.openaiApiKey) {
       errors.push('OpenAI API key is required');
-    } else if (!this.config.openaiApiKey.startsWith('sk-')) {
+    } else if (!isEmulator && !this.config.openaiApiKey.startsWith('sk-')) {
+      // Only validate format in non-emulator environments
       errors.push('OpenAI API key format is invalid');
+    } else if (isEmulator && this.config.openaiApiKey === 'EMULATOR_PLACEHOLDER') {
+      // In emulator mode, log a helpful message instead of an error
+      logger.info('Running in emulator mode with placeholder API key');
     }
 
+    // Port validation
     if (this.config.port < 1 || this.config.port > 65535) {
       errors.push('Port must be between 1 and 65535');
     }
 
+    // Only throw errors for critical validation failures
     if (errors.length > 0) {
       const errorMessage = `Configuration validation failed: ${errors.join(', ')}`;
-      logger.error(errorMessage);
-      throw new Error(errorMessage);
+      if (isEmulator) {
+        // In emulator mode, log warnings instead of throwing errors
+        logger.warn(errorMessage);
+      } else {
+        logger.error(errorMessage);
+        throw new Error(errorMessage);
+      }
     }
 
     logger.success('Environment configuration validated successfully', {

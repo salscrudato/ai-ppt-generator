@@ -15,7 +15,7 @@ import {
 } from 'react-icons/hi2';
 
 import ThemeCarousel from './ThemeCarousel';
-import LoadingButton from './LoadingButton';
+import Button from './Button';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useThemeSync } from '../hooks/useThemeSync';
 
@@ -51,12 +51,16 @@ export default function PromptInput({
     debug: false // Disabled to reduce console spam
   });
 
-  // Form validation state
+  // Enhanced form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  const [showHints, setShowHints] = useState(false);
 
   // Track if generation was explicitly requested to prevent accidental triggers
   const [generationRequested, setGenerationRequested] = useState(false);
+
+  // Character count tracking for better UX
+  const [promptCharCount, setPromptCharCount] = useState(params.prompt?.length || 0);
 
   // Sync local params when parent params change (without theme sync to avoid conflicts)
   React.useEffect(() => {
@@ -100,19 +104,45 @@ export default function PromptInput({
     }
   }, [localParams.design?.theme, themeSync?.themeId, themeSync, onParamsChange]);
 
-  // Simplified validation for deployment
+  // Enhanced validation with better user feedback
   const validateForm = (params: GenerationParams) => {
     const errors: Record<string, string> = {};
 
+    // Prompt validation with helpful messages
     if (!params.prompt || params.prompt.trim().length < 10) {
-      errors.prompt = 'Prompt must be at least 10 characters';
-    }
-    if (params.prompt && params.prompt.length > 2000) {
-      errors.prompt = 'Prompt must be under 2000 characters';
+      errors.prompt = 'Please provide a more detailed description (at least 10 characters)';
+    } else if (params.prompt.length > 2000) {
+      errors.prompt = 'Please keep your description under 2000 characters for optimal results';
+    } else if (params.prompt.trim().length < 20) {
+      errors.prompt = 'Consider adding more details for better AI-generated content';
     }
 
     setValidationErrors(errors);
     return { success: Object.keys(errors).length === 0, data: params, fieldErrors: errors };
+  };
+
+  // Get helpful suggestions based on current input
+  const getPromptSuggestions = () => {
+    const suggestions = [
+      "Try: 'Create a sales presentation for our new product launch targeting enterprise clients'",
+      "Try: 'Build a quarterly business review highlighting key metrics and achievements'",
+      "Try: 'Design a training presentation on digital marketing best practices'",
+      "Try: 'Generate an investor pitch deck for a fintech startup'",
+      "Try: 'Create an educational presentation about climate change solutions'"
+    ];
+
+    return suggestions;
+  };
+
+  // Get character count status
+  const getCharCountStatus = (count: number) => {
+    if (count < 10) return { color: 'text-red-500', message: 'Too short' };
+    if (count < 20) return { color: 'text-yellow-500', message: 'Could be more detailed' };
+    if (count < 100) return { color: 'text-green-500', message: 'Good length' };
+    if (count < 500) return { color: 'text-blue-500', message: 'Great detail' };
+    if (count < 1000) return { color: 'text-indigo-500', message: 'Very detailed' };
+    if (count < 2000) return { color: 'text-purple-500', message: 'Extremely detailed' };
+    return { color: 'text-red-500', message: 'Too long' };
   };
 
   const updateParam = <K extends keyof GenerationParams>(
@@ -368,12 +398,17 @@ export default function PromptInput({
               <HiPencilSquare className="w-5 h-5" />
               What would you like to present about? *
             </label>
-            <textarea
-              name="prompt"
-              value={localParams.prompt}
-              onChange={(e) => updateParam('prompt', e.target.value)}
-              onBlur={() => setTouchedFields(prev => new Set(prev).add('prompt'))}
-              placeholder="Describe your presentation topic here...
+            <div className="relative">
+              <textarea
+                name="prompt"
+                value={localParams.prompt}
+                onChange={(e) => {
+                  updateParam('prompt', e.target.value);
+                  setPromptCharCount(e.target.value.length);
+                }}
+                onBlur={() => setTouchedFields(prev => new Set(prev).add('prompt'))}
+                onFocus={() => setShowHints(true)}
+                placeholder="Describe your presentation topic here...
 
 • Include specific data and metrics
 • Mention your key message
@@ -381,19 +416,84 @@ export default function PromptInput({
 • Keep it concise and focused
 
 Example: Quarterly sales results showing 25% growth, key challenges in Q3, and strategic initiatives for Q4..."
-              rows={5}
-              maxLength={2000}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-lg ${
-                touchedFields.has('prompt') && validationErrors.prompt ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-              required
-            />
+                rows={6}
+                maxLength={2000}
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-lg transition-all duration-200 ${
+                  touchedFields.has('prompt') && validationErrors.prompt
+                    ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-200'
+                    : 'border-gray-300 hover:border-gray-400 focus:border-indigo-500'
+                }`}
+                required
+              />
+
+              {/* Character count indicator */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getCharCountStatus(promptCharCount).color} bg-white/80 backdrop-blur-sm border`}>
+                  {getCharCountStatus(promptCharCount).message}
+                </span>
+                <span className="text-xs text-gray-400 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-full border">
+                  {promptCharCount}/2000
+                </span>
+              </div>
+            </div>
+
+            {/* Enhanced validation feedback */}
             {touchedFields.has('prompt') && validationErrors.prompt && (
-              <p className="text-sm text-red-600">{validationErrors.prompt}</p>
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg"
+              >
+                <HiExclamationTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-600">{validationErrors.prompt}</p>
+              </motion.div>
             )}
-            <div className="flex justify-between items-center">
-              <p className="text-xs text-gray-500">Provide a detailed description of your presentation topic (10-2000 characters)</p>
-              <span className="text-xs text-gray-400">{localParams.prompt.length}/2000</span>
+
+            {/* Helpful suggestions */}
+            {showHints && promptCharCount < 20 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg"
+              >
+                <div className="flex items-start gap-2 mb-2">
+                  <HiSparkles className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 mb-1">Need inspiration?</h4>
+                    <p className="text-xs text-blue-700 mb-2">Try one of these examples:</p>
+                    <div className="space-y-1">
+                      {getPromptSuggestions().slice(0, 3).map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            updateParam('prompt', suggestion.replace('Try: ', '').replace(/'/g, ''));
+                            setPromptCharCount(suggestion.length - 6);
+                            setShowHints(false);
+                          }}
+                          className="block text-xs text-blue-600 hover:text-blue-800 hover:underline text-left"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-xs text-gray-500">
+                Provide a detailed description for better AI-generated content
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowHints(!showHints)}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                {showHints ? 'Hide tips' : 'Show tips'}
+              </button>
             </div>
           </div>
         </motion.div>
@@ -827,10 +927,9 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           transition={{ duration: 0.5, delay: 0.6 }}
           className="flex flex-col items-center gap-4 pt-8"
         >
-          <LoadingButton
+          <Button
             type="submit"
             loading={loading}
-            loadingText="Generating Draft..."
             disabled={!canSubmit}
             size="lg"
             variant="primary"
@@ -840,8 +939,8 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
             aria-label={canSubmit ? "Generate presentation draft" : "Complete the form to generate draft"}
             onClick={handleGenerateClick}
           >
-            Generate Draft
-          </LoadingButton>
+            {loading ? "Generating Draft..." : "Generate Draft"}
+          </Button>
 
           {/* Form Status Indicator */}
           <div id="form-status" className="text-center" role="status" aria-live="polite">

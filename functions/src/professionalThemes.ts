@@ -1065,6 +1065,106 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     background: '#FFFFFF',
     surface: '#E0F2F1',
   }),
+
+  // Enhanced 2025 Modern Themes with Advanced Design
+  createTheme(
+    'modern-gradient',
+    'Modern Gradient',
+    'modern',
+    {
+      primary: '#667EEA',
+      secondary: '#764BA2',
+      accent: '#F093FB',
+      background: '#FFFFFF',
+      surface: '#F8F9FF',
+    },
+    { headingFont: MODERN_FONT_STACKS.modernSans, scale: 'normal' },
+    { enforceAccessibility: true, generateHarmonious: true }
+  ),
+
+  createTheme(
+    'dark-professional',
+    'Dark Professional',
+    'modern',
+    {
+      primary: '#4F46E5',
+      secondary: '#7C3AED',
+      accent: '#06B6D4',
+      background: '#0F172A',
+      surface: '#1E293B',
+      textPrimary: '#F8FAFC',
+      textSecondary: '#CBD5E1',
+      textMuted: '#94A3B8',
+    },
+    { headingFont: MODERN_FONT_STACKS.modernSans, scale: 'large' },
+    { enforceAccessibility: true }
+  ),
+
+  createTheme(
+    'warm-professional',
+    'Warm Professional',
+    'modern',
+    {
+      primary: '#DC2626',
+      secondary: '#F59E0B',
+      accent: '#10B981',
+      background: '#FFFBF5',
+      surface: '#FEF3E2',
+    },
+    { headingFont: MODERN_FONT_STACKS.elegantSerif, scale: 'normal' },
+    { enforceAccessibility: true, generateHarmonious: true }
+  ),
+
+  createTheme(
+    'cool-minimal',
+    'Cool Minimal',
+    'modern',
+    {
+      primary: '#0F766E',
+      secondary: '#14B8A6',
+      accent: '#F59E0B',
+      background: '#FFFFFF',
+      surface: '#F0FDFA',
+    },
+    { headingFont: MODERN_FONT_STACKS.variableSans, scale: 'compact' },
+    { enforceAccessibility: true }
+  ),
+
+  createTheme(
+    'luxury-gold',
+    'Luxury Gold',
+    'corporate',
+    {
+      primary: '#92400E',
+      secondary: '#D97706',
+      accent: '#FCD34D',
+      background: '#FFFBEB',
+      surface: '#FEF3C7',
+      textPrimary: '#451A03',
+      textSecondary: '#92400E',
+      textMuted: '#A16207',
+    },
+    { headingFont: MODERN_FONT_STACKS.elegantSerif, scale: 'large' },
+    { enforceAccessibility: true }
+  ),
+
+  createTheme(
+    'tech-neon',
+    'Tech Neon',
+    'technology',
+    {
+      primary: '#8B5CF6',
+      secondary: '#A78BFA',
+      accent: '#00D9FF',
+      background: '#0A0A0F',
+      surface: '#1A1A2E',
+      textPrimary: '#F8FAFC',
+      textSecondary: '#E2E8F0',
+      textMuted: '#CBD5E1',
+    },
+    { headingFont: MODERN_FONT_STACKS.techSans, scale: 'normal' },
+    { enforceAccessibility: true }
+  ),
 ];
 
 // -------------------------------------------------------------------------------------------------
