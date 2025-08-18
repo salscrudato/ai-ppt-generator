@@ -45,20 +45,37 @@ const DEFAULT_LAYOUT = {
  * ------------------------------------------------------------------------------------------------- */
 
 /**
- * Safely convert color to valid format with comprehensive validation
+ * Safely convert color to valid PowerPoint format with comprehensive validation
  */
 function safeColor(color: string | undefined, fallback: string): string {
-  if (!color || typeof color !== 'string') return fallback;
-
-  // Remove # and ensure uppercase
-  let cleanColor = color.replace('#', '').toUpperCase();
-
-  // Validate hex color format (3 or 6 characters)
-  if (!/^[0-9A-F]{3}$|^[0-9A-F]{6}$/.test(cleanColor)) {
+  if (!color || typeof color !== 'string') {
+    logger.debug('Invalid color input, using fallback', { color, fallback });
     return fallback;
   }
 
-  // Convert 3-char hex to 6-char hex
+  // Remove # and whitespace, ensure uppercase
+  let cleanColor = color.replace(/[#\s]/g, '').toUpperCase();
+
+  // Handle named colors (convert to hex)
+  const namedColors: Record<string, string> = {
+    'BLACK': '000000', 'WHITE': 'FFFFFF', 'RED': 'FF0000', 'GREEN': '00FF00',
+    'BLUE': '0000FF', 'YELLOW': 'FFFF00', 'CYAN': '00FFFF', 'MAGENTA': 'FF00FF',
+    'GRAY': '808080', 'GREY': '808080', 'SILVER': 'C0C0C0', 'MAROON': '800000',
+    'OLIVE': '808000', 'LIME': '00FF00', 'AQUA': '00FFFF', 'TEAL': '008080',
+    'NAVY': '000080', 'FUCHSIA': 'FF00FF', 'PURPLE': '800080'
+  };
+
+  if (namedColors[cleanColor]) {
+    cleanColor = namedColors[cleanColor];
+  }
+
+  // Validate hex color format (3 or 6 characters)
+  if (!/^[0-9A-F]{3}$|^[0-9A-F]{6}$/.test(cleanColor)) {
+    logger.debug('Invalid hex color format, using fallback', { original: color, cleaned: cleanColor, fallback });
+    return fallback;
+  }
+
+  // Convert 3-char hex to 6-char hex (required by PowerPoint)
   if (cleanColor.length === 3) {
     cleanColor = cleanColor.split('').map(c => c + c).join('');
   }
@@ -67,18 +84,27 @@ function safeColor(color: string | undefined, fallback: string): string {
 }
 
 /**
- * Safely sanitize text content to prevent corruption
+ * Safely sanitize text content to prevent PowerPoint corruption
  */
 function safeText(text: string | undefined, maxLength: number = 1000): string {
   if (!text || typeof text !== 'string') return '';
 
-  // Remove potentially problematic characters
+  // Remove potentially problematic characters that cause PowerPoint corruption
   let cleanText = text
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
     .replace(/[\uFFFE\uFFFF]/g, '') // Remove invalid Unicode
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width characters
     .replace(/\r\n/g, '\n') // Normalize line endings
     .replace(/\r/g, '\n')
+    .replace(/\u00A0/g, ' ') // Replace non-breaking space with regular space
+    .replace(/[\u2000-\u200A]/g, ' ') // Replace various Unicode spaces
+    .replace(/\u2028/g, '\n') // Replace line separator with newline
+    .replace(/\u2029/g, '\n\n') // Replace paragraph separator with double newline
     .trim();
+
+  // Remove excessive whitespace
+  cleanText = cleanText.replace(/\n{3,}/g, '\n\n'); // Max 2 consecutive newlines
+  cleanText = cleanText.replace(/[ \t]{2,}/g, ' '); // Max 1 space between words
 
   // Truncate if too long
   if (cleanText.length > maxLength) {
@@ -89,16 +115,127 @@ function safeText(text: string | undefined, maxLength: number = 1000): string {
 }
 
 /**
- * Calculate content area dimensions
+ * Safely validate and normalize font face
+ */
+function safeFontFace(fontFace: string | undefined, fallback: string = 'Arial'): string {
+  if (!fontFace || typeof fontFace !== 'string') {
+    return fallback;
+  }
+
+  // List of safe, widely supported fonts
+  const safeFonts = [
+    'Arial', 'Helvetica', 'Times New Roman', 'Times', 'Courier New', 'Courier',
+    'Verdana', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS',
+    'Trebuchet MS', 'Arial Black', 'Impact', 'Lucida Sans Unicode', 'Tahoma',
+    'Lucida Console', 'Monaco', 'Bradley Hand ITC', 'Brush Script MT',
+    'Lucida Handwriting', 'Copperplate', 'Papyrus'
+  ];
+
+  // Clean the font name
+  const cleanFont = fontFace.trim().replace(/['"]/g, '');
+
+  // Check if it's a safe font (case insensitive)
+  const isSafeFont = safeFonts.some(font =>
+    font.toLowerCase() === cleanFont.toLowerCase()
+  );
+
+  if (isSafeFont) {
+    return cleanFont;
+  }
+
+  // For unknown fonts, use fallback to prevent corruption
+  logger.debug('Unknown font face, using fallback', { requested: fontFace, fallback });
+  return fallback;
+}
+
+/**
+ * Safely validate coordinates and dimensions
+ */
+function safeCoordinate(value: number | string | undefined, max: number, fallback: number): number {
+  if (value === undefined || value === null) return fallback;
+
+  let numValue: number;
+
+  if (typeof value === 'string') {
+    // Handle percentage values
+    if (value.includes('%')) {
+      const percent = parseFloat(value.replace('%', ''));
+      if (isNaN(percent)) return fallback;
+      numValue = (percent / 100) * max;
+    } else {
+      numValue = parseFloat(value);
+    }
+  } else {
+    numValue = value;
+  }
+
+  // Validate the number
+  if (isNaN(numValue) || !isFinite(numValue)) {
+    return fallback;
+  }
+
+  // Ensure it's within bounds and positive
+  return Math.max(0, Math.min(numValue, max));
+}
+
+/**
+ * Calculate content area dimensions with validation
  */
 function getContentArea() {
   const { margins } = DEFAULT_LAYOUT;
   return {
-    x: margins.left,
-    y: margins.top,
-    width: SLIDE_DIMENSIONS.width - margins.left - margins.right,
-    height: SLIDE_DIMENSIONS.height - margins.top - margins.bottom
+    x: safeCoordinate(margins.left, SLIDE_DIMENSIONS.width, 0.5),
+    y: safeCoordinate(margins.top, SLIDE_DIMENSIONS.height, 0.5),
+    width: Math.max(1, SLIDE_DIMENSIONS.width - margins.left - margins.right),
+    height: Math.max(1, SLIDE_DIMENSIONS.height - margins.top - margins.bottom)
   };
+}
+
+/**
+ * Create safe text options for PowerPoint
+ */
+function createSafeTextOptions(options: any, theme: ProfessionalTheme): any {
+  const contentArea = getContentArea();
+
+  return {
+    x: safeCoordinate(options.x, SLIDE_DIMENSIONS.width, 0.5),
+    y: safeCoordinate(options.y, SLIDE_DIMENSIONS.height, 0.5),
+    w: safeCoordinate(options.w, SLIDE_DIMENSIONS.width, contentArea.width),
+    h: safeCoordinate(options.h, SLIDE_DIMENSIONS.height, 1),
+    fontSize: Math.max(8, Math.min(options.fontSize || 16, 72)), // Reasonable font size limits
+    fontFace: safeFontFace(options.fontFace, theme.typography.body.fontFamily),
+    color: safeColor(options.color, theme.colors.text.primary),
+    bold: Boolean(options.bold),
+    italic: Boolean(options.italic),
+    align: ['left', 'center', 'right'].includes(options.align) ? options.align : 'left',
+    valign: ['top', 'middle', 'bottom'].includes(options.valign) ? options.valign : 'top'
+  };
+}
+
+/**
+ * Safely add text to slide with comprehensive validation
+ */
+function safeAddText(slide: any, text: string, options: any, theme: ProfessionalTheme): boolean {
+  try {
+    const cleanText = safeText(text, 2000);
+    if (!cleanText) return false;
+
+    const safeOptions = createSafeTextOptions(options, theme);
+
+    // Additional validation
+    if (safeOptions.x + safeOptions.w > SLIDE_DIMENSIONS.width) {
+      safeOptions.w = SLIDE_DIMENSIONS.width - safeOptions.x - 0.1;
+    }
+    if (safeOptions.y + safeOptions.h > SLIDE_DIMENSIONS.height) {
+      safeOptions.h = SLIDE_DIMENSIONS.height - safeOptions.y - 0.1;
+    }
+
+    slide.addText(cleanText, safeOptions);
+    return true;
+  } catch (error) {
+    logger.warn('Failed to add text to slide', { error, text: text?.substring(0, 50) });
+    return false;
+  }
 }
 
 /**
@@ -151,152 +288,153 @@ function generateSpeakerNotes(spec: SlideSpec, slideIndex: number, totalSlides: 
  * ------------------------------------------------------------------------------------------------- */
 
 /**
- * Add title slide with reliable, simple design
+ * Add title slide with comprehensive validation and error handling
  */
 function addTitleSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const contentArea = getContentArea();
   const { typography } = DEFAULT_LAYOUT;
 
-  try {
-    // Simple, reliable title
-    slide.addText(safeText(spec.title || 'Untitled Presentation', 120), {
+  logger.debug('Adding title slide', { title: spec.title?.substring(0, 50) });
+
+  // Main title with safe text handling
+  const titleSuccess = safeAddText(
+    slide,
+    spec.title || 'Untitled Presentation',
+    {
       x: contentArea.x,
       y: contentArea.y + 1.5,
       w: contentArea.width,
       h: 1.2,
       fontSize: typography.title.fontSize,
       fontFace: theme.typography.headings.fontFamily,
-      color: safeColor(theme.colors.text.primary, '1F2937'),
+      color: theme.colors.text.primary,
       bold: true,
       align: 'center',
       valign: 'middle'
-    });
+    },
+    theme
+  );
 
-    // Simple subtitle if available
-    if (spec.paragraph) {
-      slide.addText(safeText(spec.paragraph, 200), {
+  // Subtitle if available
+  if (spec.paragraph) {
+    safeAddText(
+      slide,
+      spec.paragraph,
+      {
         x: contentArea.x,
         y: contentArea.y + 3,
         w: contentArea.width,
         h: 0.8,
         fontSize: typography.body.fontSize,
         fontFace: theme.typography.body.fontFamily,
-        color: safeColor(theme.colors.text.secondary, '6B7280'),
+        color: theme.colors.text.secondary,
         align: 'center',
         valign: 'middle'
-      });
-    }
+      },
+      theme
+    );
+  }
 
-    // Simple accent line (no complex shapes)
+  // Simple accent line with safe coordinates
+  try {
+    const accentX = safeCoordinate(contentArea.x + (contentArea.width - 2) / 2, SLIDE_DIMENSIONS.width, contentArea.x);
+    const accentY = safeCoordinate(contentArea.y + 1.3, SLIDE_DIMENSIONS.height, contentArea.y + 1);
+
     slide.addShape('rect', {
-      x: contentArea.x + (contentArea.width - 2) / 2,
-      y: contentArea.y + 1.3,
+      x: accentX,
+      y: accentY,
       w: 2,
       h: 0.05,
       fill: { color: safeColor(theme.colors.accent, 'F59E0B') },
       line: { width: 0 }
     });
-
   } catch (error) {
-    logger.warn('Error adding title slide elements, using fallback', { error });
-    // Fallback: just add basic title
-    slide.addText(safeText(spec.title || 'Untitled Presentation', 120), {
-      x: contentArea.x,
-      y: contentArea.y + 2,
-      w: contentArea.width,
-      h: 1,
-      fontSize: 24,
-      color: '1F2937',
-      bold: true,
-      align: 'center',
-      valign: 'middle'
-    });
+    logger.debug('Failed to add accent line, continuing without it', { error });
+  }
+
+  if (!titleSuccess) {
+    logger.warn('Title slide generation had issues, but slide was created');
   }
 }
 
 /**
- * Add content slide with reliable, simple design
+ * Add content slide with comprehensive validation and enhanced functionality
  */
 function addContentSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const contentArea = getContentArea();
   const { typography, spacing } = DEFAULT_LAYOUT;
 
-  try {
-    // Simple, reliable title
-    slide.addText(safeText(spec.title || 'Untitled Slide', 120), {
+  logger.debug('Adding content slide', { title: spec.title?.substring(0, 50), bulletCount: spec.bullets?.length });
+
+  // Title with safe handling
+  safeAddText(
+    slide,
+    spec.title || 'Untitled Slide',
+    {
       x: contentArea.x,
       y: contentArea.y,
       w: contentArea.width,
       h: 0.8,
       fontSize: typography.title.fontSize,
       fontFace: theme.typography.headings.fontFamily,
-      color: safeColor(theme.colors.text.primary, '1F2937'),
+      color: theme.colors.text.primary,
       bold: true,
       valign: 'middle'
-    });
+    },
+    theme
+  );
 
-    let currentY = contentArea.y + 0.8 + spacing.titleToContent;
+  let currentY = contentArea.y + 0.8 + spacing.titleToContent;
 
-    // Simple paragraph content
-    if (spec.paragraph) {
-      slide.addText(safeText(spec.paragraph, 1000), {
+  // Paragraph content with safe handling
+  if (spec.paragraph) {
+    const paragraphHeight = Math.min(2, Math.max(0.8, spec.paragraph.length / 100));
+
+    safeAddText(
+      slide,
+      spec.paragraph,
+      {
         x: contentArea.x,
         y: currentY,
         w: contentArea.width,
-        h: 1.5,
+        h: paragraphHeight,
         fontSize: typography.body.fontSize,
         fontFace: theme.typography.body.fontFamily,
-        color: safeColor(theme.colors.text.primary, '1F2937'),
+        color: theme.colors.text.primary,
         valign: 'top'
-      });
-      currentY += 1.5 + spacing.paragraphSpacing;
-    }
+      },
+      theme
+    );
 
-    // Simple bullet points
-    if (spec.bullets && spec.bullets.length > 0) {
-      const bulletText = spec.bullets
-        .slice(0, 8) // Limit to 8 bullets to prevent overflow
-        .map(bullet => `• ${safeText(bullet, 150)}`)
-        .join('\n');
+    currentY += paragraphHeight + spacing.paragraphSpacing;
+  }
 
-      slide.addText(bulletText, {
+  // Enhanced bullet points with better formatting
+  if (spec.bullets && spec.bullets.length > 0) {
+    const maxBullets = Math.min(spec.bullets.length, 10); // Allow up to 10 bullets
+    const bulletHeight = Math.min(3, maxBullets * 0.35);
+
+    // Create properly formatted bullet text
+    const bulletText = spec.bullets
+      .slice(0, maxBullets)
+      .map(bullet => `• ${safeText(bullet, 200)}`)
+      .join('\n');
+
+    safeAddText(
+      slide,
+      bulletText,
+      {
         x: contentArea.x,
         y: currentY,
         w: contentArea.width,
-        h: Math.min(3, spec.bullets.length * 0.4),
+        h: bulletHeight,
         fontSize: typography.bullets.fontSize,
         fontFace: theme.typography.body.fontFamily,
-        color: safeColor(theme.colors.text.primary, '1F2937'),
+        color: theme.colors.text.primary,
         valign: 'top'
-      });
-    }
-
-  } catch (error) {
-    logger.warn('Error adding content slide elements, using fallback', { error });
-    // Fallback: just add basic title and content
-    slide.addText(safeText(spec.title || 'Untitled Slide', 120), {
-      x: contentArea.x,
-      y: contentArea.y,
-      w: contentArea.width,
-      h: 0.8,
-      fontSize: 20,
-      color: '1F2937',
-      bold: true,
-      valign: 'middle'
-    });
-
-    if (spec.paragraph || (spec.bullets && spec.bullets.length > 0)) {
-      const content = spec.paragraph || spec.bullets?.join('\n• ') || '';
-      slide.addText(safeText(content, 800), {
-        x: contentArea.x,
-        y: contentArea.y + 1,
-        w: contentArea.width,
-        h: 3,
-        fontSize: 14,
-        color: '1F2937',
-        valign: 'top'
-      });
-    }
+      },
+      theme
+    );
   }
 }
 
@@ -325,65 +463,85 @@ function addTableSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
 // Removed parseTableDataFromBullets - no longer needed
 
 /**
- * Add two-column slide layout with safe implementation
+ * Add two-column slide layout with comprehensive validation
  */
 function addTwoColumnSlide(slide: any, spec: SlideSpec, theme: ProfessionalTheme) {
   const contentArea = getContentArea();
   const { typography, spacing } = DEFAULT_LAYOUT;
 
-  try {
-    // Title
-    slide.addText(safeText(spec.title || 'Two Column Layout', 120), {
+  logger.debug('Adding two-column slide', { title: spec.title?.substring(0, 50) });
+
+  // Title with safe handling
+  safeAddText(
+    slide,
+    spec.title || 'Two Column Layout',
+    {
       x: contentArea.x,
       y: contentArea.y,
       w: contentArea.width,
       h: 0.8,
       fontSize: typography.title.fontSize,
       fontFace: theme.typography.headings.fontFamily,
-      color: safeColor(theme.colors.text.primary, '1F2937'),
+      color: theme.colors.text.primary,
       bold: true,
       valign: 'middle'
-    });
+    },
+    theme
+  );
 
-    const columnWidth = (contentArea.width - spacing.columnGap) / 2;
-    let currentY = contentArea.y + 0.8 + spacing.titleToContent;
+  // Calculate safe column dimensions
+  const columnWidth = Math.max(1, (contentArea.width - spacing.columnGap) / 2);
+  const currentY = contentArea.y + 0.8 + spacing.titleToContent;
+  const columnHeight = Math.min(3.5, contentArea.height - (currentY - contentArea.y));
 
-    // Left column - paragraph content
-    if (spec.paragraph) {
-      slide.addText(safeText(spec.paragraph, 500), {
+  // Left column - paragraph content
+  if (spec.paragraph) {
+    safeAddText(
+      slide,
+      spec.paragraph,
+      {
         x: contentArea.x,
         y: currentY,
         w: columnWidth,
-        h: 3,
+        h: columnHeight,
         fontSize: typography.body.fontSize,
         fontFace: theme.typography.body.fontFamily,
-        color: safeColor(theme.colors.text.primary, '1F2937'),
+        color: theme.colors.text.primary,
         valign: 'top'
-      });
-    }
+      },
+      theme
+    );
+  }
 
-    // Right column - bullet points
-    if (spec.bullets && spec.bullets.length > 0) {
-      const bulletText = spec.bullets
-        .slice(0, 6) // Limit bullets for column layout
-        .map(bullet => `• ${safeText(bullet, 100)}`)
-        .join('\n');
+  // Right column - bullet points
+  if (spec.bullets && spec.bullets.length > 0) {
+    const maxBullets = Math.min(spec.bullets.length, 8); // Reasonable limit for column
+    const bulletText = spec.bullets
+      .slice(0, maxBullets)
+      .map(bullet => `• ${safeText(bullet, 150)}`)
+      .join('\n');
 
-      slide.addText(bulletText, {
-        x: contentArea.x + columnWidth + spacing.columnGap,
+    const rightColumnX = safeCoordinate(
+      contentArea.x + columnWidth + spacing.columnGap,
+      SLIDE_DIMENSIONS.width,
+      contentArea.x + columnWidth + 0.2
+    );
+
+    safeAddText(
+      slide,
+      bulletText,
+      {
+        x: rightColumnX,
         y: currentY,
         w: columnWidth,
-        h: 3,
+        h: columnHeight,
         fontSize: typography.bullets.fontSize,
         fontFace: theme.typography.body.fontFamily,
-        color: safeColor(theme.colors.text.primary, '1F2937'),
+        color: theme.colors.text.primary,
         valign: 'top'
-      });
-    }
-
-  } catch (error) {
-    logger.warn('Error adding two-column slide, using fallback', { error });
-    addContentSlide(slide, spec, theme);
+      },
+      theme
+    );
   }
 }
 
@@ -552,28 +710,42 @@ export async function generateEnhancedPpt(
     throw new Error(`Too many slides requested (${specs.length}). Maximum allowed is 50 slides per presentation.`);
   }
 
-  // Validate each slide specification
-  const validationErrors: string[] = [];
+  // Validate and auto-fix slide specifications
+  const validationWarnings: string[] = [];
   specs.forEach((spec, index) => {
+    // Auto-fix missing titles
     if (!spec.title || spec.title.trim().length === 0) {
-      validationErrors.push(`Slide ${index + 1}: Title is required`);
+      spec.title = `Slide ${index + 1}`;
+      validationWarnings.push(`Slide ${index + 1}: Added default title`);
     }
-    if (spec.title && spec.title.length > 120) {
-      validationErrors.push(`Slide ${index + 1}: Title too long (maximum 120 characters)`);
+
+    // Auto-truncate long titles
+    if (spec.title && spec.title.length > 200) {
+      spec.title = spec.title.substring(0, 197) + '...';
+      validationWarnings.push(`Slide ${index + 1}: Title truncated to 200 characters`);
     }
+
+    // Set default layout if missing
     if (!spec.layout) {
-      validationErrors.push(`Slide ${index + 1}: Layout is required`);
+      spec.layout = 'title-bullets';
+      validationWarnings.push(`Slide ${index + 1}: Set default layout to title-bullets`);
     }
-    if (spec.bullets && spec.bullets.length > 10) {
-      validationErrors.push(`Slide ${index + 1}: Too many bullet points (maximum 10)`);
+
+    // Auto-limit bullet points
+    if (spec.bullets && spec.bullets.length > 15) {
+      spec.bullets = spec.bullets.slice(0, 15);
+      validationWarnings.push(`Slide ${index + 1}: Limited to 15 bullet points`);
     }
-    if (spec.paragraph && spec.paragraph.length > 2000) {
-      validationErrors.push(`Slide ${index + 1}: Paragraph too long (maximum 2000 characters)`);
+
+    // Auto-truncate long paragraphs
+    if (spec.paragraph && spec.paragraph.length > 5000) {
+      spec.paragraph = spec.paragraph.substring(0, 4997) + '...';
+      validationWarnings.push(`Slide ${index + 1}: Paragraph truncated to 5000 characters`);
     }
   });
 
-  if (validationErrors.length > 0) {
-    throw new Error(`Validation failed:\n${validationErrors.join('\n')}`);
+  if (validationWarnings.length > 0) {
+    logger.info('Auto-fixed slide specifications', context, { warnings: validationWarnings });
   }
 
   logger.info(`Starting enhanced PowerPoint generation for ${specs.length} slides`, context, {
@@ -582,36 +754,68 @@ export async function generateEnhancedPpt(
   });
 
   try {
-    // Initialize presentation with enhanced settings
+    // Initialize presentation with safe settings
     const pres = new pptxgen();
-    pres.defineLayout({ name: 'LAYOUT_16x9', width: 10, height: 5.63 });
+
+    // Define layout with validated dimensions
+    const layoutConfig = {
+      name: 'LAYOUT_16x9',
+      width: SLIDE_DIMENSIONS.width,
+      height: SLIDE_DIMENSIONS.height
+    };
+
+    pres.defineLayout(layoutConfig);
     pres.layout = 'LAYOUT_16x9';
 
-    // Get and validate theme
-    const theme = themeId ? getThemeById(themeId) : getThemeById('corporate-blue');
+    logger.debug('Presentation initialized with layout', layoutConfig);
+
+    // Get and validate theme with fallback
+    let theme = themeId ? getThemeById(themeId) : getThemeById('corporate-blue');
     if (!theme) {
-      logger.warn(`Theme not found: ${themeId}, using default`, context);
-      const defaultTheme = getThemeById('corporate-blue');
-      if (!defaultTheme) {
-        throw new Error('Default theme not available');
+      logger.warn(`Theme not found: ${themeId}, using fallback`, context);
+      theme = getThemeById('corporate-blue');
+      if (!theme) {
+        // Create minimal fallback theme
+        theme = {
+          id: 'fallback',
+          name: 'Fallback Theme',
+          colors: {
+            background: 'FFFFFF',
+            text: { primary: '1F2937', secondary: '6B7280' },
+            primary: '3B82F6',
+            secondary: '10B981',
+            accent: 'F59E0B'
+          },
+          typography: {
+            headings: { fontFamily: 'Arial' },
+            body: { fontFamily: 'Arial' }
+          }
+        } as ProfessionalTheme;
+        logger.info('Using minimal fallback theme', context);
       }
     }
 
-    // Set comprehensive presentation properties
+    // Set safe presentation properties
     if (options.includeMetadata !== false) {
-      const metadata = generateMetadata(specs, options);
-      pres.author = metadata.author;
-      pres.company = metadata.company;
-      pres.subject = metadata.subject;
-      pres.title = metadata.title;
-      pres.revision = '1';
-      pres.rtlMode = false;
+      try {
+        const metadata = generateMetadata(specs, options);
 
-      logger.info('Presentation metadata set', context, {
-        title: metadata.title,
-        slideCount: metadata.slideCount,
-        estimatedReadingTime: metadata.estimatedReadingTime
-      });
+        // Set metadata with safe text handling
+        pres.author = safeText(metadata.author, 100) || 'AI PowerPoint Generator';
+        pres.company = safeText(metadata.company, 100) || 'Professional Presentations';
+        pres.subject = safeText(metadata.subject, 200) || 'AI-Generated Presentation';
+        pres.title = safeText(metadata.title, 200) || 'Professional Presentation';
+        pres.revision = '1';
+        pres.rtlMode = false;
+
+        logger.info('Presentation metadata set safely', context, {
+          title: metadata.title?.substring(0, 50),
+          slideCount: metadata.slideCount,
+          estimatedReadingTime: metadata.estimatedReadingTime
+        });
+      } catch (error) {
+        logger.warn('Failed to set metadata, continuing without it', context, { error });
+      }
     }
 
     // Generate slides with enhanced error handling
@@ -627,8 +831,15 @@ export async function generateEnhancedPpt(
 
         const slide = pres.addSlide();
 
-        // Set professional background
-        slide.background = { color: safeColor(theme!.colors.background, 'FFFFFF') };
+        // Set safe background with validation
+        try {
+          const backgroundColor = safeColor(theme!.colors.background, 'FFFFFF');
+          slide.background = { color: backgroundColor };
+          logger.debug(`Set slide background to ${backgroundColor}`);
+        } catch (error) {
+          logger.warn('Failed to set slide background, using default', { error });
+          // PowerPoint will use default white background
+        }
 
         // Validate slide specification
         if (!spec.title && !spec.paragraph && (!spec.bullets || spec.bullets.length === 0)) {
