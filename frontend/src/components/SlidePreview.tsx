@@ -1,13 +1,16 @@
 /**
  * Enhanced Slide Preview Component
- * 
+ *
  * Provides real-time preview of slides with professional styling and layout
  * Features:
  * - Live preview updates with <200ms response time
  * - 16:9 aspect ratio with proper scaling
- * - Theme-aware rendering
- * - Multiple layout support
- * - Responsive design
+ * - Theme-aware rendering with instant updates
+ * - Multiple layout support (title-bullets, two-column, chart, etc.)
+ * - Responsive design with touch support
+ * - Accessibility optimized with proper ARIA labels
+ * - Performance optimized with React.memo and useMemo
+ * - Visual feedback and hover states
  */
 
 import React, { useMemo } from 'react';

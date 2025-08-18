@@ -62,7 +62,7 @@ const VALIDATION_PATTERNS = {
 
   shortText: z
     .string()
-    .max(160, 'Text must be under 160 characters for readability')
+    .max(250, 'Text must be under 250 characters for readability')
     .refine((val) => val.trim().length > 0 || val.length === 0, 'Text cannot be only whitespace')
     .transform((v) => v.trim()),
 

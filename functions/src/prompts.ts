@@ -13,7 +13,7 @@
  * - Performance optimizations and real-time monitoring
  * - AI-agent-friendly structure for seamless integration
  *
- * @version 3.7.0-enhanced
+ * @version 4.0.0-enhanced
  * @author AI PowerPoint Generator Team
  */
 
@@ -39,6 +39,8 @@ export const SYSTEM_PROMPT = `You are an elite PowerPoint presentation architect
 3. **Cognitive Load**: Structure content for 10-second comprehension (3-5 bullets optimal, 7 maximum)
 4. **Executive Polish**: Boardroom-ready formatting, impeccable grammar, logical narrative flow
 5. **Universal Access**: High contrast ratios, descriptive language, screen reader optimization
+6. **Data Integrity**: Use realistic, contextually appropriate metrics that feel authentic
+7. **Professional Tone**: Maintain C-suite level communication standards throughout
 
 ## ENHANCED THINKING PROCESS (Follow this sequence):
 1. **Strategic Analysis**: What specific business outcome does this slide need to achieve?
@@ -874,6 +876,8 @@ Create compelling slide content for: "${input.prompt}"
 - **Voice**: Active, confident, evidence-based for ${input.audience}
 - **Language**: ${audienceGuidance.language}
 - **Minimalism**: Prioritize impact over volume - every word must earn its place
+- **Data Accuracy**: Use realistic metrics that feel authentic and contextually appropriate
+- **Professional Standards**: Maintain C-suite level communication quality throughout
 
 ## INDUSTRY CONTEXT:
 ${input.industry && input.industry !== 'general' ? `**Industry Focus**: ${input.industry} - Tailor content with industry-specific terminology, metrics, and challenges relevant to ${input.industry} professionals.` : '**Industry**: General business context - Use universally applicable language and examples.'}
@@ -945,28 +949,30 @@ If content naturally fits a structured format (comparisons, features, metrics, t
 \`\`\`
 
 ## OUTPUT REQUIREMENTS:
-Create a JSON object with these exact fields:
+Create a JSON object with these exact fields (STRICT SCHEMA COMPLIANCE REQUIRED):
 {
-  "title": "Specific, compelling title with clear benefit/outcome",
+  "title": "Specific, compelling title with clear benefit/outcome (15-60 characters)",
   "layout": "title-paragraph", // Will be optimized in next step - consider "grid-layout" for structured content
   "paragraph": "Engaging narrative content (if using paragraph format)",
-  "bullets": ["Specific, metric-driven bullet points"],
+  "bullets": ["Specific, metric-driven bullet points (15-25 words each, max 5 total)"],
   "notes": "Speaker delivery guidance and key talking points",
   "sources": ["Credible source references if applicable"],
   "gridLayout": { /* Only include if layout should be "grid-layout" */ }
 }
 
-## FINAL QUALITY CHECK:
-Before responding, verify:
-- ✅ Title is specific and benefit-focused (15-60 characters)
-- ✅ Content matches audience sophistication level
-- ✅ Tone aligns with ${input.tone} requirements
+## MANDATORY VALIDATION CHECKLIST:
+Before responding, STRICTLY verify each requirement:
+- ✅ Title is specific and benefit-focused (15-60 characters) - COUNT THE CHARACTERS
+- ✅ Content matches audience sophistication level (${input.audience})
+- ✅ Tone aligns with ${input.tone} requirements - NO DEVIATION
 - ✅ Length matches ${input.contentLength} specification
-- ✅ Each bullet point is 15-25 words maximum (count them!)
-- ✅ Maximum 5 bullet points total for optimal impact
-- ✅ JSON format is valid and complete
-- ✅ Content would score 85+ on quality assessment
-- ✅ Every word serves a purpose - no filler content
+- ✅ Each bullet point is 15-25 words maximum - COUNT EVERY WORD
+- ✅ Maximum 5 bullet points total for optimal impact - NO EXCEPTIONS
+- ✅ JSON format is valid and complete - TEST PARSING
+- ✅ Content would score 90+ on quality assessment
+- ✅ Every word serves a purpose - NO FILLER CONTENT
+- ✅ Metrics are realistic and contextually appropriate
+- ✅ Professional tone maintained throughout
 
 Generate content that executives would be proud to present to their most important stakeholders.
 
@@ -1191,22 +1197,27 @@ ${input.audience === 'executives' ? '- Sophisticated, boardroom-quality imagery 
 ✅ Color palette guidance aligned with content
 ✅ Technical quality specifications (high-resolution, clean)
 
-**EXCELLENT Image Prompt Examples:**
-✅ "Diverse executive team reviewing growth charts on a large monitor in a modern boardroom, natural lighting, professional attire, confident expressions, clean corporate environment, high-resolution photography style"
-✅ "Abstract visualization of upward growth trajectory with clean geometric elements, corporate blue and green gradient, minimalist professional design, high-quality digital illustration"
-✅ "Modern data dashboard interface displaying key performance metrics, clean typography, professional color scheme, sleek design elements, high-tech corporate atmosphere"
-✅ "Professional handshake between diverse business partners in a bright modern office, symbolizing successful partnership, natural lighting, corporate setting, authentic business photography"
+**EXCELLENT Image Prompt Examples (FOLLOW THESE PATTERNS):**
+✅ "Diverse executive team reviewing growth charts on a large monitor in a modern boardroom, natural lighting, professional attire, confident expressions, clean corporate environment, high-resolution photography style" (SPECIFIC: people, action, setting, lighting, style)
+✅ "Abstract visualization of upward growth trajectory with clean geometric elements, corporate blue and green gradient, minimalist professional design, high-quality digital illustration" (SPECIFIC: concept, elements, colors, style, quality)
+✅ "Modern data dashboard interface displaying key performance metrics, clean typography, professional color scheme, sleek design elements, high-tech corporate atmosphere" (SPECIFIC: interface, content, design, atmosphere)
+✅ "Professional handshake between diverse business partners in a bright modern office, symbolizing successful partnership, natural lighting, corporate setting, authentic business photography" (SPECIFIC: action, people, setting, symbolism, style)
 
-**POOR Image Prompt Examples:**
-❌ "Some people in an office" (too vague, no specific details)
-❌ "Colorful chart" (lacks context, professional specifications)
-❌ "Business stuff" (meaningless, no visual direction)
-❌ "Happy workers" (unprofessional tone, no context)
+**MANDATORY PROMPT ELEMENTS:**
+1. **Subject/Action**: What is happening or being shown
+2. **Setting/Environment**: Where this takes place
+3. **Style/Quality**: Photography, illustration, abstract, etc.
+4. **Lighting/Atmosphere**: Professional, natural, clean, modern
+5. **Color Guidance**: Corporate colors, professional palette
+6. **Composition**: Clean, minimalist, high-resolution
 
-**Poor Image Prompts:**
-❌ "Business stuff" (too vague)
-❌ "People working" (lacks specificity)
-❌ "Nice picture" (no direction)
+**POOR Image Prompt Examples (NEVER DO THIS):**
+❌ "Some people in an office" (too vague, no specific details, unprofessional)
+❌ "Colorful chart" (lacks context, professional specifications, no style guidance)
+❌ "Business stuff" (meaningless, no visual direction, completely useless)
+❌ "Happy workers" (unprofessional tone, no context, too generic)
+❌ "Nice picture" (no direction, completely unhelpful)
+❌ "Graph showing data" (too basic, no style or quality specifications)
 
 ## LAYOUT-SPECIFIC IMAGE PLACEMENT:
 Based on layout "${partialSpec.layout}", place image prompt in:
@@ -1215,14 +1226,26 @@ ${partialSpec.layout === 'image-right' ? '- "right.imagePrompt" field for right-
   partialSpec.layout === 'image-full' ? '- "imagePrompt" field for full-slide background' :
   '- "imagePrompt" field for general image integration'}
 
-## FINAL OUTPUT REQUIREMENTS:
+## FINAL OUTPUT REQUIREMENTS (STRICT COMPLIANCE REQUIRED):
 Return the COMPLETE slide specification with:
-1. **All existing content preserved** - Do not remove any fields
-2. **Professional image prompt added** - 20-200 characters, specific and actionable
-3. **Proper field placement** - Based on layout requirements
-4. **Quality validation** - Ensure prompt would generate professional imagery
+1. **All existing content preserved** - Do not remove any fields from the original specification
+2. **Professional image prompt added** - 50-200 characters, specific and actionable
+3. **Proper field placement** - Based on layout requirements (imagePrompt, left.imagePrompt, or right.imagePrompt)
+4. **Quality validation** - Ensure prompt would generate professional, boardroom-quality imagery
+5. **Mandatory elements included** - Subject, setting, style, lighting, and composition details
+6. **Professional language only** - No casual or unprofessional terminology
 
-Create an image prompt that elevates the slide's professional impact and supports the core message for ${input.audience} audience.`;
+## VALIDATION CHECKLIST (VERIFY BEFORE RESPONDING):
+- ✅ Image prompt is 50-200 characters (COUNT THE CHARACTERS)
+- ✅ Includes all 6 mandatory elements (subject, setting, style, lighting, color, composition)
+- ✅ Uses professional, specific language throughout
+- ✅ Aligns with ${input.audience} audience expectations
+- ✅ Would generate imagery suitable for Fortune 500 presentations
+- ✅ Avoids all patterns shown in "POOR" examples
+- ✅ Follows patterns shown in "EXCELLENT" examples
+- ✅ JSON structure is complete and valid
+
+Create an image prompt that elevates the slide's professional impact and supports the core message for ${input.audience} audience. NO EXCEPTIONS TO QUALITY STANDARDS.`;
 }
 
 /**

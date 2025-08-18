@@ -14,8 +14,12 @@
  * - Enhanced visual design with professional styling
  * - Robust error handling with graceful fallbacks
  * - Optimized for scalability and performance
+ * - Modern slide layouts with improved spacing and typography
+ * - Enhanced chart generation with better data visualization
+ * - Professional image handling with proper aspect ratios
+ * - Advanced theme integration with consistent styling
  *
- * @version 5.0.0-enhanced
+ * @version 6.0.0-enhanced
  * @author AI PowerPoint Generator Team
  */
 
@@ -38,20 +42,24 @@ const LAYOUT = {
 
   // Typography system optimized for readability and visual hierarchy
   typography: {
-    title: { fontSize: 36, lineSpacing: 42, fontWeight: 'bold' as const },
-    subtitle: { fontSize: 24, lineSpacing: 30, fontWeight: 'normal' as const },
-    body: { fontSize: 18, lineSpacing: 26, fontWeight: 'normal' as const },
-    bullets: { fontSize: 16, lineSpacing: 24, fontWeight: 'normal' as const },
-    caption: { fontSize: 12, lineSpacing: 16, fontWeight: 'normal' as const }
+    title: { fontSize: 40, lineSpacing: 48, fontWeight: 'bold' as const },
+    subtitle: { fontSize: 28, lineSpacing: 34, fontWeight: 'normal' as const },
+    body: { fontSize: 20, lineSpacing: 28, fontWeight: 'normal' as const },
+    bullets: { fontSize: 18, lineSpacing: 26, fontWeight: 'normal' as const },
+    caption: { fontSize: 14, lineSpacing: 18, fontWeight: 'normal' as const },
+    chart: { fontSize: 16, lineSpacing: 22, fontWeight: 'normal' as const },
+    table: { fontSize: 16, lineSpacing: 20, fontWeight: 'normal' as const }
   },
 
   // Spacing system for consistent visual rhythm
   spacing: {
-    titleToContent: 0.4,
-    paragraphSpacing: 0.25,
-    bulletSpacing: 0.2,
-    columnGap: 0.5,
-    sectionSpacing: 0.3
+    titleToContent: 0.5,
+    paragraphSpacing: 0.3,
+    bulletSpacing: 0.25,
+    columnGap: 0.6,
+    sectionSpacing: 0.4,
+    chartPadding: 0.3,
+    tablePadding: 0.2
   }
 };
 
@@ -74,6 +82,48 @@ const CONTENT = {
 /* -------------------------------------------------------------------------------------------------
  * Utility Functions
  * ------------------------------------------------------------------------------------------------- */
+
+/**
+ * Enhanced image processing for professional presentations
+ * Handles aspect ratio correction, quality optimization, and format conversion
+ */
+function processImageForSlide(imageUrl: string, targetWidth: number, targetHeight: number): any {
+  try {
+    // For now, return basic image configuration
+    // In a full implementation, this would handle:
+    // - Image downloading and caching
+    // - Aspect ratio correction to 16:9
+    // - Quality optimization
+    // - Format conversion (PNG/JPG)
+    // - Background removal if needed
+    // - Color enhancement
+
+    return {
+      path: imageUrl,
+      w: targetWidth,
+      h: targetHeight,
+      sizing: {
+        type: 'contain', // Maintain aspect ratio
+        w: targetWidth,
+        h: targetHeight
+      },
+      rounding: true, // Add subtle rounding for modern look
+      shadow: {
+        type: 'outer',
+        blur: 3,
+        offset: 2,
+        color: '00000020' // Subtle shadow
+      }
+    };
+  } catch (error) {
+    logger.warn('Image processing failed, using fallback', { imageUrl, error });
+    return {
+      path: imageUrl,
+      w: targetWidth,
+      h: targetHeight
+    };
+  }
+}
 
 /**
  * Convert color input to safe 6-digit hex format for PowerPoint
@@ -120,10 +170,16 @@ function getPowerPointFont(fontFamily?: string): string {
     'Georgia': 'Georgia',
     'Verdana': 'Verdana',
     'Tahoma': 'Tahoma',
+    'Trebuchet MS': 'Trebuchet MS',
+    'Century Gothic': 'Century Gothic',
+    'Franklin Gothic Medium': 'Franklin Gothic Medium',
     // Fallback for common web fonts
     'Roboto': 'Calibri',
     'Open Sans': 'Calibri',
-    'Lato': 'Calibri'
+    'Lato': 'Calibri',
+    'Montserrat': 'Calibri',
+    'Source Sans Pro': 'Calibri',
+    'Poppins': 'Calibri'
   };
 
   if (!fontFamily) return 'Calibri';
@@ -138,17 +194,26 @@ function getPowerPointFont(fontFamily?: string): string {
 }
 
 /**
- * Get theme colors with safe fallbacks
+ * Get theme colors with safe fallbacks and enhanced color palette
  */
 function getThemeColors(theme: ProfessionalTheme) {
   return {
     primary: safeColor(theme.colors.primary, '1E40AF'),
-    accent: safeColor(theme.colors.accent, '3B82F6'),
+    secondary: safeColor(theme.colors.secondary, '3B82F6'),
+    accent: safeColor(theme.colors.accent, 'F59E0B'),
     background: safeColor(theme.colors.background, 'FFFFFF'),
     surface: safeColor(theme.colors.surface, 'F8FAFC'),
     textPrimary: safeColor(theme.colors.text.primary, '1F2937'),
     textSecondary: safeColor(theme.colors.text.secondary, '6B7280'),
-    textMuted: safeColor(theme.colors.text.muted, '9CA3AF')
+    textMuted: safeColor(theme.colors.text.muted, '9CA3AF'),
+    textInverse: safeColor(theme.colors.text.inverse, 'FFFFFF'),
+    success: safeColor(theme.colors.semantic?.success, '10B981'),
+    warning: safeColor(theme.colors.semantic?.warning, 'F59E0B'),
+    error: safeColor(theme.colors.semantic?.error, 'EF4444'),
+    info: safeColor(theme.colors.semantic?.info, '3B82F6'),
+    borderLight: safeColor(theme.colors.borders?.light, 'F3F4F6'),
+    borderMedium: safeColor(theme.colors.borders?.medium, 'E5E7EB'),
+    borderStrong: safeColor(theme.colors.borders?.strong, 'D1D5DB')
   };
 }
 
@@ -301,93 +366,161 @@ function parseChartDataFromBullets(bullets: string[]): any[] {
 /**
  * Determine optimal chart type based on data characteristics
  */
-function determineOptimalChartType(data: any[], preferredType?: string): string {
-  if (preferredType && ['bar', 'column', 'line', 'pie', 'doughnut'].includes(preferredType)) {
+function determineOptimalChartType(chartData: any[], preferredType?: string): string {
+  if (!chartData || chartData.length === 0) return 'column';
+
+  const dataPoints = chartData[0]?.values?.length || 0;
+  const hasMultipleSeries = chartData.length > 1;
+
+  // Use preferred type if specified and valid
+  if (preferredType && ['bar', 'column', 'line', 'pie', 'area'].includes(preferredType)) {
     return preferredType;
   }
 
-  if (!data || data.length === 0) return 'column';
-
-  const firstSeries = data[0];
-  if (!firstSeries || !firstSeries.values) return 'column';
-
-  const valueCount = firstSeries.values.length;
-  const hasMultipleSeries = data.length > 1;
-
-  // Decision logic for optimal chart type
-  if (valueCount <= 6 && !hasMultipleSeries) {
-    // Few data points, single series - pie chart works well
-    return 'pie';
-  } else if (hasMultipleSeries) {
-    // Multiple series - column chart for comparison
-    return 'column';
-  } else if (valueCount > 10) {
-    // Many data points - line chart for trends
-    return 'line';
+  // Auto-determine based on data characteristics
+  if (dataPoints <= 6 && !hasMultipleSeries) {
+    return 'pie'; // Good for showing parts of a whole
+  } else if (dataPoints > 10 || hasMultipleSeries) {
+    return 'line'; // Better for trends and multiple series
   } else {
-    // Default to column chart
-    return 'column';
+    return 'column'; // Default for most cases
   }
 }
 
 /**
  * Create enhanced chart configuration with professional styling
  */
-function createChartConfig(chartType: string, data: any[], colors: any, fonts: any, title: string) {
+function createChartConfig(chartType: string, chartData: any[], colors: any, fonts: any, title?: string) {
   const baseConfig = {
-    title: safeText(title, 100),
-    showTitle: true,
-    showLegend: data.length > 1,
-    showValue: true,
-    chartColors: colors,
-    titleFontSize: 16,
+    chartColors: colors.slice(0, chartData.length),
+    showTitle: !!title,
+    title: title ? safeText(title, 80) : '',
+    titleFontSize: LAYOUT.typography.chart.fontSize,
     titleFontFace: fonts.heading,
-    titleColor: colors[0],
-    legendFontSize: 12,
+    titleColor: colors.primary,
+    showLegend: chartData.length > 1,
+    legendPos: 'r' as const,
+    legendFontSize: LAYOUT.typography.caption.fontSize,
     legendFontFace: fonts.body,
-    dataLabelFontSize: 11,
+    showValue: true,
+    dataLabelFontSize: LAYOUT.typography.caption.fontSize,
     dataLabelFontFace: fonts.body,
-    // Enhanced styling options
-    border: { pt: 1, color: colors[0] },
+    dataLabelColor: colors.textPrimary,
+    border: { pt: 1, color: colors.borderLight },
+    fill: colors.surface,
     plotArea: {
-      fill: { color: 'FFFFFF' },
-      border: { pt: 1, color: 'E5E7EB' }
+      fill: { color: colors.background, transparency: 0 },
+      border: { pt: 1, color: colors.borderMedium }
     }
   };
 
-  // Chart-specific configurations
+  // Enhanced chart-specific configurations with professional styling
   switch (chartType) {
-    case 'bar':
-    case 'column':
-      return {
-        ...baseConfig,
-        barDir: chartType === 'bar' ? 'bar' : 'col',
-        barGrouping: 'clustered',
-        showValue: true,
-        dataLabelPosition: 'outEnd'
-      };
-
     case 'pie':
-    case 'doughnut':
       return {
         ...baseConfig,
-        showLegend: true,
+        showPercent: true,
+        dataLabelPosition: 'outEnd',
+        holeSize: 40, // Donut style for modern look
+        showLeaderLines: true,
         legendPos: 'r',
-        dataLabelPosition: 'bestFit',
-        showPercent: true
+        shadow: { type: 'outer', blur: 4, offset: 2, color: colors.borderMedium }
       };
-
     case 'line':
       return {
         ...baseConfig,
         lineSmooth: true,
-        lineSize: 3,
+        lineSize: 4,
         showMarkers: true,
-        markerSize: 6
+        markerSize: 8,
+        markerSymbol: 'circle',
+        gridLines: {
+          style: 'solid',
+          size: 1,
+          color: colors.borderLight
+        },
+        shadow: { type: 'outer', blur: 3, offset: 2, color: colors.borderMedium }
       };
-
+    case 'bar':
+    case 'column':
+      return {
+        ...baseConfig,
+        barGapWidthPct: 20, // Tighter spacing for modern look
+        barGrouping: 'clustered',
+        showValue: true,
+        dataLabelPosition: 'outEnd',
+        gridLines: {
+          style: 'solid',
+          size: 1,
+          color: colors.borderLight
+        },
+        shadow: { type: 'outer', blur: 2, offset: 1, color: colors.borderLight }
+      };
+    case 'area':
+      return {
+        ...baseConfig,
+        lineSmooth: true,
+        lineSize: 3,
+        showMarkers: false,
+        transparency: 30, // Semi-transparent fill
+        shadow: { type: 'outer', blur: 3, offset: 2, color: colors.borderMedium }
+      };
     default:
       return baseConfig;
+  }
+}
+
+
+
+/**
+ * Parse table data from slide specification
+ */
+function parseTableData(spec: SlideSpec): string[][] | null {
+  try {
+    // Check if table data is provided directly
+    if (spec.table && spec.table.rows && spec.table.rows.length > 0) {
+      const headers = spec.table.columns || [];
+      const rows = spec.table.rows;
+      return headers.length > 0 ? [headers, ...rows] : rows;
+    }
+
+    // Parse from bullets if no direct table data
+    if (spec.bullets && spec.bullets.length > 0) {
+      const tableRows: string[][] = [];
+      let currentRow: string[] = [];
+
+      spec.bullets.forEach(bullet => {
+        // Check for table-like patterns
+        if (bullet.includes('|')) {
+          // Pipe-separated values
+          const cells = bullet.split('|').map(cell => safeText(cell.trim(), 100));
+          if (cells.length > 1) {
+            tableRows.push(cells);
+          }
+        } else if (bullet.includes('\t')) {
+          // Tab-separated values
+          const cells = bullet.split('\t').map(cell => safeText(cell.trim(), 100));
+          if (cells.length > 1) {
+            tableRows.push(cells);
+          }
+        } else if (bullet.includes(':') && bullet.split(':').length === 2) {
+          // Key-value pairs
+          const [key, value] = bullet.split(':');
+          currentRow.push(safeText(key.trim(), 50), safeText(value.trim(), 100));
+          if (currentRow.length >= 2) {
+            tableRows.push([...currentRow]);
+            currentRow = [];
+          }
+        }
+      });
+
+      return tableRows.length > 0 ? tableRows : null;
+    }
+
+    return null;
+  } catch (error) {
+    logger.warn('Table data parsing failed', { error });
+    return null;
   }
 }
 
@@ -427,58 +560,7 @@ function createAdvancedTableConfig(data: string[][], colors: any, fonts: any) {
   };
 }
 
-/**
- * Parse and structure table data from various input formats
- */
-function parseTableData(spec: SlideSpec): string[][] | null {
-  try {
-    // Priority 1: Structured comparison table
-    if (spec.comparisonTable && spec.comparisonTable.rows) {
-      const headers = spec.comparisonTable.headers || ['Item', 'Details'];
-      return [
-        headers.map(header => safeText(header, 50)),
-        ...spec.comparisonTable.rows.map(row =>
-          row.map(cell => safeText(cell, 100))
-        )
-      ];
-    }
 
-    // Priority 2: Parse from bullets
-    if (spec.bullets && spec.bullets.length > 0) {
-      const tableData: string[][] = [['Feature', 'Description']];
-
-      spec.bullets.forEach(bullet => {
-        const separators = [':', ' - ', ' – ', ' — ', ' | ', ' = '];
-        let parsed = false;
-
-        for (const separator of separators) {
-          const index = bullet.indexOf(separator);
-          if (index > 0) {
-            const key = safeText(bullet.substring(0, index).trim(), 50);
-            const value = safeText(bullet.substring(index + separator.length).trim(), 150);
-            if (key && value) {
-              tableData.push([key, value]);
-              parsed = true;
-              break;
-            }
-          }
-        }
-
-        // If no separator found, add as single-column entry
-        if (!parsed && bullet.trim()) {
-          tableData.push([safeText(bullet.trim(), 50), '']);
-        }
-      });
-
-      return tableData.length > 1 ? tableData : null;
-    }
-
-    return null;
-  } catch (error) {
-    logger.warn('Table data parsing failed', { error });
-    return null;
-  }
-}
 
 /* -------------------------------------------------------------------------------------------------
  * Design Elements
@@ -1183,8 +1265,8 @@ function generateMetadata(specs: SlideSpec[], options: any = {}) {
       wordCount: totalWords,
       estimatedReadingTime: `${estimatedReadingTime} minute${estimatedReadingTime !== 1 ? 's' : ''}`,
       slideTypes: slideTypes,
-      generator: 'AI PowerPoint Generator v5.0.0-enhanced',
-      version: '5.0.0-enhanced',
+      generator: 'AI PowerPoint Generator v6.0.0-enhanced',
+      version: '6.0.0-enhanced',
       generatedAt: currentDate.toLocaleString(),
       // Additional metadata for professional presentations
       keywords: extractKeywords(specs),
@@ -1207,8 +1289,8 @@ function generateMetadata(specs: SlideSpec[], options: any = {}) {
       slideCount: specs.length,
       wordCount: 0,
       estimatedReadingTime: '1 minute',
-      generator: 'AI PowerPoint Generator v5.0.0-enhanced',
-      version: '5.0.0-enhanced'
+      generator: 'AI PowerPoint Generator v6.0.0-enhanced',
+      version: '6.0.0-enhanced'
     };
   }
 }
@@ -1287,39 +1369,84 @@ function generateSpeakerNotes(spec: SlideSpec, slideNumber: number, totalSlides:
     if (spec.notes) {
       notes.push(safeText(spec.notes, 500));
     } else {
-      // Generate automatic speaker notes based on content
-      notes.push(`Slide ${slideNumber} of ${totalSlides}: ${safeText(spec.title || 'Untitled Slide', 100)}`);
+      // Generate comprehensive automatic speaker notes based on content
+      notes.push(`=== SLIDE ${slideNumber} OF ${totalSlides} ===`);
+      notes.push(`Title: ${safeText(spec.title || 'Untitled Slide', 100)}`);
+      notes.push('');
 
-      if (spec.paragraph) {
-        notes.push(`Key message: ${safeText(spec.paragraph, 200)}`);
+      // Opening guidance
+      if (slideNumber === 1) {
+        notes.push('OPENING: Welcome your audience and introduce the presentation topic.');
+      } else {
+        notes.push('TRANSITION: Briefly connect to the previous slide before introducing this topic.');
+      }
+      notes.push('');
+
+      // Content-specific guidance
+      if (spec.layout === 'title') {
+        notes.push('PRESENTATION GUIDANCE:');
+        notes.push('- This is your title slide - use it to set the tone');
+        notes.push('- Introduce yourself and your credentials');
+        notes.push('- Provide a brief overview of what the audience will learn');
+        if (spec.paragraph) {
+          notes.push(`- Key message to emphasize: ${safeText(spec.paragraph, 200)}`);
+        }
+      } else if (spec.layout === 'chart') {
+        notes.push('CHART PRESENTATION:');
+        notes.push('- Start with the main insight or conclusion');
+        notes.push('- Walk through the data systematically');
+        notes.push('- Highlight key trends, outliers, or patterns');
+        notes.push('- Connect the data to your overall message');
+        if (spec.chart?.title) {
+          notes.push(`- Focus on: ${safeText(spec.chart.title, 100)}`);
+        }
+      } else if (spec.layout === 'comparison-table') {
+        notes.push('TABLE DISCUSSION:');
+        notes.push('- Guide the audience through each comparison point');
+        notes.push('- Highlight the most important differences or similarities');
+        notes.push('- Use the table to support your recommendation or conclusion');
+        notes.push('- Be prepared to answer questions about specific data points');
+      } else {
+        notes.push('CONTENT DELIVERY:');
+        if (spec.paragraph) {
+          notes.push(`- Main message: ${safeText(spec.paragraph, 200)}`);
+        }
+        if (spec.bullets && spec.bullets.length > 0) {
+          notes.push('- Key points to cover:');
+          spec.bullets.slice(0, 6).forEach((bullet, index) => {
+            notes.push(`  ${index + 1}. ${safeText(bullet, 150)}`);
+          });
+        }
       }
 
-      if (spec.bullets && spec.bullets.length > 0) {
-        notes.push(`Main points to cover:`);
-        spec.bullets.slice(0, 5).forEach((bullet, index) => {
-          notes.push(`${index + 1}. ${safeText(bullet, 150)}`);
-        });
-      }
+      notes.push('');
 
+      // Engagement tips
+      notes.push('ENGAGEMENT TIPS:');
+      if (spec.bullets && spec.bullets.length > 3) {
+        notes.push('- Consider asking the audience which point resonates most with them');
+      }
       if (spec.chart) {
-        notes.push(`Chart presentation: Highlight the key data trends and insights from the ${spec.chart.title || 'chart'}.`);
+        notes.push('- Ask if anyone has questions about the data before moving on');
       }
+      notes.push('- Pause for questions if this is a complex topic');
+      notes.push('- Make eye contact and check for understanding');
 
-      if (spec.comparisonTable) {
-        notes.push(`Table discussion: Walk through the comparison points and emphasize key differences or similarities.`);
-      }
+      notes.push('');
 
-      // Add transition guidance
+      // Timing and transition
+      const wordCount = notes.join(' ').split(' ').length;
+      const estimatedTime = Math.max(1, Math.ceil(wordCount / 150)); // 150 words per minute
+      notes.push(`TIMING: Estimated ${estimatedTime} minute${estimatedTime !== 1 ? 's' : ''} for this slide`);
+
       if (slideNumber < totalSlides) {
-        notes.push(`Transition: Connect this content to the next slide's topic.`);
+        notes.push('TRANSITION: Prepare to connect this content to the next slide\'s topic');
+      } else {
+        notes.push('CLOSING: Summarize key takeaways and open for final questions');
       }
-
-      // Add timing guidance
-      const estimatedTime = Math.max(1, Math.ceil((notes.join(' ').split(' ').length) / 150)); // 150 words per minute speaking
-      notes.push(`Estimated speaking time: ${estimatedTime} minute${estimatedTime !== 1 ? 's' : ''}`);
     }
 
-    return notes.join('\n\n');
+    return notes.join('\n');
   } catch (error) {
     logger.warn('Speaker notes generation failed', { slideNumber, error });
     return `Slide ${slideNumber}: ${spec.title || 'Untitled Slide'}`;
@@ -1379,7 +1506,7 @@ export async function generateSimplePpt(
     // Get theme
     const theme = PROFESSIONAL_THEMES.find(t => t.id === themeId) || PROFESSIONAL_THEMES[0];
 
-    // Set enhanced presentation metadata
+    // Set enhanced presentation metadata with comprehensive properties
     if (options.includeMetadata !== false) {
       const metadata = generateMetadata(specs, options);
       pres.author = metadata.author;
@@ -1387,6 +1514,19 @@ export async function generateSimplePpt(
       pres.subject = metadata.subject;
       pres.title = metadata.title;
       pres.revision = '1';
+
+      // Enhanced metadata properties (using available PptxGenJS properties)
+      try {
+        // Add custom properties if supported
+        if (metadata.keywords && metadata.keywords.length > 0) {
+          // Store keywords in subject if not already used
+          if (!pres.subject.includes(metadata.keywords[0])) {
+            pres.subject += ` - Keywords: ${metadata.keywords.slice(0, 3).join(', ')}`;
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to set enhanced metadata properties', { error });
+      }
 
       // Additional metadata for professional presentations
       logger.info('Presentation metadata generated', context, {

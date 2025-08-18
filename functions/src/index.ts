@@ -28,7 +28,7 @@
  * - Comprehensive error handling with typed error classes
  * - Memory-efficient caching for theme recommendations
  *
- * @version 3.3.2-enhanced-fixed
+ * @version 4.0.0-enhanced
  * @author AI PowerPoint Generator Team
  */
 

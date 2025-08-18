@@ -195,9 +195,6 @@ class APIClient {
         duration
       });
 
-      // Debug logger error tracking
-      frontendDebugLogger.completeAPICall(advancedRequestId, 0, null, errorMessage);
-
       frontendDebugLogger.error(`API request error: ${mergedOptions.method} ${endpoint}`, {
         requestId,
         error: errorMessage,

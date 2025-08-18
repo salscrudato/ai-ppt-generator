@@ -1,13 +1,16 @@
 /**
  * Enhanced Theme Selector Component
- * 
+ *
  * Professional theme selection with live preview and categorization
  * Features:
  * - Theme categories (Corporate, Creative, Academic, etc.)
- * - Live preview updates
- * - Accessibility compliant
- * - Responsive grid layout
- * - Search and filtering
+ * - Live preview updates with instant feedback
+ * - Full accessibility compliance (WCAG 2.1 AA)
+ * - Responsive grid layout with touch support
+ * - Advanced search and filtering
+ * - Keyboard navigation support
+ * - Visual feedback and animations
+ * - Color contrast validation
  */
 
 import React, { useState, useMemo } from 'react';
