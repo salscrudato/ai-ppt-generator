@@ -85,7 +85,7 @@ function testProjectStructure() {
     'frontend/src/main.tsx',
     'functions/package.json',
     'functions/src/index.ts',
-    'functions/src/pptGenerator-simple.ts',
+    'functions/src/pptGenerator-enhanced.ts',
     'functions/src/prompts.ts',
     'functions/src/config/appConfig.ts',
     'functions/src/utils/commonUtils.ts'
@@ -193,8 +193,8 @@ function testEnhancedFeatures() {
   }
   
   // Test enhanced PowerPoint generator
-  if (fileExists('functions/src/pptGenerator-simple.ts')) {
-    const pptContent = fs.readFileSync('functions/src/pptGenerator-simple.ts', 'utf8');
+  if (fileExists('functions/src/pptGenerator-enhanced.ts')) {
+    const pptContent = fs.readFileSync('functions/src/pptGenerator-enhanced.ts', 'utf8');
     
     if (pptContent.includes('estimateSpeakingTime')) {
       logTest('Enhanced speaker notes with timing', 'PASS');

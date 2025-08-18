@@ -211,23 +211,23 @@ export function useLoadingState(options: UseLoadingStateOptions = {}) {
  */
 export const LOADING_STAGES = {
   SLIDE_GENERATION: [
-    { id: 'analyzing', message: '🔍 Analyzing your request and audience...', duration: 1500, progress: 5 },
-    { id: 'context', message: '🧠 Understanding content context...', duration: 2000, progress: 15 },
-    { id: 'generating', message: '✨ Generating professional slide content...', duration: 4500, progress: 45 },
-    { id: 'enhancing', message: '📈 Enhancing with storytelling frameworks...', duration: 2500, progress: 70 },
-    { id: 'optimizing', message: '🎨 Optimizing layout and design...', duration: 1500, progress: 85 },
-    { id: 'finalizing', message: '✅ Finalizing slide structure...', duration: 1000, progress: 95 }
+    { id: 'analyzing', message: '🔍 Analyzing your request and understanding context...', duration: 1800, progress: 8 },
+    { id: 'context', message: '🧠 Processing audience and tone requirements...', duration: 2200, progress: 18 },
+    { id: 'generating', message: '✨ Generating professional slide content with AI...', duration: 5000, progress: 50 },
+    { id: 'enhancing', message: '📈 Enhancing with storytelling frameworks...', duration: 2800, progress: 72 },
+    { id: 'optimizing', message: '🎨 Optimizing layout and visual design...', duration: 1800, progress: 88 },
+    { id: 'finalizing', message: '✅ Finalizing slide structure and formatting...', duration: 1200, progress: 98 }
   ],
 
   PRESENTATION_GENERATION: [
-    { id: 'preparing', message: '📋 Preparing presentation components...', duration: 1500, progress: 8 },
-    { id: 'themes', message: '🎨 Applying professional themes...', duration: 2000, progress: 20 },
-    { id: 'layouts', message: '📐 Optimizing layouts and typography...', duration: 2500, progress: 35 },
-    { id: 'content', message: '📝 Processing content and formatting...', duration: 3500, progress: 50 },
-    { id: 'charts', message: '📊 Generating charts and visualizations...', duration: 3000, progress: 65 },
-    { id: 'building', message: '🔧 Building PowerPoint file...', duration: 4000, progress: 80 },
-    { id: 'metadata', message: '📋 Adding speaker notes and metadata...', duration: 1500, progress: 90 },
-    { id: 'optimizing', message: '⚡ Optimizing for download...', duration: 1000, progress: 98 }
+    { id: 'preparing', message: '📋 Preparing presentation components and assets...', duration: 1800, progress: 10 },
+    { id: 'themes', message: '🎨 Applying professional themes and styling...', duration: 2200, progress: 22 },
+    { id: 'layouts', message: '📐 Optimizing layouts and typography systems...', duration: 2800, progress: 38 },
+    { id: 'content', message: '📝 Processing content and advanced formatting...', duration: 3800, progress: 55 },
+    { id: 'charts', message: '📊 Generating charts and data visualizations...', duration: 3200, progress: 68 },
+    { id: 'building', message: '🔧 Building PowerPoint file with enhancements...', duration: 4200, progress: 82 },
+    { id: 'metadata', message: '📋 Adding speaker notes and comprehensive metadata...', duration: 1800, progress: 92 },
+    { id: 'optimizing', message: '⚡ Optimizing file size and preparing download...', duration: 1200, progress: 99 }
   ],
 
   IMAGE_ENHANCEMENT: [

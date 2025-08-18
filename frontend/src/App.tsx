@@ -85,16 +85,16 @@ function AppContent() {
 
   // Enhanced loading state management with better error handling
   const loadingState = useLoadingState({
-    defaultTimeout: 90000, // Increased to 90 seconds for complex generations
+    defaultTimeout: 120000, // Increased to 2 minutes for complex generations
     onComplete: () => {
       console.log('✅ Operation completed successfully');
-      setSuccessMessage('PowerPoint generated successfully!');
-      setTimeout(() => setSuccessMessage(''), 5000);
+      setSuccessMessage('PowerPoint generated successfully! 🎉');
+      setTimeout(() => setSuccessMessage(''), 6000);
     },
     onError: (error) => {
       console.error('❌ Operation failed:', error);
       updateState({
-        error: `Generation failed: ${error}. Please try again.`,
+        error: `Generation failed: ${error}. Please try again or contact support if the issue persists.`,
         loading: false
       });
     }
@@ -588,9 +588,18 @@ function AppContent() {
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             className="fixed bottom-6 right-6 z-50"
           >
-            <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3">
-              <HiCheckCircle className="w-6 h-6" />
-              <span className="font-medium">{successMessage}</span>
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-green-400/20 max-w-sm">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              >
+                <HiCheckCircle className="w-6 h-6 flex-shrink-0" />
+              </motion.div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm">{successMessage}</span>
+                <span className="text-green-100 text-xs mt-1">Your presentation is ready!</span>
+              </div>
             </div>
           </motion.div>
         )}
@@ -605,11 +614,20 @@ function AppContent() {
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             className="fixed bottom-6 left-6 z-50"
           >
-            <div className="bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-md">
-              <HiExclamationTriangle className="w-6 h-6 flex-shrink-0" />
-              <span className="font-medium">
-                {typeof state.error === 'string' ? state.error : 'An error occurred. Please try again.'}
-              </span>
+            <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-start gap-3 max-w-md border border-red-400/20">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+              >
+                <HiExclamationTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+              </motion.div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm mb-1">Generation Failed</span>
+                <span className="text-red-100 text-xs leading-relaxed">
+                  {typeof state.error === 'string' ? state.error : 'An unexpected error occurred. Please try again or contact support.'}
+                </span>
+              </div>
             </div>
           </motion.div>
         )}

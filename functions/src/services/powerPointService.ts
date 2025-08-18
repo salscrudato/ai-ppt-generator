@@ -12,7 +12,7 @@
  * - Richer structured logging with context
  */
 
-import { generatePpt } from '../pptGenerator-simple';
+import { generatePpt } from '../pptGenerator-enhanced';
 import { type SlideSpec } from '../schema';
 import { type ProfessionalTheme } from '../professionalThemes';
 import { logger, type LogContext } from '../utils/smartLogger';
@@ -229,10 +229,25 @@ export class PowerPointService implements IPowerPointService {
 
       logger.error('PowerPoint generation failed', context, {
         error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         generationTime,
         slideCount: slides.length,
-        options: { ...options, theme: options.theme?.name }
+        options: { ...options, theme: options.theme?.name },
+        memoryUsage: process.memoryUsage(),
+        nodeVersion: process.version
       });
+
+      // Enhance error with additional context
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+        if (errorMessage.includes('timeout')) {
+          error.message = `Generation timeout after ${generationTime}ms. Try reducing slide count or complexity.`;
+        } else if (errorMessage.includes('memory')) {
+          error.message = `Insufficient memory for generation. Try reducing slide count or image complexity.`;
+        } else {
+          error.message = `PowerPoint Service Error: ${errorMessage}`;
+        }
+      }
 
       throw error;
     }

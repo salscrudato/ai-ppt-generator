@@ -5,7 +5,7 @@
  * column and row arrangements for flexible content organization.
  */
 
-import { generateSimplePpt } from '../pptGenerator-simple';
+import { generatePpt as generateSimplePpt } from '../pptGenerator-enhanced';
 import type { SlideSpec } from '../schema';
 import { getThemeById } from '../professionalThemes';
 

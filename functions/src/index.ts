@@ -53,7 +53,7 @@ import {
 } from "./llm";
 import { PROFESSIONAL_THEMES, selectThemeForContent } from "./professionalThemes";
 import { logger } from "./utils/smartLogger";
-import { generatePpt } from "./pptGenerator-simple";
+import { generatePpt } from "./pptGenerator-enhanced";
 
 // Import new modular services
 import { aiService } from "./services/aiService";
@@ -341,14 +341,15 @@ app.get("/health", async (_req, res) => {
   const healthCheck = {
     status: "healthy",
     timestamp: new Date().toISOString(),
-    version: "3.3.2-enhanced-fixed",
-    service: "AI PowerPoint Generator",
+    version: "4.0.0-enhanced",
+    service: "AI PowerPoint Generator - Enhanced",
     environment: process.env.NODE_ENV || "development",
     apiKeyStatus: "unknown",
     systemChecks: {
       openai: false,
       pptxGeneration: false,
-      memory: false
+      memory: false,
+      themes: false
     }
   };
 
@@ -714,6 +715,10 @@ app.post("/generate/professional", async (req, res) => {
   const performanceMetric = startPerformanceTracking("/generate/professional", req);
 
   try {
+    // Initialize context for error handling
+    const requestId = logger.generateRequestId();
+    const context = { requestId, operation: "ppt-generation" };
+
     logger.info("Professional PowerPoint generation request", {
       hasSpec: !!req.body.spec,
       colorPalette: req.body.colorPalette || "corporate",
@@ -837,8 +842,6 @@ app.post("/generate/professional", async (req, res) => {
     }
 
     // Generate PowerPoint using enhanced generator
-    const requestId = logger.generateRequestId();
-    const context = { requestId, operation: "ppt-generation" };
 
     logger.startPerf(`ppt-gen-${requestId}`, context);
     logger.info("Starting enhanced PowerPoint generation", context, {
@@ -922,7 +925,19 @@ app.post("/generate/professional", async (req, res) => {
     return res.status(500).json({
       error: "PowerPoint generation failed",
       code: "GENERATION_ERROR",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+      requestId: logger.generateRequestId(),
+      suggestions: [
+        'Check your slide content for any formatting issues',
+        'Try reducing the number of slides if you have many',
+        'Ensure your theme selection is valid',
+        'Contact support if the issue persists'
+      ],
+      supportInfo: {
+        documentation: 'https://docs.ai-ppt-generator.com/troubleshooting',
+        contact: 'support@ai-ppt-generator.com'
+      }
     });
   }
 });
