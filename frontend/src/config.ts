@@ -17,6 +17,8 @@
  * @version 3.3.2-production-ready
  */
 
+import { frontendDebugLogger, DebugCategory } from './utils/debugLogger';
+
 // Robust environment detection for API base URL
 const getApiBaseUrl = () => {
   // 1. Explicit override via environment variable (highest priority)
@@ -94,8 +96,6 @@ export const API_ENDPOINTS = {
  * This helps debug connection issues in production and development
  */
 export const verifyApiConnection = async (): Promise<boolean> => {
-  // Import debug logger dynamically to avoid circular dependencies
-  const { frontendDebugLogger, DebugCategory } = await import('./utils/debugLogger');
 
   const apiCallId = frontendDebugLogger.trackAPICall(API_ENDPOINTS.health, 'GET');
 

@@ -1,3 +1,31 @@
+/**
+ * PromptInput Component - AI PowerPoint Generator Input Interface
+ *
+ * CORE FUNCTIONALITY:
+ * This component provides the main user interface for configuring AI-powered
+ * PowerPoint generation parameters. It handles user input validation, theme
+ * selection, and parameter management for the slide generation process.
+ *
+ * KEY FEATURES:
+ * - Comprehensive parameter configuration (prompt, audience, tone, content length)
+ * - Real-time theme preview and selection
+ * - Input validation with user-friendly error messages
+ * - Responsive design with accessibility support
+ * - Theme synchronization with context management
+ * - Professional UI with smooth animations
+ *
+ * PARAMETERS MANAGED:
+ * - prompt: User's presentation topic and requirements
+ * - audience: Target audience (executives, technical, sales, etc.)
+ * - tone: Presentation style (professional, casual, persuasive, etc.)
+ * - contentLength: Detail level (brief, moderate, detailed)
+ * - design.theme: Visual theme selection
+ * - presentationType: Business context (business, academic, sales, etc.)
+ *
+ * @version 2.0.0-enhanced
+ * @author AI PowerPoint Generator Team
+ */
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';

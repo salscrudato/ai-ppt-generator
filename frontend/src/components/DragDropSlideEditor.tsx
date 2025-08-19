@@ -44,7 +44,7 @@ import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 
 // Components and hooks
-import { EnhancedSlidePreview } from './EnhancedSlidePreview';
+import SlidePreview from './SlidePreview';
 import { LoadingSpinner } from './LoadingSpinner';
 import Button from './Button';
 import { useDebounced } from '../hooks/useDebounced';
@@ -219,11 +219,10 @@ function SortableSlideItem({
           'slide-preview-container',
           viewMode === 'grid' ? 'mb-4' : 'mb-2'
         )}>
-          <EnhancedSlidePreview
+          <SlidePreview
             spec={localSlide}
             theme={theme}
             className="w-full"
-            quality={viewMode === 'grid' ? 'standard' : 'draft'}
             aspectRatio={16/9}
             enableRealTimeUpdates={true}
           />
@@ -510,11 +509,10 @@ export default function DragDropSlideEditor({
         <DragOverlay>
           {activeId && draggedSlide ? (
             <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 opacity-90">
-              <EnhancedSlidePreview
+              <SlidePreview
                 spec={draggedSlide}
                 theme={theme}
                 className="w-64"
-                quality="draft"
               />
             </div>
           ) : null}

@@ -165,12 +165,18 @@ cd ai-ppt-generator
 
 #### **3. Configure OpenAI API Key**
 ```bash
-# Create environment file
-cp functions/.env.example functions/.env
+# Create secure environment file in project root
+cp .env.example .env
 
-# Edit the file and add your OpenAI API key
-OPENAI_API_KEY=your-openai-api-key-here
+# Edit .env and add your OpenAI API key
+# OPENAI_API_KEY=your-openai-api-key-here
 ```
+
+**🔒 Security Best Practices:**
+- The `.env` file is automatically excluded from version control
+- API keys are kept separate from Firebase deployment
+- Development script automatically configures functions environment
+- Never commit actual API keys to the repository
 
 #### **4. Start Development Environment**
 ```bash

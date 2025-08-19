@@ -60,9 +60,17 @@ import { aiService } from "./services/aiService";
 import { validationService } from "./services/validationService";
 import { type SlideSpec, safeValidateSlideSpec } from "./schema";
 
-/* -------------------------------------------------------------------------- */
-/*                               CONFIG & TYPES                               */
-/* -------------------------------------------------------------------------- */
+/* ============================================================================
+ * CONFIGURATION & TYPE DEFINITIONS
+ * ============================================================================
+ *
+ * This section contains all configuration constants, type definitions, and
+ * interfaces used throughout the application. It includes:
+ * - Admin authentication keys
+ * - Production configuration settings
+ * - Performance monitoring types
+ * - Security and CORS configuration
+ * ============================================================================ */
 
 const ADMIN_KEYS = {
   configCheck: process.env.ADMIN_CONFIG_KEY || "config-check-2024",
@@ -157,9 +165,17 @@ const performanceMetrics: PerformanceMetrics[] = [];
 // Simple in-memory cache
 const cache = new Map<string, any>();
 
-/* -------------------------------------------------------------------------- */
-/*                              PERF TRACKING UTIL                             */
-/* -------------------------------------------------------------------------- */
+/* ============================================================================
+ * PERFORMANCE MONITORING & UTILITIES
+ * ============================================================================
+ *
+ * This section provides comprehensive performance monitoring capabilities:
+ * - Request/response timing measurement
+ * - Memory usage tracking
+ * - Error classification and reporting
+ * - Quality metrics collection
+ * - Cache management utilities
+ * ============================================================================ */
 
 function startPerformanceTracking(endpoint: string, req: Request): PerformanceMetrics {
   const existingId = (req as any).requestId as string | undefined;

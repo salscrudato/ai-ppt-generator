@@ -11,6 +11,44 @@ echo "📅 $(date)"
 echo "🖥️  Platform: $(uname -s)"
 echo ""
 
+# Load environment variables from root .env file
+if [ -f ".env" ]; then
+    echo "🔑 Loading environment variables from .env file..."
+    export $(grep -v '^#' .env | grep -v '^$' | xargs)
+
+    # Copy OPENAI_API_KEY to functions/.env for Firebase emulator
+    if [ ! -z "$OPENAI_API_KEY" ]; then
+        echo "🔧 Configuring functions environment..."
+        # Create or update functions/.env with the API key
+        if [ -f "functions/.env" ]; then
+            # Remove existing OPENAI_API_KEY line and add new one
+            grep -v "^OPENAI_API_KEY=" functions/.env > functions/.env.tmp || true
+            echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> functions/.env.tmp
+            mv functions/.env.tmp functions/.env
+        else
+            # Create new functions/.env file
+            cat > functions/.env << EOF
+# Development Configuration (Auto-generated from root .env)
+NODE_ENV=development
+OPENAI_API_KEY=$OPENAI_API_KEY
+
+# Enhanced Features Configuration
+AI_TESTING_MODE=false
+AI_COST_LIMIT_ENABLED=true
+AI_DAILY_COST_LIMIT=10.00
+EOF
+        fi
+        echo "✅ Functions environment configured with API key"
+    else
+        echo "⚠️  OPENAI_API_KEY not found in .env file"
+    fi
+
+    echo "✅ Environment variables loaded"
+else
+    echo "⚠️  Warning: .env file not found in root directory"
+    echo "💡 Create a .env file with OPENAI_API_KEY for full functionality"
+fi
+
 # Load configuration
 CONFIG_FILE="dev-config.json"
 if [ ! -f "$CONFIG_FILE" ]; then

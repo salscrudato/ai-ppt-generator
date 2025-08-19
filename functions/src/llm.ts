@@ -937,6 +937,14 @@ export function sanitizeAIResponseWithRecovery(data: any): any {
 
   let sanitized = sanitizeAIResponse(data);
 
+  // Remove null/empty values for optional fields that should be omitted when null or empty
+  const optionalFields = ['chart', 'comparisonTable', 'image', 'timeline', 'processSteps', 'gridLayout', 'contentItems'];
+  optionalFields.forEach(field => {
+    if (sanitized[field] === null || sanitized[field] === '' || sanitized[field] === undefined) {
+      delete sanitized[field];
+    }
+  });
+
   // Ensure requireds or infer
   if (!sanitized.title || typeof sanitized.title !== 'string' || sanitized.title.trim() === '') {
     sanitized.title = 'Untitled Slide';

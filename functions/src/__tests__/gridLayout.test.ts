@@ -5,7 +5,7 @@
  * column and row arrangements for flexible content organization.
  */
 
-import { generatePpt as generateSimplePpt } from '../pptGenerator-enhanced';
+import { generatePpt as generateSimplePpt } from '../pptGenerator-simple';
 import type { SlideSpec } from '../schema';
 import { getThemeById } from '../professionalThemes';
 
@@ -169,7 +169,7 @@ describe('Grid Layout System', () => {
         notes: 'Compare the key features of our two main product offerings.'
       };
 
-      const buffer = await generateSimplePpt([gridSlideSpec], true, mockTheme.id);
+      const buffer = await generateSimplePpt([gridSlideSpec], mockTheme.id, {});
       
       expect(buffer).toBeInstanceOf(Buffer);
       expect(buffer.length).toBeGreaterThan(10000); // Should be a substantial file
@@ -207,7 +207,7 @@ describe('Grid Layout System', () => {
         notes: 'Highlight our strong Q4 performance across key metrics.'
       };
 
-      const buffer = await generateSimplePpt([metricsSlideSpec], true, mockTheme.id);
+      const buffer = await generateSimplePpt([metricsSlideSpec], mockTheme.id, {});
       
       expect(buffer).toBeInstanceOf(Buffer);
       expect(buffer.length).toBeGreaterThan(10000);
@@ -255,7 +255,7 @@ describe('Grid Layout System', () => {
         notes: 'Our systematic four-phase implementation approach ensures success.'
       };
 
-      const buffer = await generateSimplePpt([processSlideSpec], true, mockTheme.id);
+      const buffer = await generateSimplePpt([processSlideSpec], mockTheme.id, {});
       
       expect(buffer).toBeInstanceOf(Buffer);
       expect(buffer.length).toBeGreaterThan(10000);
@@ -280,7 +280,7 @@ describe('Grid Layout System', () => {
         }
       };
 
-      const buffer = await generateSimplePpt([slideWithEmptyCells], true, mockTheme.id);
+      const buffer = await generateSimplePpt([slideWithEmptyCells], mockTheme.id, {});
       
       expect(buffer).toBeInstanceOf(Buffer);
       expect(buffer.length).toBeGreaterThan(5000);
@@ -306,7 +306,7 @@ describe('Grid Layout System', () => {
       };
 
       // Should not throw an error
-      const buffer = await generateSimplePpt([slideWithInvalidCells], true, mockTheme.id);
+      const buffer = await generateSimplePpt([slideWithInvalidCells], mockTheme.id, {});
       
       expect(buffer).toBeInstanceOf(Buffer);
       expect(buffer.length).toBeGreaterThan(5000);
