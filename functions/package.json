@@ -63,7 +63,9 @@
     "test:alternative-output": "npm run build && node lib/scripts/alternativeOutputTest.js",
     "test:ultimate-repair": "npm run build && node lib/scripts/ultimateRepairFix.js",
     "clean": "rm -rf lib",
-    "clean:ports": "pkill -f 'firebase emulators' || true && lsof -ti:5003 | xargs kill -9 || true"
+    "clean:ports": "pkill -f 'firebase emulators' || true && lsof -ti:5003 | xargs kill -9 || true",
+    "test:scenario-matrix": "npm run build && node lib/scripts/runScenarioMatrix.js",
+    "ppt:sample": "npm run build && node lib/scripts/exportSamplePpt.js"
   },
   "dependencies": {
     "@types/compression": "^1.8.1",

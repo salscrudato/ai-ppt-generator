@@ -119,6 +119,10 @@ class EnvironmentManager {
         logger.warn('No OpenAI API key found in emulator environment. Set OPENAI_API_KEY in functions/.env file');
         // Return a placeholder that will be replaced by the secret system
         return 'EMULATOR_PLACEHOLDER';
+      } else if (process.env.NODE_ENV === 'production' || process.env.GCLOUD_PROJECT) {
+        // During deployment/build, the secret won't be available yet
+        logger.warn('No OpenAI API key found during build - will be loaded from secrets at runtime');
+        return 'BUILD_PLACEHOLDER';
       } else {
         logger.warn('No OpenAI API key found in environment variables');
       }
@@ -152,16 +156,20 @@ class EnvironmentManager {
   private validateConfiguration(): void {
     const errors: string[] = [];
     const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+    const isBuild = process.env.NODE_ENV === 'production' || process.env.GCLOUD_PROJECT;
 
-    // OpenAI API key validation with emulator exception
+    // OpenAI API key validation with emulator and build exceptions
     if (!this.config.openaiApiKey) {
       errors.push('OpenAI API key is required');
-    } else if (!isEmulator && !this.config.openaiApiKey.startsWith('sk-')) {
-      // Only validate format in non-emulator environments
-      errors.push('OpenAI API key format is invalid');
-    } else if (isEmulator && this.config.openaiApiKey === 'EMULATOR_PLACEHOLDER') {
+    } else if (this.config.openaiApiKey === 'BUILD_PLACEHOLDER') {
+      // During build/deployment, log a helpful message instead of an error
+      logger.info('Running in build mode with placeholder API key - will be loaded from secrets at runtime');
+    } else if (this.config.openaiApiKey === 'EMULATOR_PLACEHOLDER') {
       // In emulator mode, log a helpful message instead of an error
       logger.info('Running in emulator mode with placeholder API key');
+    } else if (!isEmulator && !isBuild && !this.config.openaiApiKey.startsWith('sk-')) {
+      // Only validate format in non-emulator, non-build environments
+      errors.push('OpenAI API key format is invalid');
     }
 
     // Port validation

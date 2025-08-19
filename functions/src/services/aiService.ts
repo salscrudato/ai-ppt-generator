@@ -15,6 +15,7 @@
 
 import OpenAI from 'openai';
 import { getTextModelConfig, logCostEstimate } from '../config/aiModels';
+import { apiKeyValidator } from '../config/apiKeyValidator';
 import {
   AIGenerationError,
   ValidationError,
@@ -42,14 +43,27 @@ const AI_CONFIG = getTextModelConfig();
 let openaiClient: OpenAI | null = null;
 
 /**
- * Get or create OpenAI client instance with enhanced configuration
+ * Get or create OpenAI client instance with enhanced configuration.
+ * - In production (Firebase), reads OPENAI_API_KEY from Secret Manager via process.env (index wires secret -> env)
+ * - In local dev, supports process.env and functions/.env
  */
 function getOpenAI(): OpenAI {
   if (!openaiClient) {
+    // Validate configuration and surface better diagnostics
+    const validation = apiKeyValidator.validateConfiguration();
+
+    // Prefer secret-provided env var; fallback to raw env
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OpenAI API key not configured');
+
+    if (!apiKey || !validation.isValid) {
+      // Throw a categorized error so /draft maps to 503 with clear message
+      throw new AIGenerationError(
+        `OpenAI API key not configured correctly (source=${validation.source}, env=${validation.environment})`,
+        'Initialize OpenAI Client',
+        1
+      );
     }
+
     openaiClient = new OpenAI({
       apiKey,
       timeout: 60000, // 60 second timeout

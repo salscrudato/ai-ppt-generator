@@ -98,12 +98,81 @@ export interface ProfessionalTheme {
  * Synchronized with backend themes for consistent user experience
  */
 export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
+  // TOP TIER - MOST AESTHETICALLY PLEASING THEMES
+
+  // Corporate Professional - Clean, trustworthy, universally appealing
+  {
+    id: 'corporate-blue',
+    name: 'Corporate Professional',
+    category: 'corporate',
+    description: 'Clean, trustworthy theme perfect for business presentations',
+    colors: {
+      primary: '#1E40AF',
+      secondary: '#3B82F6',
+      accent: '#F59E0B',
+      background: '#FFFFFF',
+      surface: '#F8FAFC',
+      text: {
+        primary: '#1F2937',
+        secondary: '#6B7280',
+        inverse: '#FFFFFF',
+        muted: '#9CA3AF'
+      },
+      semantic: {
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        info: '#3B82F6'
+      },
+      borders: {
+        light: '#F3F4F6',
+        medium: '#E5E7EB',
+        strong: '#D1D5DB'
+      }
+    },
+    typography: {
+      headings: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [400, 500, 600, 700, 800],
+        sizes: {
+          display: 52,
+          h1: 38,
+          h2: 28,
+          h3: 22,
+          h4: 18
+        }
+      },
+      body: {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        weights: [400, 500, 600],
+        sizes: {
+          large: 19,
+          medium: 16,
+          small: 14,
+          caption: 12
+        }
+      }
+    },
+    effects: {
+      shadows: {
+        subtle: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        strong: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+      },
+      gradients: {
+        primary: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
+        accent: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+        surface: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)'
+      }
+    }
+  },
+
   // Executive Dark Theme
   {
     id: 'executive-dark',
-    name: 'Executive Dark',
+    name: 'Modern Executive',
     category: 'corporate',
-    description: 'Professional dark theme for executive presentations',
+    description: 'Sophisticated dark theme for executive presentations',
     colors: {
       primary: '#3B82F6',
       secondary: '#64748B',
@@ -210,7 +279,7 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       borders: {
         light: '#F3F4F6',
         medium: '#E5E7EB',
-        strong: '#D1D5D7'
+        strong: '#D1D5DB'
       }
     },
     typography: {
@@ -322,14 +391,14 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       }
     },
     effects: {
-      borderRadius: 12,
+      borderRadius: 14, // Increased for more modern appearance
       shadows: {
-        subtle: '0 1px 3px rgba(255, 190, 152, 0.1)',
-        medium: '0 4px 6px rgba(255, 190, 152, 0.15)',
-        strong: '0 10px 15px rgba(255, 190, 152, 0.2)',
-        colored: '0 4px 6px rgba(255, 190, 152, 0.3)',
-        glow: '0 0 8px rgba(255, 107, 53, 0.3)',
-        elevated: '0 12px 24px rgba(255, 190, 152, 0.1)'
+        subtle: '0 2px 4px rgba(255, 190, 152, 0.12)', // Enhanced subtle shadow
+        medium: '0 6px 12px rgba(255, 190, 152, 0.18)', // Improved medium shadow
+        strong: '0 12px 24px rgba(255, 190, 152, 0.25)', // Enhanced strong shadow
+        colored: '0 6px 12px rgba(255, 190, 152, 0.35)', // More prominent colored shadow
+        glow: '0 0 12px rgba(255, 107, 53, 0.4)', // Enhanced glow effect
+        elevated: '0 16px 32px rgba(255, 190, 152, 0.15)' // More elevated shadow
       },
       gradients: {
         primary: 'linear-gradient(135deg, #FFBE98 0%, #FFDAB9 100%)',

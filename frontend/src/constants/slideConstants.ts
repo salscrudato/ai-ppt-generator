@@ -22,24 +22,26 @@ export const SLIDE_DIMENSIONS = {
 } as const;
 
 /**
- * Enhanced layout spacing constants that mirror backend generator
- * All values in inches, optimized for modern presentations and full slide utilization
+ * Enhanced layout spacing constants with improved visual hierarchy
+ * All values in inches, optimized for modern presentations and superior visual impact
  */
 export const LAYOUT_CONSTANTS = {
-  /** Reduced padding for better space utilization */
-  CONTENT_PADDING: 0.5,
-  /** Maximized content width for 16:9 format */
-  MAX_CONTENT_WIDTH: 9.0,
-  /** Optimized starting Y position below title (aligned with backend) */
-  CONTENT_Y: 1.6,
-  /** Enhanced column width for better balance (aligned with backend) */
+  /** Content padding from slide edges (in.) */
+  CONTENT_PADDING: 0.75,
+  /** Max content width (in.) */
+  MAX_CONTENT_WIDTH: 10.0 - (0.75 + 0.75),
+  /** Vertical offset from top to content area start (titleH + gap) (in.) */
+  CONTENT_Y: 1.6, // Aligns with backend LAYOUT.spacing.titleToContent
+  /** Two-column width (in.) */
   COLUMN_WIDTH: 4.0,
-  /** Refined gap between columns */
+  /** Gap between columns (in.) */
   COLUMN_GAP: 0.5,
-  /** Enhanced spacing between elements */
+  /** Spacing between elements (in.) */
   ELEMENT_SPACING: 0.25,
-  /** Margin for visual breathing room */
+  /** Visual margin for cards (in.) */
   VISUAL_MARGIN: 0.15,
+  /** Accent bar height (in.) */
+  ACCENT_HEIGHT: 0.1
 } as const;
 
 /**
@@ -82,20 +84,20 @@ export const PREVIEW_LAYOUT = {
 } as const;
 
 /**
- * Enhanced typography scaling for preview
- * Optimized for better readability and modern visual hierarchy
+ * Enhanced typography scaling for superior preview accuracy
+ * Optimized for better readability and modern visual hierarchy matching backend enhancements
  */
 export const PREVIEW_TYPOGRAPHY = {
-  /** Enhanced title font size for better prominence */
-  titleSize: '2.2rem',
-  /** Improved heading font size */
-  headingSize: '1.5rem',
-  /** Enhanced body text size for better readability */
-  bodySize: '1.1rem',
-  /** Improved small text size */
-  smallSize: '0.9rem',
-  /** Enhanced tiny text size for better legibility */
-  tinySize: '0.8rem',
+  /** Enhanced title font size for superior prominence */
+  titleSize: '2.6rem', // Increased to match backend typography improvements
+  /** Improved heading font size for better hierarchy */
+  headingSize: '1.8rem', // Increased for better visual impact
+  /** Enhanced body text size for superior readability */
+  bodySize: '1.3rem', // Increased to match backend body text improvements
+  /** Improved small text size for better legibility */
+  smallSize: '1.0rem', // Increased for better visibility
+  /** Enhanced tiny text size for superior legibility */
+  tinySize: '0.9rem', // Increased for better readability
 } as const;
 
 /**
