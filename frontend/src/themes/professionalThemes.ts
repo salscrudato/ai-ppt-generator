@@ -94,18 +94,24 @@ export interface ProfessionalTheme {
 }
 
 /**
- * Enhanced Professional Theme Library
- * Synchronized with backend themes for consistent user experience
+ * SIMPLIFIED PROFESSIONAL THEME LIBRARY
+ *
+ * Reduced to 6 core themes with excellent text readability and WCAG compliance.
+ * Synchronized with backend themes for consistent user experience.
+ *
+ * All themes have been tested for:
+ * - WCAG AA/AAA compliance
+ * - Excellent text readability
+ * - Professional appearance
+ * - Cross-platform compatibility
  */
 export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
-  // TOP TIER - MOST AESTHETICALLY PLEASING THEMES
-
-  // Corporate Professional - Enhanced with modern design principles
+  // CORE THEME 1: Corporate Professional - Perfect for business presentations
   {
     id: 'corporate-blue',
     name: 'Corporate Professional',
     category: 'corporate',
-    description: 'Clean, trustworthy theme with modern design elements perfect for business presentations',
+    description: 'Clean, trustworthy theme with excellent text readability perfect for business presentations',
     colors: {
       primary: '#1E40AF',
       secondary: '#3B82F6',
@@ -134,61 +140,42 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       headings: {
         fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600, 700, 800],
-        sizes: {
-          display: 56, // Enhanced for better visual impact
-          h1: 42,      // Improved hierarchy
-          h2: 32,      // Better scaling
-          h3: 24,      // Enhanced readability
-          h4: 20       // Improved visibility
-        },
-        lineHeight: 1.1, // Optimized for headings
-        letterSpacing: '-0.02em' // Modern tight spacing
+        sizes: { display: 56, h1: 42, h2: 32, h3: 24, h4: 20 },
+        lineHeight: 1.1,
+        letterSpacing: '-0.02em'
       },
       body: {
         fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600],
-        sizes: {
-          large: 20,   // Enhanced readability
-          medium: 16,  // Standard body
-          small: 14,   // Improved small text
-          caption: 12  // Better caption size
-        },
-        lineHeight: 1.6, // Optimal reading experience
-        letterSpacing: '0.01em' // Subtle tracking for readability
+        sizes: { large: 20, medium: 16, small: 14, caption: 12 },
+        lineHeight: 1.6,
+        letterSpacing: '0.01em'
       }
     },
     effects: {
-      borderRadius: 12, // Modern rounded corners
+      borderRadius: 12,
       shadows: {
-        subtle: '0 2px 4px rgba(0, 0, 0, 0.06)', // Enhanced subtle shadow
-        medium: '0 6px 12px rgba(0, 0, 0, 0.12)', // Improved medium shadow
-        strong: '0 12px 24px rgba(0, 0, 0, 0.15)', // Enhanced strong shadow
-        colored: '0 6px 12px rgba(30, 64, 175, 0.25)', // Theme-colored shadow
-        glow: '0 0 16px rgba(245, 158, 11, 0.35)', // Enhanced glow effect
-        elevated: '0 16px 32px rgba(0, 0, 0, 0.12)' // Premium elevation
+        subtle: '0 2px 4px rgba(0, 0, 0, 0.06)',
+        medium: '0 6px 12px rgba(0, 0, 0, 0.12)',
+        strong: '0 12px 24px rgba(0, 0, 0, 0.15)',
+        colored: '0 6px 12px rgba(30, 64, 175, 0.25)',
+        glow: '0 0 16px rgba(245, 158, 11, 0.35)',
+        elevated: '0 16px 32px rgba(0, 0, 0, 0.12)'
       },
       gradients: {
         primary: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
-        secondary: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)', // Enhanced secondary
-        accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)', // Improved accent
+        secondary: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+        accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
         background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        mesh: 'radial-gradient(at 20% 80%, rgba(30, 64, 175, 0.08) 0%, transparent 50%), radial-gradient(at 80% 20%, rgba(245, 158, 11, 0.06) 0%, transparent 50%)', // Modern mesh gradient
+        mesh: 'radial-gradient(at 20% 80%, rgba(30, 64, 175, 0.08) 0%, transparent 50%), radial-gradient(at 80% 20%, rgba(245, 158, 11, 0.06) 0%, transparent 50%)',
         subtle: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
         vibrant: 'linear-gradient(45deg, #F59E0B 0%, #1E40AF 100%)'
       }
     },
-    spacing: {
-      xs: 4,
-      sm: 8,
-      md: 16,
-      lg: 24,
-      xl: 32,
-      xxl: 48,
-      xxxl: 64
-    }
+    spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48, xxxl: 64 }
   },
 
-  // Executive Dark Theme - Modern, sleek, and professional
+  // CORE THEME 2: Modern Executive - Fixed dark theme with excellent contrast
   {
     id: 'executive-dark',
     name: 'Modern Executive',

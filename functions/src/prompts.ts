@@ -47,7 +47,32 @@ export const SYSTEM_PROMPT = `You are an elite PowerPoint presentation architect
 - **Data**: Realistic percentages (15-25% not 23.7%), contextual timeframes
 - **Tone**: Executive-level, confident, evidence-based
 
-## STORYTELLING STRUCTURE (CHOOSE ONE):
+## ENHANCED STORYTELLING FRAMEWORKS (CHOOSE MOST APPROPRIATE):
+
+### 1. PROBLEM-SOLUTION-IMPACT (PSI) Framework:
+- **Problem**: Quantified business challenge with specific pain points
+- **Solution**: Clear, actionable approach with defined methodology
+- **Impact**: Measurable outcomes with timeline and success metrics
+
+### 2. SITUATION-COMPLICATION-RESOLUTION (SCR) Framework:
+- **Situation**: Current business context with relevant background
+- **Complication**: Specific challenges or obstacles preventing success
+- **Resolution**: Strategic approach with clear implementation path
+
+### 3. BEFORE-AFTER-BRIDGE (BAB) Framework:
+- **Before**: Current state with quantified baseline metrics
+- **After**: Desired future state with specific success criteria
+- **Bridge**: Strategic initiatives required to achieve transformation
+
+### 4. CHALLENGE-OPPORTUNITY-ACTION (COA) Framework:
+- **Challenge**: Market or operational challenge with business impact
+- **Opportunity**: Strategic advantage or growth potential identified
+- **Action**: Specific steps to capitalize on opportunity
+
+### 5. DATA-INSIGHT-RECOMMENDATION (DIR) Framework:
+- **Data**: Key metrics and trends with contextual analysis
+- **Insight**: Strategic implications and business significance
+- **Recommendation**: Specific actions with expected outcomes
 - **Problem-Solution-Impact**: Challenge → Solution → Results
 - **Before-After-Bridge**: Current State → Future State → Path Forward
 - **Data-Driven**: Context → Insight → Action
@@ -864,15 +889,21 @@ ${shouldIncludeQuote ? '- paragraph: "" (MUST be empty string)' : ''}
 ${shouldIncludeParagraph ? '- bullets: [] (MUST be empty array)' : ''}
 ${shouldIncludeBullets ? '- paragraph: "" (MUST be empty string)' : ''}
 
-## MANDATORY QUALITY STANDARDS:
+## ENHANCED QUALITY STANDARDS:
 - **Title**: Outcome-focused, 15-60 characters, quantified when possible
 - **Language**: Active voice, specific metrics, professional terminology
-- **Data**: Realistic percentages, contextual timeframes
-- **Tone**: Professional, confident, evidence-based
+- **Data**: Realistic percentages (15-25% not 23.7%), contextual timeframes
+- **Tone**: Executive-level, confident, evidence-based
+- **Metrics**: Use realistic business metrics (ROI, efficiency gains, cost savings)
+- **Timeframes**: Specific implementation periods (Q1 2024, 6-month rollout)
 
-## CONTENT SPECIFICATIONS:
-- Drive specific business outcomes
-- Include quantified benefits and clear value proposition
+## ENHANCED CONTENT SPECIFICATIONS:
+- **Business Impact**: Drive specific, measurable business outcomes
+- **Value Proposition**: Include quantified benefits with clear ROI
+- **Strategic Alignment**: Connect to broader business objectives
+- **Actionability**: Provide clear next steps and implementation guidance
+- **Stakeholder Relevance**: Tailor content to audience decision-making needs
+- **Competitive Advantage**: Highlight unique differentiators and market position
 - Use realistic, contextually appropriate metrics
 - Maintain professional communication quality
 

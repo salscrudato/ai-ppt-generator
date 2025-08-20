@@ -25,6 +25,8 @@
     "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest --ci --coverage --watchAll=false",
     "sample:scripts:build": "tsc -p tsconfig.json",
     "sample:generate": "npm run build && node lib/scripts/generate-samples.js",
+    "test:ppt": "npm run build && node lib/scripts/run-comprehensive-tests.js",
+    "test:ppt:debug": "npm run build && node --inspect lib/scripts/run-comprehensive-tests.js",
     "clean": "rm -rf lib",
     "clean:ports": "pkill -f 'firebase emulators' || true && lsof -ti:5003 | xargs kill -9 || true"
   },

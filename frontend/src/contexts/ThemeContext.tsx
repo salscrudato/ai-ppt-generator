@@ -7,8 +7,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { ProfessionalTheme } from '../themes/professionalThemes';
-import { getThemeById, getDefaultTheme } from '../themes/professionalThemes';
+import type { ProfessionalTheme } from '../themes/simplifiedThemes';
+import { getThemeById, getDefaultTheme } from '../themes/simplifiedThemes';
 import { applyGlobalTheme, removeGlobalTheme } from '../utils/themeUtils';
 
 interface ThemeContextType {
