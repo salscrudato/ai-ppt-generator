@@ -22,26 +22,32 @@ export const SLIDE_DIMENSIONS = {
 } as const;
 
 /**
- * Enhanced layout spacing constants with improved visual hierarchy
- * All values in inches, optimized for modern presentations and superior visual impact
+ * Enhanced layout spacing constants with modern design principles
+ * All values in inches, optimized for contemporary presentations and superior visual impact
  */
 export const LAYOUT_CONSTANTS = {
-  /** Content padding from slide edges (in.) */
+  /** Content padding from slide edges (in.) - Enhanced for modern spacing */
   CONTENT_PADDING: 0.75,
-  /** Max content width (in.) */
+  /** Max content width (in.) - Optimized for readability */
   MAX_CONTENT_WIDTH: 10.0 - (0.75 + 0.75),
   /** Vertical offset from top to content area start (titleH + gap) (in.) */
-  CONTENT_Y: 1.6, // Aligns with backend LAYOUT.spacing.titleToContent
-  /** Two-column width (in.) */
+  CONTENT_Y: 2.0, // Increased to match backend LAYOUT.spacing.titleToContent (1.2) + title height
+  /** Two-column width (in.) - Enhanced for better proportions */
   COLUMN_WIDTH: 4.0,
-  /** Gap between columns (in.) */
-  COLUMN_GAP: 0.5,
-  /** Spacing between elements (in.) */
-  ELEMENT_SPACING: 0.25,
-  /** Visual margin for cards (in.) */
-  VISUAL_MARGIN: 0.15,
-  /** Accent bar height (in.) */
-  ACCENT_HEIGHT: 0.1
+  /** Gap between columns (in.) - Improved for visual separation */
+  COLUMN_GAP: 0.6, // Increased for better visual separation
+  /** Spacing between elements (in.) - Enhanced for modern hierarchy */
+  ELEMENT_SPACING: 0.3, // Increased for better breathing room
+  /** Visual margin for cards (in.) - Enhanced for premium feel */
+  VISUAL_MARGIN: 0.2, // Increased for better visual balance
+  /** Accent bar height (in.) - Optimized for modern design */
+  ACCENT_HEIGHT: 0.08, // Slightly reduced for more subtle appearance
+  /** Card padding (in.) - Enhanced for premium spacing */
+  CARD_PADDING: 0.5,
+  /** Border radius (in.) - Modern rounded corners */
+  BORDER_RADIUS: 0.15,
+  /** Shadow offset (in.) - Enhanced depth perception */
+  SHADOW_OFFSET: 0.06
 } as const;
 
 /**
@@ -84,20 +90,30 @@ export const PREVIEW_LAYOUT = {
 } as const;
 
 /**
- * Enhanced typography scaling for superior preview accuracy
- * Optimized for better readability and modern visual hierarchy matching backend enhancements
+ * Modern typography scaling for superior preview accuracy
+ * Optimized for contemporary design and enhanced readability matching backend improvements
  */
 export const PREVIEW_TYPOGRAPHY = {
+  /** Enhanced display font size for maximum impact */
+  displaySize: '3.2rem', // New display size for hero titles
   /** Enhanced title font size for superior prominence */
-  titleSize: '2.6rem', // Increased to match backend typography improvements
+  titleSize: '2.8rem', // Increased for better visual hierarchy
   /** Improved heading font size for better hierarchy */
-  headingSize: '1.8rem', // Increased for better visual impact
+  headingSize: '2.0rem', // Enhanced for modern design
   /** Enhanced body text size for superior readability */
-  bodySize: '1.3rem', // Increased to match backend body text improvements
+  bodySize: '1.4rem', // Increased for better readability
   /** Improved small text size for better legibility */
-  smallSize: '1.0rem', // Increased for better visibility
+  smallSize: '1.1rem', // Enhanced for better visibility
   /** Enhanced tiny text size for superior legibility */
-  tinySize: '0.9rem', // Increased for better readability
+  tinySize: '1.0rem', // Increased for better accessibility
+  /** Line height multipliers for optimal reading */
+  lineHeights: {
+    display: 1.1,
+    title: 1.15,
+    heading: 1.2,
+    body: 1.6,
+    small: 1.5
+  }
 } as const;
 
 /**
@@ -138,6 +154,45 @@ export type SupportedLayout = typeof SUPPORTED_LAYOUTS[number];
 
 /**
  * Animation constants for slide transitions and interactions
+ */
+/**
+ * Enhanced preview constants that match backend PowerPoint generation
+ * Ensures accurate preview-to-output consistency
+ */
+export const PREVIEW_CONSTANTS = {
+  /** Slide aspect ratio (16:9) */
+  aspectRatio: SLIDE_DIMENSIONS.ASPECT_RATIO,
+
+  /** Preview sizes for different contexts */
+  sizes: {
+    small: { width: 240, height: 135 },
+    medium: { width: 400, height: 225 },
+    large: { width: 640, height: 360 },
+    xlarge: { width: 800, height: 450 }
+  },
+
+  /** Typography scaling that matches backend font sizes */
+  typography: {
+    display: { scale: 0.08, lineHeight: 1.1 },
+    title: { scale: 0.06, lineHeight: 1.15 },
+    subtitle: { scale: 0.045, lineHeight: 1.4 },
+    body: { scale: 0.035, lineHeight: 1.6 },
+    bullet: { scale: 0.032, lineHeight: 1.5 },
+    caption: { scale: 0.028, lineHeight: 1.4 }
+  },
+
+  /** Color opacity values for consistent theming */
+  opacity: {
+    background: 0.95,
+    surface: 0.12,
+    accent: 0.8,
+    shadow: 0.15,
+    overlay: 0.6
+  }
+} as const;
+
+/**
+ * Animation constants for modern slide transitions and interactions
  */
 export const ANIMATION_CONSTANTS = {
   DURATION: {

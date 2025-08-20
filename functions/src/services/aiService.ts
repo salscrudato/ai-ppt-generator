@@ -30,9 +30,7 @@ import {
   SYSTEM_PROMPT,
   generateContentPrompt,
   generateLayoutPrompt,
-  generateImagePrompt,
-  generateRefinementPrompt,
-  generateBatchImagePrompts
+  generateRefinementPrompt
 } from '../prompts';
 import { logger, type LogContext } from '../utils/smartLogger';
 
@@ -79,7 +77,6 @@ function getOpenAI(): OpenAI {
 export interface IAIService {
   generateSlideContent(input: GenerationParams): Promise<SlideSpec>;
   generateBatchSlides(input: GenerationParams, slideCount: number): Promise<SlideSpec[]>;
-  generateImagePrompts(slides: Partial<SlideSpec>[], input: GenerationParams, context?: LogContext): Promise<string[]>;
   validateContent(content: any): Promise<boolean>;
 }
 
@@ -102,13 +99,13 @@ export class AIService implements IAIService {
 
     logger.info(`Single slide generation for prompt: ${input.prompt.substring(0, 50)}...`, context, {
       model: this.config.model,
-      withImage: input.withImage
+      components: input.components
     });
 
     // Log cost estimate
     logCostEstimate({
       textTokens: 3000,
-      imageCount: input.withImage ? 1 : 0,
+      imageCount: 0,
       operation: 'Single Slide Generation'
     });
 
@@ -131,16 +128,7 @@ export class AIService implements IAIService {
         context
       );
 
-      // Step 3: Generate image prompt if enabled
-      if (input.withImage) {
-        partialSpec = await this.executeAIStep(
-          generateImagePrompt(input, partialSpec),
-          'Image Prompt Generation',
-          partialSpec,
-          input,
-          context
-        );
-      }
+      // Step 3: Image generation removed for simplification
 
       // Step 4: Final refinement
       const finalSpec = await this.executeAIStep(
@@ -151,6 +139,9 @@ export class AIService implements IAIService {
         context
       );
 
+      // Step 5: Enforce component exclusivity
+      const enforcedSpec = this.enforceComponentExclusivity(finalSpec, input);
+
       const generationTime = Date.now() - startTime;
 
       logger.info('Quality metrics', context, {
@@ -158,10 +149,10 @@ export class AIService implements IAIService {
         slideTitle: finalSpec.title,
         layout: finalSpec.layout,
         contentLength: JSON.stringify(finalSpec).length,
-        hasImage: !!finalSpec.imagePrompt
+        hasImage: !!finalSpec.imageUrl
       });
 
-      return finalSpec;
+      return enforcedSpec;
     } catch (error) {
       const generationTime = Date.now() - startTime;
 
@@ -189,13 +180,13 @@ export class AIService implements IAIService {
     logger.info(`Batch generation for ${slideCount} slides with prompt: ${input.prompt.substring(0, 50)}...`, context, {
       slideCount,
       model: this.config.model,
-      withImage: input.withImage
+      withImage: false
     });
 
     // Log cost estimate
     logCostEstimate({
       textTokens: 3000 * slideCount,
-      imageCount: input.withImage ? slideCount : 0,
+      imageCount: 0,
       operation: `Batch Generation (${slideCount} slides)`
     });
 
@@ -231,10 +222,7 @@ export class AIService implements IAIService {
         slides.push(partialSpec);
       }
 
-      // Batch process images if enabled
-      if (input.withImage && slides.length > 0) {
-        await this.processBatchImages(slides, input);
-      }
+
 
       const generationTime = Date.now() - startTime;
       console.log(`Batch generation completed in ${generationTime}ms`);
@@ -247,64 +235,7 @@ export class AIService implements IAIService {
     }
   }
 
-  /**
-   * Generate image prompts for multiple slides
-   */
-  async generateImagePrompts(slides: Partial<SlideSpec>[], input: GenerationParams, context?: LogContext): Promise<string[]> {
-    console.log(`Generating image prompts for ${slides.length} slides...`);
 
-    const baseContext = context || {
-      component: 'aiService',
-      operation: 'generateImagePrompts'
-    };
-
-    try {
-      const batchPrompt = generateBatchImagePrompts(input, slides);
-      const response = await this.executeAIStep(batchPrompt, 'Batch Image Processing', undefined, input, {
-        component: 'aiService',
-        operation: 'generateImagePrompts'
-      });
-      
-      // Parse batch response (implementation depends on response format)
-      // This is a simplified version - actual implementation would parse the JSON array
-      return slides.map((_, index) => `Professional image for slide ${index + 1}`);
-    } catch (error) {
-      console.warn('Batch image processing failed, falling back to individual processing:', error);
-      
-      // Fallback to individual processing
-      const imagePrompts: string[] = [];
-      for (let i = 0; i < slides.length; i++) {
-        try {
-          const slideWithImage = await this.executeAIStep(
-            generateImagePrompt(input, slides[i]),
-            `Image Prompt (Slide ${i + 1})`,
-            slides[i],
-            input,
-            {
-              component: 'aiService',
-              operation: 'generateImagePrompts',
-              stage: `slide_${i}`
-            }
-          );
-          imagePrompts.push(slideWithImage.imagePrompt || '');
-        } catch (imageError) {
-          const imageContext: LogContext = {
-            ...baseContext,
-            operation: 'generateBatchImages',
-            stage: `slide_${i}`
-          };
-
-          logger.error('Image generation failed', imageContext, {
-            error: imageError instanceof Error ? imageError.message : String(imageError),
-            slideIndex: i,
-            slideTitle: slides[i].title
-          });
-          imagePrompts.push('');
-        }
-      }
-      return imagePrompts;
-    }
-  }
 
   /**
    * Validate content quality
@@ -578,7 +509,7 @@ export class AIService implements IAIService {
       complexity += spec.paragraph.length / 100; // 1 point per 100 characters
     }
 
-    if (spec.imagePrompt) {
+    if (spec.imageUrl) {
       complexity += 2; // Images add significant complexity
     }
 
@@ -587,6 +518,90 @@ export class AIService implements IAIService {
     }
 
     return Math.round(complexity * 10) / 10; // Round to 1 decimal place
+  }
+
+  /**
+   * Enforce component exclusivity based on user selection
+   */
+  private enforceComponentExclusivity(spec: SlideSpec, input: GenerationParams): SlideSpec {
+    const components = input.components || {};
+    const selectedComponents = Object.entries(components).filter(([_, enabled]) => enabled);
+    const primaryComponent = selectedComponents.length > 0 ? selectedComponents[0][0] : 'bulletList';
+
+    const enforcedSpec = { ...spec };
+
+    // Enforce mutually exclusive component selection
+    switch (primaryComponent) {
+      case 'chart':
+        enforcedSpec.bullets = [];
+        enforcedSpec.paragraph = '';
+        enforcedSpec.layout = 'chart';
+        // Ensure chart data exists or generate stub data
+        if (!enforcedSpec.chart) {
+          enforcedSpec.chart = {
+            type: 'column',
+            categories: ['Q1', 'Q2', 'Q3', 'Q4'],
+            series: [{ name: 'Revenue', data: [2.4, 3.1, 3.8, 4.5] }],
+            title: 'Quarterly Performance',
+            showLegend: true,
+            showDataLabels: false
+          };
+        }
+        break;
+
+      case 'table':
+        enforcedSpec.bullets = [];
+        enforcedSpec.paragraph = '';
+        enforcedSpec.layout = 'comparison-table';
+        // Ensure table data exists or generate stub data
+        if (!enforcedSpec.comparisonTable) {
+          enforcedSpec.comparisonTable = {
+            headers: ['Metric', 'Q3', 'Q4', 'Growth'],
+            rows: [
+              ['Revenue', '$2.1M', '$2.8M', '33%'],
+              ['Customers', '1,200', '1,560', '30%'],
+              ['Satisfaction', '87%', '94%', '8%']
+            ]
+          };
+        }
+        break;
+
+      case 'quote':
+        enforcedSpec.bullets = [];
+        enforcedSpec.paragraph = '';
+        enforcedSpec.layout = 'quote';
+        // Ensure quote exists
+        if (!enforcedSpec.quote) {
+          enforcedSpec.quote = 'Innovation distinguishes between a leader and a follower.';
+          enforcedSpec.author = 'Steve Jobs';
+        }
+        break;
+
+      case 'paragraph':
+        enforcedSpec.bullets = [];
+        enforcedSpec.layout = 'title-paragraph';
+        // Ensure paragraph content exists
+        if (!enforcedSpec.paragraph || enforcedSpec.paragraph.trim() === '') {
+          enforcedSpec.paragraph = 'Our strategic market analysis reveals significant opportunities for growth through enhanced customer engagement and data-driven decision making. By leveraging advanced analytics and customer behavior insights, we can identify key trends that drive purchasing decisions and optimize our approach to meet evolving market demands. This comprehensive analysis provides the foundation for sustainable competitive advantage and measurable business impact.';
+        }
+        break;
+
+      case 'bulletList':
+      default:
+        enforcedSpec.paragraph = '';
+        enforcedSpec.layout = 'title-bullets';
+        // Ensure bullets exist
+        if (!enforcedSpec.bullets || enforcedSpec.bullets.length === 0) {
+          enforcedSpec.bullets = [
+            'Key point addressing the main topic with specific metrics',
+            'Supporting evidence demonstrating measurable business impact',
+            'Strategic initiative driving growth and operational efficiency'
+          ];
+        }
+        break;
+    }
+
+    return enforcedSpec;
   }
 
   /**
@@ -642,29 +657,7 @@ export class AIService implements IAIService {
     );
   }
 
-  /**
-   * Process batch images for multiple slides
-   */
-  private async processBatchImages(slides: SlideSpec[], input: GenerationParams): Promise<void> {
-    console.log('Processing batch image prompts...');
-    
-    try {
-      const imagePrompts = await this.generateImagePrompts(slides, input, {
-        component: 'aiService',
-        operation: 'processBatchImages'
-      });
-      
-      // Apply image prompts to slides
-      for (let i = 0; i < slides.length && i < imagePrompts.length; i++) {
-        if (imagePrompts[i]) {
-          (slides[i] as any).imagePrompt = imagePrompts[i];
-        }
-      }
-    } catch (error) {
-      console.warn('Batch image processing failed:', error);
-      // Continue without images rather than failing the entire generation
-    }
-  }
+
 }
 
 // Export singleton instance

@@ -3,7 +3,7 @@
  * @version 2.0.0 - AI-optimized for simplicity and maintainability
  */
 
-import { generateSimplePpt } from '../pptGenerator-simple';
+import { generatePresentation } from '../core/generator';
 import { type SlideSpec } from '../schema';
 import { type ProfessionalTheme } from '../professionalThemes';
 
@@ -44,7 +44,7 @@ export interface IPowerPointService {
 export class PowerPointService implements IPowerPointService {
   static readonly MAX_SLIDES = 50;
 
-  constructor(private readonly logger: Pick<Console, 'log' | 'warn' | 'error'> = console) {}
+  constructor() {}
 
   /** Generate a complete PowerPoint presentation */
   async generatePresentation(slides: SlideSpec[], options: PowerPointOptions): Promise<PowerPointResult> {
@@ -66,8 +66,15 @@ export class PowerPointService implements IPowerPointService {
     }
 
     try {
+      // Optionally resolve images before generation
+      let slidesToUse = slides;
+      if (options.includeImages) {
+        const { resolveImagesForSlides } = await import('./imageOrchestrator');
+        slidesToUse = await resolveImagesForSlides(slides, { provider: 'dalle', aspectRatio: '16:9', size: 'medium' });
+      }
+
       // Generate PowerPoint
-      const buffer = await generateSimplePpt(slides, options.theme?.id, {
+      const buffer = await generatePresentation(slidesToUse, options.theme?.id, {
         includeMetadata: options.includeMetadata,
         includeSpeakerNotes: options.includeNotes,
         optimizeFileSize: options.optimizeForSize,
@@ -89,7 +96,7 @@ export class PowerPointService implements IPowerPointService {
         },
       };
     } catch (error) {
-      this.logger.error('PowerPoint generation failed:', error);
+      // Error will be handled by calling function
       throw new Error(`PowerPoint generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

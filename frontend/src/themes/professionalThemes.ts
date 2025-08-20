@@ -100,12 +100,12 @@ export interface ProfessionalTheme {
 export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
   // TOP TIER - MOST AESTHETICALLY PLEASING THEMES
 
-  // Corporate Professional - Clean, trustworthy, universally appealing
+  // Corporate Professional - Enhanced with modern design principles
   {
     id: 'corporate-blue',
     name: 'Corporate Professional',
     category: 'corporate',
-    description: 'Clean, trustworthy theme perfect for business presentations',
+    description: 'Clean, trustworthy theme with modern design elements perfect for business presentations',
     colors: {
       primary: '#1E40AF',
       secondary: '#3B82F6',
@@ -135,194 +135,46 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
         fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600, 700, 800],
         sizes: {
-          display: 52,
-          h1: 38,
-          h2: 28,
-          h3: 22,
-          h4: 18
-        }
-      },
-      body: {
-        fontFamily: 'Inter, system-ui, sans-serif',
-        weights: [400, 500, 600],
-        sizes: {
-          large: 19,
-          medium: 16,
-          small: 14,
-          caption: 12
-        }
-      }
-    },
-    effects: {
-      shadows: {
-        subtle: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        strong: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-      },
-      gradients: {
-        primary: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
-        accent: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-        surface: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)'
-      }
-    }
-  },
-
-  // Executive Dark Theme
-  {
-    id: 'executive-dark',
-    name: 'Modern Executive',
-    category: 'corporate',
-    description: 'Sophisticated dark theme for executive presentations',
-    colors: {
-      primary: '#3B82F6',
-      secondary: '#64748B',
-      accent: '#10B981',
-      background: '#1E293B',
-      surface: '#334155',
-      text: {
-        primary: '#F8FAFC',
-        secondary: '#CBD5E1',
-        inverse: '#1E293B',
-        muted: '#94A3B8'
-      },
-      semantic: {
-        success: '#10B981',
-        warning: '#F59E0B',
-        error: '#EF4444',
-        info: '#3B82F6'
-      },
-      borders: {
-        light: '#475569',
-        medium: '#64748B',
-        strong: '#94A3B8'
-      }
-    },
-    typography: {
-      headings: {
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        weights: [400, 500, 600, 700],
-        sizes: {
-          display: 48,
-          h1: 36,
-          h2: 28,
-          h3: 22,
-          h4: 18
-        }
-      },
-      body: {
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        weights: [400, 500],
-        sizes: {
-          large: 18,
-          medium: 16,
-          small: 14,
-          caption: 12
+          display: 56, // Enhanced for better visual impact
+          h1: 42,      // Improved hierarchy
+          h2: 32,      // Better scaling
+          h3: 24,      // Enhanced readability
+          h4: 20       // Improved visibility
         },
-        lineHeight: 1.6
-      }
-    },
-    spacing: {
-      baseUnit: 4,
-      scale: {
-        xs: 4,
-        sm: 8,
-        md: 16,
-        lg: 24,
-        xl: 32,
-        xxl: 48
-      }
-    },
-    effects: {
-      shadows: {
-        sm: '0 1px 2px rgba(0, 0, 0, 0.3)',
-        md: '0 4px 6px rgba(0, 0, 0, 0.3)',
-        lg: '0 10px 15px rgba(0, 0, 0, 0.3)',
-        xl: '0 20px 25px rgba(0, 0, 0, 0.4)'
-      },
-      borderRadius: {
-        sm: 4,
-        md: 8,
-        lg: 12,
-        xl: 16
-      },
-      transitions: {
-        fast: '150ms ease-in-out',
-        normal: '300ms ease-in-out',
-        slow: '500ms ease-in-out'
-      }
-    }
-  },
-  // Core Professional Themes
-  {
-    id: 'corporate-blue',
-    name: 'Corporate Professional',
-    category: 'corporate',
-    description: 'Clean, trustworthy design perfect for business presentations',
-    colors: {
-      primary: '#1E40AF',
-      secondary: '#3B82F6',
-      accent: '#F59E0B',
-      background: '#FFFFFF',
-      surface: '#F8FAFC',
-      text: {
-        primary: '#1F2937',
-        secondary: '#6B7280',
-        inverse: '#FFFFFF',
-        muted: '#9CA3AF'
-      },
-      semantic: {
-        success: '#10B981',
-        warning: '#F59E0B',
-        error: '#EF4444',
-        info: '#3B82F6'
-      },
-      borders: {
-        light: '#F3F4F6',
-        medium: '#E5E7EB',
-        strong: '#D1D5DB'
-      }
-    },
-    typography: {
-      headings: {
-        fontFamily: 'Inter, system-ui, sans-serif',
-        weights: [600, 700, 800],
-        sizes: {
-          display: 48,
-          h1: 36,
-          h2: 28,
-          h3: 22,
-          h4: 18
-        }
+        lineHeight: 1.1, // Optimized for headings
+        letterSpacing: '-0.02em' // Modern tight spacing
       },
       body: {
         fontFamily: 'Inter, system-ui, sans-serif',
         weights: [400, 500, 600],
         sizes: {
-          large: 18,
-          normal: 16,
-          small: 14,
-          tiny: 12
-        }
+          large: 20,   // Enhanced readability
+          medium: 16,  // Standard body
+          small: 14,   // Improved small text
+          caption: 12  // Better caption size
+        },
+        lineHeight: 1.6, // Optimal reading experience
+        letterSpacing: '0.01em' // Subtle tracking for readability
       }
     },
     effects: {
-      borderRadius: 8,
+      borderRadius: 12, // Modern rounded corners
       shadows: {
-        subtle: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-        medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        strong: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-        colored: '0 4px 6px rgba(30, 64, 175, 0.2)',
-        glow: '0 0 8px rgba(245, 158, 11, 0.3)',
-        elevated: '0 12px 24px rgba(0, 0, 0, 0.08)'
+        subtle: '0 2px 4px rgba(0, 0, 0, 0.06)', // Enhanced subtle shadow
+        medium: '0 6px 12px rgba(0, 0, 0, 0.12)', // Improved medium shadow
+        strong: '0 12px 24px rgba(0, 0, 0, 0.15)', // Enhanced strong shadow
+        colored: '0 6px 12px rgba(30, 64, 175, 0.25)', // Theme-colored shadow
+        glow: '0 0 16px rgba(245, 158, 11, 0.35)', // Enhanced glow effect
+        elevated: '0 16px 32px rgba(0, 0, 0, 0.12)' // Premium elevation
       },
       gradients: {
         primary: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
-        secondary: 'linear-gradient(135deg, #3B82F6 0%, #F59E0B 100%)',
-        accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+        secondary: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)', // Enhanced secondary
+        accent: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)', // Improved accent
         background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-        mesh: 'radial-gradient(at 0% 0%, rgba(30, 64, 175, 0.1), transparent 50%)',
-        subtle: 'linear-gradient(180deg, #F8FAFC, #FFFFFF)',
-        vibrant: 'linear-gradient(45deg, #F59E0B, #1E40AF)'
+        mesh: 'radial-gradient(at 20% 80%, rgba(30, 64, 175, 0.08) 0%, transparent 50%), radial-gradient(at 80% 20%, rgba(245, 158, 11, 0.06) 0%, transparent 50%)', // Modern mesh gradient
+        subtle: 'linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%)',
+        vibrant: 'linear-gradient(45deg, #F59E0B 0%, #1E40AF 100%)'
       }
     },
     spacing: {
@@ -335,6 +187,95 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       xxxl: 64
     }
   },
+
+  // Executive Dark Theme - Modern, sleek, and professional
+  {
+    id: 'executive-dark',
+    name: 'Modern Executive',
+    category: 'corporate',
+    description: 'Sophisticated dark theme with premium design elements and excellent contrast for executive presentations',
+    colors: {
+      primary: '#3B82F6', // Vibrant blue for strong contrast
+      secondary: '#8B5CF6', // Purple accent for sophistication
+      accent: '#10B981', // Emerald green for highlights
+      background: '#0F172A', // Deep navy background
+      surface: '#1E293B', // Elevated surface color
+      text: {
+        primary: '#FFFFFF', // Pure white for maximum contrast
+        secondary: '#E2E8F0', // Light gray for secondary text
+        inverse: '#0F172A', // Dark text for light backgrounds
+        muted: '#CBD5E1' // Muted but still readable
+      },
+      semantic: {
+        success: '#10B981', // Emerald green
+        warning: '#F59E0B', // Amber warning
+        error: '#EF4444', // Red error
+        info: '#3B82F6' // Blue info
+      },
+      borders: {
+        light: '#334155', // Subtle borders
+        medium: '#475569', // Medium borders
+        strong: '#64748B' // Strong borders
+      }
+    },
+    typography: {
+      headings: {
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        weights: [500, 600, 700, 800],
+        sizes: {
+          display: 52, // Enhanced for impact
+          h1: 40,      // Improved hierarchy
+          h2: 30,      // Better scaling
+          h3: 24,      // Enhanced readability
+          h4: 20       // Improved visibility
+        },
+        lineHeight: 1.1,
+        letterSpacing: '-0.025em' // Tighter for dark themes
+      },
+      body: {
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        weights: [400, 500, 600],
+        sizes: {
+          large: 19,   // Enhanced readability on dark
+          medium: 16,  // Standard body
+          small: 14,   // Improved small text
+          caption: 12  // Better caption size
+        },
+        lineHeight: 1.65, // Slightly more for dark theme readability
+        letterSpacing: '0.015em' // Enhanced tracking for dark backgrounds
+      }
+    },
+    effects: {
+      borderRadius: 14, // Modern rounded corners
+      shadows: {
+        subtle: '0 4px 12px rgba(0, 0, 0, 0.25)', // Soft shadow for dark theme
+        medium: '0 8px 24px rgba(0, 0, 0, 0.35)', // Medium depth
+        strong: '0 16px 40px rgba(0, 0, 0, 0.45)', // Strong elevation
+        colored: '0 8px 24px rgba(59, 130, 246, 0.4)', // Blue glow shadow
+        glow: '0 0 24px rgba(16, 185, 129, 0.5)', // Emerald glow effect
+        elevated: '0 24px 48px rgba(0, 0, 0, 0.4)' // Maximum premium elevation
+      },
+      gradients: {
+        primary: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+        secondary: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+        accent: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 15%, #0F172A 100%)',
+        mesh: 'radial-gradient(at 25% 75%, rgba(59, 130, 246, 0.2) 0%, transparent 60%), radial-gradient(at 75% 25%, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
+        subtle: 'linear-gradient(180deg, #1E293B 0%, #334155 50%, #1E293B 100%)',
+        vibrant: 'linear-gradient(45deg, #3B82F6 0%, #8B5CF6 50%, #10B981 100%)'
+      }
+    },
+    spacing: {
+      xs: 4,
+      sm: 8,
+      md: 16,
+      lg: 24,
+      xl: 32,
+      xxl: 48,
+      xxxl: 64
+    }
+  },
+
 
   // 2024 Modern Themes
   {
@@ -391,23 +332,23 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
       }
     },
     effects: {
-      borderRadius: 14, // Increased for more modern appearance
+      borderRadius: 16, // Modern rounded corners for warm theme
       shadows: {
-        subtle: '0 2px 4px rgba(255, 190, 152, 0.12)', // Enhanced subtle shadow
-        medium: '0 6px 12px rgba(255, 190, 152, 0.18)', // Improved medium shadow
-        strong: '0 12px 24px rgba(255, 190, 152, 0.25)', // Enhanced strong shadow
-        colored: '0 6px 12px rgba(255, 190, 152, 0.35)', // More prominent colored shadow
-        glow: '0 0 12px rgba(255, 107, 53, 0.4)', // Enhanced glow effect
-        elevated: '0 16px 32px rgba(255, 190, 152, 0.15)' // More elevated shadow
+        subtle: '0 3px 6px rgba(255, 190, 152, 0.15)', // Enhanced warm shadow
+        medium: '0 8px 16px rgba(255, 190, 152, 0.22)', // Improved depth
+        strong: '0 16px 32px rgba(255, 190, 152, 0.28)', // Premium elevation
+        colored: '0 8px 16px rgba(255, 107, 53, 0.4)', // Vibrant accent shadow
+        glow: '0 0 20px rgba(255, 107, 53, 0.45)', // Enhanced warm glow
+        elevated: '0 20px 40px rgba(255, 190, 152, 0.2)' // Sophisticated elevation
       },
       gradients: {
         primary: 'linear-gradient(135deg, #FFBE98 0%, #FFDAB9 100%)',
-        secondary: 'linear-gradient(135deg, #FFDAB9 0%, #FF6B35 100%)',
-        accent: 'linear-gradient(135deg, #FF6B35 0%, #FFBE98 100%)',
+        secondary: 'linear-gradient(135deg, #FFDAB9 0%, #FFD4B3 100%)', // Softer secondary
+        accent: 'linear-gradient(135deg, #FF6B35 0%, #FF8A65 100%)', // Enhanced accent
         background: 'linear-gradient(135deg, #FFF8F5 0%, #FFE8E0 100%)',
-        mesh: 'radial-gradient(at 0% 0%, rgba(255, 190, 152, 0.1), transparent 50%)',
-        subtle: 'linear-gradient(180deg, #FFE8E0, #FFF8F5)',
-        vibrant: 'linear-gradient(45deg, #FF6B35, #FFBE98)'
+        mesh: 'radial-gradient(at 25% 75%, rgba(255, 190, 152, 0.12) 0%, transparent 50%), radial-gradient(at 75% 25%, rgba(255, 107, 53, 0.08) 0%, transparent 50%)', // Modern mesh
+        subtle: 'linear-gradient(180deg, #FFE8E0 0%, #FFF8F5 100%)',
+        vibrant: 'linear-gradient(45deg, #FF6B35 0%, #FFBE98 100%)'
       }
     },
     spacing: {

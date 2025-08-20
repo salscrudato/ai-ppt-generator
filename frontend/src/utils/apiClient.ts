@@ -5,7 +5,7 @@
  */
 
 import { API_ENDPOINTS } from '../config';
-import { frontendDebugLogger, DebugCategory } from './debugLogger';
+import { logger } from './cleanLogger';
 
 
 // API response wrapper
@@ -54,11 +54,7 @@ class APIClient {
       ...defaultHeaders
     };
 
-    frontendDebugLogger.info('API Client initialized', DebugCategory.API, {
-      baseURL,
-      defaultHeaders: this.defaultHeaders,
-      userAgent: navigator.userAgent
-    });
+    // API Client initialized
   }
 
   // Core request method with comprehensive debugging
@@ -70,13 +66,7 @@ class APIClient {
     const url = `${this.baseURL}${endpoint}`;
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Start tracking with both loggers
-    const apiCallId = frontendDebugLogger.trackAPICall(url, mergedOptions.method || 'GET', mergedOptions.body);
-    const perfId = frontendDebugLogger.startPerformanceTracking(`API ${mergedOptions.method} ${endpoint}`, {
-      requestId,
-      endpoint,
-      method: mergedOptions.method
-    });
+    // API request starting
 
     // Advanced logger tracking
     const context: FrontendLogContext = {
@@ -85,24 +75,9 @@ class APIClient {
       action: 'request'
     };
 
-    const advancedRequestId = frontendDebugLogger.trackAPICall(
-      url,
-      mergedOptions.method || 'GET',
-      mergedOptions.body
-    );
-
     const startTime = performance.now();
 
     try {
-      frontendDebugLogger.debug('Starting API request', DebugCategory.API, {
-        requestId,
-        url,
-        method: mergedOptions.method,
-        headers: { ...this.defaultHeaders, ...mergedOptions.headers },
-        bodyPreview: mergedOptions.body ? JSON.stringify(mergedOptions.body).substring(0, 200) + '...' : undefined,
-        timeout: mergedOptions.timeout
-      });
-
       const response = await this.executeRequest(url, mergedOptions, requestId);
       const duration = performance.now() - startTime;
 
@@ -117,11 +92,6 @@ class APIClient {
         }
       } catch (parseError) {
         errorMessage = `Failed to parse response: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
-        frontendDebugLogger.warn('Response parsing failed', DebugCategory.API, {
-          requestId,
-          parseError: errorMessage,
-          status: response.status
-        });
       }
 
       const success = response.ok;
@@ -137,21 +107,6 @@ class APIClient {
         }
       };
 
-      // Complete tracking
-      frontendDebugLogger.completeAPICall(
-        apiCallId,
-        response.status,
-        responseData,
-        !success ? apiResponse.error : undefined
-      );
-
-      frontendDebugLogger.endPerformanceTracking(perfId, {
-        success,
-        status: response.status,
-        responseSize: JSON.stringify(responseData || {}).length,
-        duration
-      });
-
       // Advanced logger response tracking
       const apiMetrics: APICallMetrics = {
         url,
@@ -164,44 +119,11 @@ class APIClient {
         cached: false
       };
 
-      frontendDebugLogger.completeAPICall(advancedRequestId, response.status, responseData);
-
-      if (success) {
-        frontendDebugLogger.info(`API request successful: ${mergedOptions.method} ${endpoint}`, DebugCategory.API, {
-          requestId,
-          status: response.status,
-          duration: `${duration.toFixed(2)}ms`,
-          responseSize: `${JSON.stringify(responseData || {}).length} bytes`
-        });
-      } else {
-        frontendDebugLogger.error(`API request failed: ${mergedOptions.method} ${endpoint}`, {
-          requestId,
-          status: response.status,
-          error: apiResponse.error,
-          duration: `${duration.toFixed(2)}ms`
-        });
-      }
-
       return apiResponse;
 
     } catch (error) {
       const duration = performance.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
-
-      frontendDebugLogger.completeAPICall(apiCallId, 0, null, errorMessage);
-      frontendDebugLogger.endPerformanceTracking(perfId, {
-        success: false,
-        error: errorMessage,
-        duration
-      });
-
-      frontendDebugLogger.error(`API request error: ${mergedOptions.method} ${endpoint}`, {
-        requestId,
-        error: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
-        duration: `${duration.toFixed(2)}ms`,
-        url
-      });
 
       return {
         data: undefined,
@@ -244,12 +166,7 @@ class APIClient {
       const isLastAttempt = attempt >= (retries || 0) + 1;
 
       if (!isLastAttempt && this.shouldRetry(error)) {
-        frontendDebugLogger.warn(`API request retry ${attempt}/${retries}`, DebugCategory.API, {
-          requestId,
-          attempt,
-          error: error instanceof Error ? error.message : String(error),
-          retryDelay
-        });
+        
 
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         return this.executeRequest(url, options, requestId, attempt + 1);
@@ -289,22 +206,14 @@ class APIClient {
 
   // Health check with detailed diagnostics
   async healthCheck(): Promise<APIResponse<any>> {
-    frontendDebugLogger.info('Starting health check', DebugCategory.API);
+    
 
     const result = await this.get('/health');
 
     if (result.success) {
-      frontendDebugLogger.info('Health check passed', DebugCategory.API, {
-        status: result.status,
-        data: result.data,
-        responseTime: result.metadata?.duration
-      });
+      
     } else {
-      frontendDebugLogger.error('Health check failed', {
-        status: result.status,
-        error: result.error,
-        responseTime: result.metadata?.duration
-      });
+      
     }
 
     return result;
@@ -312,7 +221,7 @@ class APIClient {
 
   // Get API statistics
   getStats() {
-    return frontendDebugLogger.getAPICallStats();
+    return 
   }
 }
 

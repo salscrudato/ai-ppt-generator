@@ -17,7 +17,7 @@
  * @version 3.3.2-production-ready
  */
 
-import { frontendDebugLogger, DebugCategory } from './utils/debugLogger';
+import { logger } from './utils/cleanLogger';
 
 // Robust environment detection for API base URL
 const getApiBaseUrl = () => {
@@ -95,19 +95,38 @@ export const API_ENDPOINTS = {
  * Enhanced API connectivity verification with comprehensive debugging
  * This helps debug connection issues in production and development
  */
-export const verifyApiConnection = async (): Promise<boolean> => {
+// Singleton pattern to prevent multiple simultaneous API checks
+let apiCheckPromise: Promise<boolean> | null = null;
+let lastCheckTime = 0;
+const CHECK_CACHE_DURATION = 5000; // 5 seconds
 
-  const apiCallId = frontendDebugLogger.trackAPICall(API_ENDPOINTS.health, 'GET');
+export const verifyApiConnection = async (): Promise<boolean> => {
+  const now = Date.now();
+
+  // Return cached result if recent
+  if (now - lastCheckTime < CHECK_CACHE_DURATION && apiCheckPromise) {
+    return apiCheckPromise;
+  }
+
+  // Prevent multiple simultaneous calls
+  if (apiCheckPromise) {
+    return apiCheckPromise;
+  }
+
+  apiCheckPromise = performApiCheck();
+  lastCheckTime = now;
 
   try {
-    console.log('🔍 Verifying API connection to:', API_ENDPOINTS.health);
+    const result = await apiCheckPromise;
+    return result;
+  } finally {
+    // Clear promise after completion
+    setTimeout(() => { apiCheckPromise = null; }, 1000);
+  }
+};
 
-    frontendDebugLogger.info('Starting API connection verification', DebugCategory.API, {
-      endpoint: API_ENDPOINTS.health,
-      baseUrl: API_BASE_URL,
-      hostname: window.location.hostname,
-      userAgent: navigator.userAgent
-    });
+async function performApiCheck(): Promise<boolean> {
+  try {
 
     const response = await fetch(API_ENDPOINTS.health, {
       method: 'GET',
@@ -120,26 +139,9 @@ export const verifyApiConnection = async (): Promise<boolean> => {
 
     if (response.ok) {
       const data = await response.json();
-      console.log('✅ API connection successful:', data);
-
-      frontendDebugLogger.completeAPICall(apiCallId, response.status, data);
-      frontendDebugLogger.info('API connection verification successful', DebugCategory.API, {
-        status: response.status,
-        responseData: data,
-        responseTime: response.headers.get('x-response-time')
-      });
-
       return true;
     } else {
-      console.error('❌ API health check failed:', response.status, response.statusText);
-
-      frontendDebugLogger.completeAPICall(apiCallId, response.status, null, `Health check failed: ${response.statusText}`);
-      frontendDebugLogger.error('API health check failed', {
-        status: response.status,
-        statusText: response.statusText,
-        url: API_ENDPOINTS.health
-      });
-
+      logger.error(`API health check failed: ${response.status} ${response.statusText}`);
       return false;
     }
   } catch (error) {
@@ -153,18 +155,7 @@ export const verifyApiConnection = async (): Promise<boolean> => {
       isProduction: import.meta.env.PROD
     });
 
-    frontendDebugLogger.completeAPICall(apiCallId, 0, null, errorMessage);
-    frontendDebugLogger.error('API connection verification failed', {
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-      configuration: {
-        baseUrl: API_BASE_URL,
-        healthEndpoint: API_ENDPOINTS.health,
-        hostname: window.location.hostname,
-        protocol: window.location.protocol,
-        isProduction: import.meta.env.PROD
-      }
-    });
+    logger.error('API connection verification failed. Check network and configuration.');
 
     return false;
   }

@@ -88,7 +88,7 @@ const PREVIEW_CONSTANTS = {
   }
 } as const;
 
-export default function SlidePreview({
+const SlidePreview = React.memo(function SlidePreview({
   spec,
   theme,
   size = 'medium',
@@ -115,17 +115,13 @@ export default function SlidePreview({
     }
   };
 
-  // Debug logging to identify content issues
-  React.useEffect(() => {
-    console.log('🔍 SlidePreview Debug:', {
-      spec,
-      hasTitle: !!spec?.title,
-      hasContent: !!(spec?.bullets?.length || spec?.paragraph || spec?.left || spec?.right),
-      layout: spec?.layout,
-      contentType: spec?.bullets?.length ? 'bullets' : spec?.paragraph ? 'paragraph' : spec?.left ? 'two-column' : 'none',
-      theme: previewTheme?.id
-    });
-  }, [spec, previewTheme]);
+  // Memoize content validation
+  const contentValidation = React.useMemo(() => ({
+    hasTitle: !!spec?.title,
+    hasContent: !!(spec?.bullets?.length || spec?.paragraph || spec?.left || spec?.right),
+    layout: spec?.layout,
+    theme: previewTheme?.id
+  }), [spec, previewTheme]);
 
   // Memoized preview content for performance
   const previewContent = useMemo(() => {
@@ -139,34 +135,46 @@ export default function SlidePreview({
 
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-lg border-2 border-gray-200 bg-white shadow-sm ${
-        interactive ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+      className={`relative overflow-hidden ${
+        interactive ? 'cursor-pointer' : ''
       } ${className}`}
       style={{
         width: dimensions.width,
         height: dimensions.height,
-        aspectRatio: PREVIEW_CONSTANTS.aspectRatio
+        aspectRatio: PREVIEW_CONSTANTS.aspectRatio,
+        borderRadius: theme.effects?.borderRadius || 12,
+        border: `2px solid ${theme.colors.borders?.light || '#F3F4F6'}`,
+        boxShadow: theme.effects?.shadows?.medium || '0 6px 12px rgba(0, 0, 0, 0.12)',
+        background: theme.effects?.gradients?.background || `linear-gradient(135deg, ${theme.colors.background} 0%, ${theme.colors.surface} 100%)`
       }}
       onClick={onClick}
-      whileHover={interactive ? { scale: 1.02 } : undefined}
-      transition={{ duration: 0.2 }}
+      whileHover={interactive ? {
+        scale: 1.02,
+        boxShadow: theme.effects?.shadows?.elevated || '0 16px 32px rgba(0, 0, 0, 0.12)',
+        borderColor: theme.colors.primary
+      } : undefined}
+      transition={{
+        duration: 0.3,
+        ease: "easeOut"
+      }}
     >
       {/* Enhanced background with sophisticated gradient for visual depth */}
       <div
         className="absolute inset-0"
         style={{
-          background: `linear-gradient(135deg, ${previewTheme.colors.background} 0%, ${previewTheme.colors.surface} 100%)`,
-          opacity: 0.98 // Subtle transparency for depth
+          background: theme.effects?.gradients?.background || `linear-gradient(135deg, ${theme.colors.background} 0%, ${theme.colors.surface} 100%)`,
+          opacity: 1 // Full opacity for proper theme colors
         }}
       />
 
-      {/* Primary accent bar with enhanced visual prominence and shadow */}
+      {/* Top accent bar with gradient (no border) matching backend */}
       <div
         className="absolute top-0 left-0 right-0"
         style={{
-          height: `${accentPxH * 1.2}px`, // Enhanced height for better prominence
-          backgroundColor: previewTheme.colors.primary,
-          boxShadow: `0 2px 8px ${previewTheme.colors.primary}40` // Enhanced shadow
+          height: `${accentPxH}px`,
+          background: theme.effects?.gradients?.primary ||
+            `linear-gradient(90deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%)`,
+          boxShadow: `0 2px 8px ${theme.colors.primary}30`
         }}
       />
 
@@ -174,10 +182,10 @@ export default function SlidePreview({
       <div
         className="absolute left-0"
         style={{
-          top: `${accentPxH * 1.2}px`,
+          top: `${accentPxH}px`,
           width: '65%', // Enhanced width for better visual balance
-          height: `${accentPxH * 0.7}px`, // Improved height for prominence
-          background: `linear-gradient(90deg, ${previewTheme.colors.accent} 0%, ${previewTheme.colors.secondary} 100%)`,
+          height: `${accentPxH * 0.6}px`, // Improved height for prominence
+          background: `linear-gradient(90deg, ${theme.colors.accent} 0%, ${theme.colors.secondary} 100%)`,
           opacity: 0.85 // Refined transparency
         }}
       />
@@ -188,13 +196,13 @@ export default function SlidePreview({
         style={{
           top: `${accentPxH}px`,
           height: '1px',
-          backgroundColor: previewTheme.colors.text.secondary,
+          backgroundColor: theme.colors.text.secondary,
           opacity: 0.1
         }}
       />
 
-      {/* Content */}
-      <div className="relative p-4 h-full flex flex-col">
+      {/* Content with increased top padding to prevent title overlap */}
+      <div className="relative h-full flex flex-col" style={{ paddingTop: `${accentPxH * 2.5}px`, paddingLeft: '16px', paddingRight: '16px', paddingBottom: '16px' }}>
         {previewContent}
       </div>
 
@@ -204,7 +212,7 @@ export default function SlidePreview({
       </div>
     </motion.div>
   );
-}
+});
 
 /**
  * Enhanced slide content rendering with improved typography and styling
@@ -215,59 +223,58 @@ function renderSlideContent(
   theme: any,
   dimensions: { width: number; height: number }
 ) {
-  // Debug logging for content rendering
-  console.log('🎨 Rendering slide content:', {
-    layout: spec?.layout,
-    title: spec?.title,
-    hasBullets: !!(spec?.bullets?.length),
-    hasParagraph: !!spec?.paragraph,
-    hasLeft: !!spec?.left,
-    hasRight: !!spec?.right,
-    bulletCount: spec?.bullets?.length || 0
-  });
+  // Render slide content based on layout
 
-  // Superior typography system with enhanced readability and modern visual hierarchy
+  // Modern typography system with enhanced readability and sophisticated visual hierarchy
   const displayStyle = {
     color: theme.colors.text.primary,
-    fontSize: Math.max(22, dimensions.width * PREVIEW_CONSTANTS.typography.display.scale * 1.25), // Enhanced for maximum impact
-    fontWeight: '800', // Increased weight for hero titles
-    lineHeight: PREVIEW_CONSTANTS.typography.display.lineHeight * 0.95, // Tighter line height for display
-    marginBottom: '16px',
-    textShadow: `0 2px 4px ${theme.colors.text.secondary}25`, // Enhanced depth
-    letterSpacing: '-0.02em' // Improved letter spacing for display text
+    fontSize: Math.max(24, dimensions.width * PREVIEW_CONSTANTS.typography.display.scale * 1.3), // Enhanced for maximum impact
+    fontWeight: '800', // Bold weight for hero titles
+    lineHeight: 1.1, // Tight line height for display text
+    marginBottom: '18px',
+    textShadow: `0 3px 6px ${theme.colors.text.secondary}30`, // Enhanced depth with modern shadow
+    letterSpacing: '-0.025em', // Modern tight spacing for display
+    fontFamily: theme.typography?.headings?.fontFamily || 'Inter, system-ui, sans-serif'
   };
 
   const titleStyle = {
     color: theme.colors.primary,
-    fontSize: Math.max(17, dimensions.width * PREVIEW_CONSTANTS.typography.title.scale * 1.18), // Enhanced prominence
-    fontWeight: '700', // Increased weight for better hierarchy
-    lineHeight: PREVIEW_CONSTANTS.typography.title.lineHeight * 0.98, // Optimized line height
-    marginBottom: '14px',
-    textShadow: `0 1px 2px ${theme.colors.primary}20`, // Enhanced shadow
-    letterSpacing: '-0.01em' // Refined letter spacing
+    fontSize: Math.max(18, dimensions.width * PREVIEW_CONSTANTS.typography.title.scale * 1.22), // Enhanced prominence
+    fontWeight: '700', // Strong weight for better hierarchy
+    lineHeight: 1.15, // Optimized line height for titles
+    marginBottom: '16px',
+    textShadow: `0 2px 4px ${theme.colors.primary}25`, // Enhanced themed shadow
+    letterSpacing: '-0.015em', // Refined letter spacing for modern look
+    fontFamily: theme.typography?.headings?.fontFamily || 'Inter, system-ui, sans-serif'
   };
 
   const subtitleStyle = {
     color: theme.colors.text.secondary,
-    fontSize: Math.max(14, dimensions.width * PREVIEW_CONSTANTS.typography.subtitle.scale * 1.12), // Enhanced clarity
-    fontWeight: '600', // Increased weight for better hierarchy
-    lineHeight: PREVIEW_CONSTANTS.typography.subtitle.lineHeight,
-    fontStyle: 'normal', // Changed from italic for better readability
-    letterSpacing: '-0.005em' // Subtle letter spacing
+    fontSize: Math.max(15, dimensions.width * PREVIEW_CONSTANTS.typography.subtitle.scale * 1.15), // Enhanced clarity
+    fontWeight: '600', // Medium weight for better hierarchy
+    lineHeight: 1.4, // Comfortable reading line height
+    fontStyle: 'normal', // Clean, readable style
+    letterSpacing: '0.005em', // Subtle positive tracking for readability
+    fontFamily: theme.typography?.body?.fontFamily || 'Inter, system-ui, sans-serif'
   };
 
-  // Enhanced text styles with superior readability and modern design
+  // Enhanced typography system with modern design principles and superior readability
+  const baseScale = dimensions.width / 400; // Responsive scaling factor
+
   const textStyle = {
     color: theme.colors.text.primary,
-    fontSize: Math.max(12, dimensions.width * PREVIEW_CONSTANTS.typography.body.scale * 1.12), // Enhanced readability
-    lineHeight: PREVIEW_CONSTANTS.typography.body.lineHeight * 0.95, // Optimized line height
-    letterSpacing: '0.002em' // Subtle tracking for better readability
+    fontSize: Math.max(12, dimensions.width * PREVIEW_CONSTANTS.typography.body.scale * 1.15), // Enhanced readability
+    lineHeight: 1.6, // Optimal reading line height
+    letterSpacing: '0.01em', // Improved tracking for better readability
+    fontWeight: 400,
+    fontFamily: theme.typography?.body?.fontFamily || 'Inter, system-ui, sans-serif'
   };
 
   const bulletStyle = {
     ...textStyle,
-    fontSize: Math.max(10, dimensions.width * PREVIEW_CONSTANTS.typography.bullet.scale * 1.1), // Increased for scanning
-    lineHeight: PREVIEW_CONSTANTS.typography.bullet.lineHeight
+    fontSize: Math.max(11, dimensions.width * PREVIEW_CONSTANTS.typography.bullet.scale * 1.12), // Enhanced for scanning
+    lineHeight: 1.5, // Optimized for bullet lists
+    letterSpacing: '0.008em' // Subtle tracking for lists
   };
 
   switch (spec.layout) {
@@ -339,56 +346,67 @@ function renderSlideContent(
     case 'two-column':
       return (
         <>
-          {/* Enhanced title with accent underline */}
-          <div className="relative mb-4">
-            <h1 style={titleStyle} className="mb-1">
+          {/* Enhanced title with modern accent underline and gradient */}
+          <div className="relative mb-5">
+            <h1 style={titleStyle} className="mb-2">
               {spec.title || 'Slide Title'}
             </h1>
             <div
               style={{
-                width: '15%',
-                height: '2px',
-                backgroundColor: theme.colors.accent,
-                borderRadius: '1px'
+                width: '18%',
+                height: '3px',
+                background: theme.effects?.gradients?.accent || `linear-gradient(90deg, ${theme.colors.accent} 0%, ${theme.colors.primary} 100%)`,
+                borderRadius: '2px',
+                boxShadow: `0 2px 4px ${theme.colors.accent}30`
               }}
             />
           </div>
 
-          {/* Enhanced two-column layout with better visual separation */}
-          <div className="flex-1 flex gap-4 relative">
-            {/* Left column with enhanced modern card design */}
+          {/* Enhanced two-column layout with modern card design */}
+          <div className="flex-1 flex gap-5 relative">
+            {/* Left column with sophisticated modern card design */}
             <div className="flex-1 relative">
               <div
-                className="absolute inset-0 rounded-lg"
+                className="absolute inset-0 rounded-xl"
                 style={{
                   backgroundColor: theme.colors.surface,
-                  opacity: 0.08,
-                  border: `0.5px solid ${theme.colors.text.secondary}15`,
-                  boxShadow: `0 1px 3px ${theme.colors.text.secondary}10`
+                  opacity: 0.12,
+                  border: `1px solid ${theme.colors.borders?.light || theme.colors.text.secondary}25`,
+                  boxShadow: theme.effects?.shadows?.subtle || `0 2px 8px ${theme.colors.text.secondary}15`,
+                  background: theme.effects?.gradients?.subtle || `linear-gradient(135deg, ${theme.colors.surface} 0%, ${theme.colors.background} 100%)`
                 }}
               />
-              <div className="relative p-4">
+              <div className="relative p-5">
                 {(spec as any).left?.bullets && (spec as any).left.bullets.length > 0 ? (
-                  <ul className="space-y-2.5">
+                  <ul className="space-y-3">
                     {(spec as any).left.bullets.slice(0, 4).map((bullet: string, index: number) => (
                       <li key={index} style={bulletStyle} className="flex items-start">
-                        <span className="mr-3 flex-shrink-0 font-bold" style={{ color: theme.colors.accent }}>▸</span>
-                        <span className="line-clamp-2">{bullet}</span>
+                        <span
+                          className="mr-3 flex-shrink-0 font-bold text-sm"
+                          style={{
+                            color: theme.colors.accent,
+                            textShadow: `0 1px 2px ${theme.colors.accent}30`
+                          }}
+                        >
+                          ●
+                        </span>
+                        <span className="line-clamp-2 leading-relaxed">{bullet}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p style={textStyle} className="line-clamp-4">
+                  <p style={textStyle} className="line-clamp-4 leading-relaxed">
                     {(spec as any).left?.content || 'Left column content...'}
                   </p>
                 )}
               </div>
-              {/* Accent indicator */}
+              {/* Modern accent indicator with gradient */}
               <div
-                className="absolute left-0 top-2 bottom-2 w-1 rounded-r"
+                className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
                 style={{
-                  backgroundColor: theme.colors.accent,
-                  opacity: 0.6
+                  background: theme.effects?.gradients?.accent || `linear-gradient(180deg, ${theme.colors.accent} 0%, ${theme.colors.primary} 100%)`,
+                  opacity: 0.8,
+                  boxShadow: `0 0 8px ${theme.colors.accent}40`
                 }}
               />
             </div>
@@ -915,12 +933,7 @@ function renderSlideContent(
       );
 
     default:
-      // Enhanced title-bullets or title-paragraph layout with debugging
-      console.warn('🚨 Using default layout rendering for:', {
-        layout: spec?.layout,
-        hasTitle: !!spec?.title,
-        hasContent: !!(spec?.bullets?.length || spec?.paragraph)
-      });
+      // Enhanced title-bullets or title-paragraph layout
 
       return (
         <>
@@ -1007,3 +1020,5 @@ function renderSlideContent(
       );
   }
 }
+
+export default SlidePreview;

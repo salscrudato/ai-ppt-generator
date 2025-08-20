@@ -45,6 +45,7 @@ import { HiPresentationChartLine, HiExclamationTriangle, HiCheckCircle } from 'r
 import { API_ENDPOINTS, verifyApiConnection } from './config';
 import { useThemeSync } from './hooks/useThemeSync';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { logger } from './utils/cleanLogger';
 import './App.css';
 
 /**
@@ -57,11 +58,11 @@ import './App.css';
 function AppContent() {
   const contextThemeId = 'corporate-blue';
 
-  // Initialize logging and API connection verification
+  // Initialize and verify API connection
   useEffect(() => {
-    console.log('🚀 AI PowerPoint Generator initialized');
+    logger.info('AI PowerPoint Generator initialized');
     verifyApiConnection().catch(error => {
-      console.warn('⚠️ API connection verification failed:', error);
+      logger.error('API connection verification failed', error);
     });
   }, []);
 
@@ -87,12 +88,12 @@ function AppContent() {
   const loadingState = useLoadingState({
     defaultTimeout: 120000, // Increased to 2 minutes for complex generations
     onComplete: () => {
-      console.log('✅ Operation completed successfully');
+      logger.success('Operation completed successfully');
       setSuccessMessage('PowerPoint generated successfully! 🎉');
       setTimeout(() => setSuccessMessage(''), 6000);
     },
     onError: (error) => {
-      console.error('❌ Operation failed:', error);
+      logger.error('Operation failed', error);
       updateState({
         error: `Generation failed: ${error}. Please try again or contact support if the issue persists.`,
         loading: false
@@ -102,39 +103,53 @@ function AppContent() {
 
   // Enhanced theme synchronization with error handling
   const themeSync = useThemeSync({
-    initialThemeId: contextThemeId || state.params.design?.theme,
+    initialThemeId: state.params.design?.theme || contextThemeId,
     debug: process.env.NODE_ENV === 'development',
     autoSync: true
   });
 
-  // Debug logging for theme synchronization (only in development)
+  // Theme synchronization monitoring and state updates
   React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🎨 App: Theme state', {
-        contextThemeId,
-        formThemeId: state.params.design?.theme,
-        syncThemeId: themeSync.themeId,
-        syncStatus: themeSync.syncStatus,
+    // Only sync if theme sync has a different theme than state
+    if (themeSync.themeId && themeSync.themeId !== state.params.design?.theme) {
+      console.log('🎨 App: Syncing theme to state', {
+        syncTheme: themeSync.themeId,
+        stateTheme: state.params.design?.theme,
         step: state.step
       });
-    }
-  }, [contextThemeId, state.params.design?.theme, themeSync.themeId, themeSync.syncStatus, state.step]);
 
-  // Verify API connection on component mount for debugging
+      // Use a timeout to prevent rapid updates
+      const timeoutId = setTimeout(() => {
+        updateState({
+          params: {
+            ...state.params,
+            design: {
+              ...state.params.design,
+              theme: themeSync.themeId
+            }
+          }
+        });
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [themeSync.themeId]);
+
+  // Verify API connection on component mount (with debounce)
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const checkApiConnection = async () => {
-      console.log('🔍 Verifying API connection on app startup...');
       const isConnected = await verifyApiConnection();
       if (!isConnected) {
-        console.warn('⚠️ API connection verification failed. Check network and configuration.');
+        logger.error('API connection verification failed. Check network and configuration.');
       }
     };
 
-    checkApiConnection();
+    // Debounce API connection check to prevent multiple calls
+    timeoutId = setTimeout(checkApiConnection, 100);
 
-
-
-
+    return () => clearTimeout(timeoutId);
   }, []);
 
 
@@ -154,14 +169,7 @@ function AppContent() {
   const updateState = useCallback((updates: Partial<AppState>) => {
     setState(prev => {
       const newState = { ...prev, ...updates };
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔄 State updated:', {
-          from: prev.step,
-          to: newState.step,
-          hasError: !!newState.error,
-          loading: newState.loading
-        });
-      }
+      // State update logging removed for clean console
       return newState;
     });
   }, []);
@@ -191,12 +199,9 @@ function AppContent() {
    * Generate slide draft from user parameters
    * Simplified with essential functionality and better error handling
    */
-  const generateDraft = async (params: GenerationParams) => {
-    console.log('🚀 Generating draft for:', params.prompt.substring(0, 50));
-
+  const generateDraft = useCallback(async (params: GenerationParams) => {
     // Prevent multiple simultaneous generations
     if (state.loading) {
-      console.log('🚫 Generation already in progress');
       return;
     }
 
@@ -221,7 +226,6 @@ function AppContent() {
 
       if (isDevelopment) {
         // Mock response for development testing
-        console.log('🔧 Using mock data for development testing');
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
 
         result = {
@@ -263,9 +267,10 @@ function AppContent() {
           }
 
           result = await response.json();
-          draft = result.spec;
+          // Handle array response from backend
+          draft = Array.isArray(result.spec) ? result.spec[0] : result.spec;
         } catch (apiError) {
-          console.warn('⚠️ Draft API failed, falling back to mock content for a smooth UX:', apiError);
+          // Fallback to mock content for smooth UX
           await new Promise(resolve => setTimeout(resolve, 600));
           result = {
             spec: {
@@ -286,15 +291,7 @@ function AppContent() {
         }
       }
 
-      // Debug logging for generated content
-      console.log('🎯 Generated Draft:', {
-        draft,
-        hasTitle: !!draft?.title,
-        hasContent: !!(draft?.bullets?.length || draft?.paragraph || draft?.left || draft?.right),
-        layout: draft?.layout,
-        contentType: draft?.bullets?.length ? 'bullets' : draft?.paragraph ? 'paragraph' : draft?.left ? 'two-column' : 'none',
-        quality: result.quality
-      });
+      // Draft generated successfully
 
       // Ensure the draft has an ID
       if (!draft.id) {
@@ -307,10 +304,7 @@ function AppContent() {
 
       loadingState.completeLoading('Slide ready!');
 
-      // Show quality feedback if available
-      if (result.quality) {
-        console.log(`✅ Draft Generated - Quality: ${result.quality.grade} (${result.quality.score}/100)`);
-      }
+      // Quality feedback available in result
 
       updateState({
         draft: draft,
@@ -319,14 +313,14 @@ function AppContent() {
         loading: false
       });
     } catch (error) {
-      console.error('❌ Draft generation failed:', error);
+      logger.error('Draft generation failed', error);
       loadingState.failLoading('Draft generation failed');
       updateState({
         error: error instanceof Error ? error.message : 'Draft generation failed. Please try again.',
         loading: false
       });
     }
-  };
+  }, [state.loading]);
 
   /**
    * Generate final PowerPoint file from slide specification
@@ -345,11 +339,7 @@ function AppContent() {
       route: '/generate'
     };
 
-    // Log PowerPoint generation start
-    console.log(`Starting PowerPoint generation for: ${spec.title}`, {
-      layout: spec.layout,
-      hasContent: !!(spec.paragraph || (spec.bullets && spec.bullets.length > 0))
-    });
+    // Starting PowerPoint generation
 
     updateState({ loading: true, error: undefined });
 
@@ -357,8 +347,7 @@ function AppContent() {
     loadingState.startLoading(LOADING_STAGES.PRESENTATION_GENERATION, 45000);
 
     try {
-      // Check if the original generation request included images
-      const shouldIncludeImages = state.params.withImage || false;
+
 
       // Stage 1: Preparing
       loadingState.setStage('preparing');
@@ -368,7 +357,7 @@ function AppContent() {
       // Enhanced generation options for single slide
       const generationOptions = {
         spec: spec,
-        withImage: shouldIncludeImages,
+
         themeId: state.params.design?.theme || themeSync.themeId || 'corporate-blue',
         compactMode: false,
         typographyScale: 'medium',
@@ -397,11 +386,7 @@ function AppContent() {
 
       const blob = await response.blob();
 
-      // Log download process
-      console.log('PowerPoint blob received', {
-        blobSize: blob.size,
-        blobType: blob.type
-      });
+      // PowerPoint blob received
 
       // Comprehensive blob validation
       if (!blob) {
@@ -413,10 +398,7 @@ function AppContent() {
       }
 
       if (blob.size < 10000) {
-        console.warn('PowerPoint file suspiciously small', {
-          fileSize: blob.size,
-          minimumExpected: 10000
-        });
+        logger.error('PowerPoint file suspiciously small - generation may have failed');
       }
 
       // Validate file signature by reading first few bytes
@@ -427,20 +409,13 @@ function AppContent() {
 
         const signatureValid = signature.every((byte, index) => byte === expectedSignature[index]);
         if (!signatureValid) {
-          console.error('Invalid PowerPoint file signature detected:', {
-            actual: Array.from(signature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-            expected: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-            fileSize: blob.size
-          });
+          logger.error('Invalid PowerPoint file signature detected - file may be corrupted');
           throw new Error('Downloaded file has invalid PowerPoint format - file may be corrupted. Please try generating again.');
         }
 
-        console.log('PowerPoint file signature validation passed', {
-          signature: Array.from(signature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-          fileSize: blob.size
-        });
+        // File signature validation passed
       } catch (signatureError) {
-        console.error('Could not validate file signature:', signatureError);
+        logger.error('Could not validate file signature', signatureError);
         throw new Error('Unable to validate PowerPoint file integrity - please try generating again.');
       }
 
@@ -452,34 +427,11 @@ function AppContent() {
       a.click();
       URL.revokeObjectURL(url);
 
-      // Log successful download
-      console.log('PowerPoint download initiated', {
-        filename,
-        fileSize: blob.size,
-        fileSizeKB: Math.round(blob.size / 1024)
-      });
-
       loadingState.completeLoading('PowerPoint generated successfully!');
-      // showSuccess('Download Started', 'Your PowerPoint presentation is ready!');
-      console.log('✅ Download Started: Your PowerPoint presentation is ready!');
+      logger.success('PowerPoint presentation ready for download!');
       updateState({ loading: false });
     } catch (error) {
-      console.error('PowerPoint generation failed:', error);
-
-      // Log error details
-      console.error('PowerPoint generation context at failure', {
-        specTitle: spec.title,
-        specLayout: spec.layout,
-        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
-        errorMessage: error instanceof Error ? error.message : String(error)
-      });
-
-      // Use enhanced notification system for better user feedback
-      // notifications.handleApiError(error, 'PowerPoint Generation', () => {
-      //   // Retry function
-      //   generateSlide(spec);
-      // });
-      console.error('PowerPoint generation error:', error);
+      logger.error('PowerPoint generation failed', error);
 
       loadingState.failLoading('PowerPoint generation failed');
       updateState({
@@ -518,6 +470,7 @@ function AppContent() {
             onSpecChange={(editedSpec) => updateState({ editedSpec })}
             onGenerate={() => generateSlide(state.editedSpec!)}
             onBack={() => updateState({ step: 'input' })}
+            theme={themeSync.currentTheme}
           />
         );
 

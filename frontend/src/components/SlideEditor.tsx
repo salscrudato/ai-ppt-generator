@@ -25,6 +25,7 @@ import { useCurrentTheme } from '../contexts/ThemeContext';
 import { useThemeSync } from '../hooks/useThemeSync';
 import SlidePreview from './SlidePreview';
 import ThemeVerificationIndicator from './ThemeVerificationIndicator';
+import ThemeGallery from './ThemeGallery';
 
 interface SlideEditorProps {
   spec: SlideSpec;
@@ -49,47 +50,11 @@ interface ValidationState {
   warnings: string[];
 }
 
-// Real-time validation function
+// Real-time validation function (delegates to shared Zod schema for consistency)
+import { validateSlideSpec as validateWithSchema } from '../schemas/slideSpec';
 function validateSlideSpec(spec: SlideSpec): ValidationState {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  // Title validation
-  if (!spec.title || spec.title.trim().length === 0) {
-    errors.push('Title is required');
-  } else if (spec.title.length > 120) {
-    errors.push('Title must be 120 characters or less');
-  }
-
-  // Content validation
-  const hasContent = (spec.bullets && spec.bullets.length > 0) ||
-                    (spec.paragraph && spec.paragraph.trim().length > 0) ||
-                    (spec.left && (spec.left.bullets?.length || spec.left.paragraph)) ||
-                    (spec.right && (spec.right.bullets?.length || spec.right.paragraph));
-
-  if (!hasContent) {
-    warnings.push('Slide has no content - consider adding bullets or paragraph text');
-  }
-
-  // Bullet validation
-  if (spec.bullets && spec.bullets.length > 10) {
-    warnings.push('Consider reducing bullet points to 10 or fewer for better readability');
-  }
-
-  // Layout-specific validation
-  if (spec.layout === 'two-column' && !spec.left && !spec.right) {
-    errors.push('Two-column layout requires left or right content');
-  }
-
-  if (spec.layout === 'chart' && !spec.chart && (!spec.bullets || spec.bullets.length === 0)) {
-    warnings.push('Chart layout works best with data in bullets or chart configuration');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings
-  };
+  const result = validateWithSchema(spec);
+  return { isValid: result.isValid, errors: result.errors, warnings: result.warnings };
 }
 
 export default function SlideEditor({
@@ -139,13 +104,10 @@ export default function SlideEditor({
   // Use provided theme, synchronized theme, context theme, or default theme
   const activeTheme: ProfessionalTheme = theme || themeSync?.currentTheme || contextTheme || getDefaultTheme();
 
-  // Debug logging (after activeTheme is defined)
-  React.useEffect(() => {
-    console.log('SlideEditor received spec:', spec);
-    console.log('SlideEditor localSpec:', localSpec);
-    console.log('SlideEditor theme prop:', theme);
-    console.log('SlideEditor activeTheme:', activeTheme);
-  }, [spec, localSpec, theme, activeTheme]);
+
+
+  // Memoize theme to prevent unnecessary re-renders
+  const memoizedTheme = React.useMemo(() => activeTheme, [activeTheme.id]);
 
   const updateSpec = (updates: Partial<SlideSpec>) => {
     const updated = { ...localSpec, ...updates };
@@ -1338,25 +1300,31 @@ export default function SlideEditor({
                 <HiEye className="w-5 h-5 text-blue-500" />
                 Live Preview
               </h3>
-              <ThemeVerificationIndicator
-                theme={activeTheme}
-                compact={true}
-              />
+              <div className="flex items-center gap-3">
+                {/* Quick Theme Selector */}
+                <div className="hidden md:block">
+                  <div className="text-xs text-slate-500 mb-1">Theme</div>
+                  {/* Lazy import alternative could be added later */}
+                  <div style={{ width: 220 }}>
+                    <ThemeVerificationIndicator theme={memoizedTheme} compact={true} />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <SlidePreview
               spec={localSpec}
-              theme={activeTheme}
+              theme={memoizedTheme}
               size="large"
               className="w-full shadow-lg"
             />
 
-            {/* Detailed Theme Verification */}
+            {/* Theme gallery (compact) */}
             <div className="mt-4">
-              <ThemeVerificationIndicator
-                theme={activeTheme}
-                showDetails={false}
-              />
+              <div className="mb-2 text-sm font-medium text-slate-700">Quick Themes</div>
+              <div className="border border-slate-200 rounded-lg p-2 bg-white/60">
+                <ThemeGallery compact />
+              </div>
             </div>
           </div>
         </motion.div>

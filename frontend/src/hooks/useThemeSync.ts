@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useThemeContext } from '../contexts/ThemeContext';
+import { getThemeById, type ProfessionalTheme } from '../themes/professionalThemes';
 
 interface ThemeSyncOptions {
   /** Initial theme ID */
@@ -42,7 +43,10 @@ interface ThemeSyncActions {
   resetTheme: () => void;
 }
 
-export type ThemeSyncReturn = ThemeSyncState & ThemeSyncActions;
+export type ThemeSyncReturn = ThemeSyncState & ThemeSyncActions & {
+  /** Current theme object */
+  currentTheme: ProfessionalTheme;
+};
 
 const DEFAULT_THEME_ID = 'corporate-blue';
 
@@ -54,7 +58,7 @@ export function useThemeSync(options: ThemeSyncOptions = {}): ThemeSyncReturn {
   } = options;
 
   // Get theme context
-  const { themeId: contextThemeId, setThemeId: setContextThemeId } = useThemeContext();
+  const { themeId: contextThemeId, setTheme: setContextThemeId } = useThemeContext();
   
   // Internal state
   const [state, setState] = useState<ThemeSyncState>(() => ({
@@ -199,8 +203,12 @@ export function useThemeSync(options: ThemeSyncOptions = {}): ThemeSyncReturn {
     }
   }, [contextThemeId, state.themeId, state.isSyncing, state.syncStatus, autoSync, debugLog, updateSyncStatus]);
 
+  // Get current theme object
+  const currentTheme = getThemeById(state.themeId) || getThemeById(contextThemeId) || getThemeById('corporate-blue')!;
+
   return {
     ...state,
+    currentTheme,
     setTheme,
     forceSync,
     resetTheme

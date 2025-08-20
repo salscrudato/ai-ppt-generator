@@ -35,11 +35,11 @@ import {
   HiExclamationTriangle,
   HiSparkles,
   HiUsers,
-  HiChatBubbleLeftRight,
-  HiPhoto,
   HiRectangleStack,
+  HiChatBubbleLeftRight,
   HiDocumentText,
-  HiBriefcase
+  HiBriefcase,
+  HiPhoto
 } from 'react-icons/hi2';
 
 import ThemeCarousel from './ThemeCarousel';
@@ -48,11 +48,7 @@ import { useThemeContext } from '../contexts/ThemeContext';
 import { useThemeSync } from '../hooks/useThemeSync';
 
 
-// Define options directly since validation system was removed
-const AUDIENCE_OPTIONS = ['general', 'executives', 'technical', 'sales', 'investors', 'students'] as const;
-const TONE_OPTIONS = ['professional', 'casual', 'persuasive', 'educational', 'inspiring'] as const;
-const CONTENT_LENGTH_OPTIONS = ['brief', 'moderate', 'detailed'] as const;
-const PRESENTATION_TYPE_OPTIONS = ['business', 'academic', 'sales', 'training', 'report'] as const;
+
 
 interface PromptInputProps {
   params: GenerationParams;
@@ -207,26 +203,14 @@ export default function PromptInput({
     e.preventDefault();
     e.stopPropagation();
 
-    // Debug logging to track when generation is triggered
-    console.log('🎯 PromptInput: handleSubmit called', {
-      eventType: e.type,
-      target: e.target,
-      currentTarget: e.currentTarget,
-      loading,
-      canSubmit,
-      submitter: (e.nativeEvent as SubmitEvent)?.submitter
-    });
-
     // Prevent submission if already loading or form is invalid
     if (loading || !canSubmit) {
-      console.log('🚫 PromptInput: Submission blocked', { loading, canSubmit });
       return;
     }
 
     // Additional check: ensure this is from the submit button or explicitly requested
     const submitter = (e.nativeEvent as SubmitEvent)?.submitter;
     if (submitter && submitter.type !== 'submit' && !generationRequested) {
-      console.log('🚫 PromptInput: Submission not from submit button and not explicitly requested', { submitter, generationRequested });
       return;
     }
 
@@ -236,13 +220,9 @@ export default function PromptInput({
     // Ensure all required fields have defaults
     const paramsWithDefaults = {
       ...localParams,
-      audience: localParams.audience || 'general',
-      tone: localParams.tone || 'professional',
-      contentLength: localParams.contentLength || 'moderate',
-      presentationType: localParams.presentationType || 'general',
-      industry: localParams.industry || 'general',
-      withImage: localParams.withImage || false,
-      imageStyle: localParams.imageStyle || 'professional',
+
+
+
       qualityLevel: localParams.qualityLevel || 'standard',
       includeNotes: localParams.includeNotes || false,
       includeSources: localParams.includeSources || false,
@@ -256,10 +236,8 @@ export default function PromptInput({
     const validationResult = validateForm(paramsWithDefaults);
 
     if (validationResult.success && validationResult.data) {
-      console.log('✅ PromptInput: Validation passed, calling onGenerate', validationResult.data);
       onGenerate(validationResult.data);
     } else {
-      console.log('❌ PromptInput: Form validation failed', validationResult.fieldErrors);
       // Mark all fields as touched to show errors
       setTouchedFields(new Set(Object.keys(paramsWithDefaults)));
     }
@@ -270,18 +248,14 @@ export default function PromptInput({
 
   // Explicit button click handler for additional safety
   const handleGenerateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    console.log('🖱️ PromptInput: Generate button clicked', { loading, canSubmit });
-
     if (loading || !canSubmit) {
       e.preventDefault();
       e.stopPropagation();
-      console.log('🚫 PromptInput: Button click blocked', { loading, canSubmit });
       return;
     }
 
     // Mark that generation was explicitly requested
     setGenerationRequested(true);
-    console.log('✅ PromptInput: Generation explicitly requested via button click');
 
     // Let the form submission handle the rest
   };
@@ -293,11 +267,9 @@ export default function PromptInput({
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('⌨️ PromptInput: Ctrl+Enter pressed', { canSubmit });
         // Trigger form submission on Ctrl+Enter if valid
         if (canSubmit) {
           setGenerationRequested(true);
-          console.log('✅ PromptInput: Generation explicitly requested via Ctrl+Enter');
           handleSubmit(e);
         }
       } else {
@@ -311,72 +283,11 @@ export default function PromptInput({
     }
   };
 
-  // Debug component to show theme sync status (only in development)
-  const ThemeSyncDebug = () => {
-    if (process.env.NODE_ENV !== 'development') return null;
 
-    const formTheme = localParams.design?.theme;
-    const isInSync = formTheme === contextThemeId;
-    const [syncStatus, setSyncStatus] = React.useState<'synced' | 'syncing' | 'out-of-sync'>('synced');
-
-    // Track sync status changes
-    React.useEffect(() => {
-      if (isInSync) {
-        setSyncStatus('synced');
-      } else {
-        setSyncStatus('syncing');
-        // After a brief moment, if still not synced, mark as out of sync
-        const timer = setTimeout(() => {
-          if (formTheme !== contextThemeId) {
-            setSyncStatus('out-of-sync');
-          }
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }, [formTheme, contextThemeId, isInSync]);
-
-    const getStatusColor = () => {
-      switch (syncStatus) {
-        case 'synced': return "bg-green-100 text-green-800 border border-green-200";
-        case 'syncing': return "bg-yellow-100 text-yellow-800 border border-yellow-200";
-        case 'out-of-sync': return "bg-red-100 text-red-800 border border-red-200";
-      }
-    };
-
-    const getStatusText = () => {
-      switch (syncStatus) {
-        case 'synced': return '✓ Synced';
-        case 'syncing': return '⏳ Syncing...';
-        case 'out-of-sync': return '⚠ Out of sync';
-      }
-    };
-
-    const getStatusTextColor = () => {
-      switch (syncStatus) {
-        case 'synced': return "text-green-600";
-        case 'syncing': return "text-yellow-600";
-        case 'out-of-sync': return "text-red-600";
-      }
-    };
-
-    return (
-      <div className={clsx(
-        "fixed top-4 right-4 z-50 px-3 py-2 rounded-lg text-xs font-mono shadow-lg transition-colors duration-200",
-        getStatusColor()
-      )}>
-        <div className="text-xs opacity-75 mb-1">Theme Sync Status</div>
-        <div>Form: <span className="font-semibold">{formTheme || 'none'}</span></div>
-        <div>Context: <span className="font-semibold">{contextThemeId || 'none'}</span></div>
-        <div className={clsx("font-bold mt-1", getStatusTextColor())}>
-          {getStatusText()}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen">
-      <ThemeSyncDebug />
+
 
       {/* Enhanced Header */}
       <motion.div
@@ -549,11 +460,10 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               }`}
               required
             >
-              {AUDIENCE_OPTIONS.map(type => (
-                <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
+              <option value="general">General</option>
+              <option value="executives">Executives</option>
+              <option value="technical">Technical</option>
+              <option value="sales">Sales</option>
             </select>
             {touchedFields.has('audience') && validationErrors.audience && (
               <p className="text-sm text-red-600">{validationErrors.audience}</p>
@@ -577,11 +487,10 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               }`}
               required
             >
-              {TONE_OPTIONS.map(type => (
-                <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
+              <option value="professional">Professional</option>
+              <option value="casual">Casual</option>
+              <option value="persuasive">Persuasive</option>
+              <option value="educational">Educational</option>
             </select>
             {touchedFields.has('tone') && validationErrors.tone && (
               <p className="text-sm text-red-600">{validationErrors.tone}</p>
@@ -605,11 +514,9 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               }`}
               required
             >
-              {CONTENT_LENGTH_OPTIONS.map(type => (
-                <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
+              <option value="brief">Brief</option>
+              <option value="moderate">Moderate</option>
+              <option value="detailed">Detailed</option>
             </select>
             {touchedFields.has('contentLength') && validationErrors.contentLength && (
               <p className="text-sm text-red-600">{validationErrors.contentLength}</p>
@@ -633,11 +540,10 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
               }`}
               required
             >
-              {PRESENTATION_TYPE_OPTIONS.map(type => (
-                <option key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
+              <option value="general">General</option>
+              <option value="business">Business</option>
+              <option value="sales">Sales</option>
+              <option value="training">Training</option>
             </select>
             {touchedFields.has('presentationType') && validationErrors.presentationType && (
               <p className="text-sm text-red-600">{validationErrors.presentationType}</p>
@@ -703,218 +609,136 @@ Example: Quarterly sales results showing 25% growth, key challenges in Q3, and s
           />
         </motion.div>
 
-        {/* Grid Layout Preferences */}
+
+
+        {/* Slide Components Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.28 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
           className="space-y-4"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg">
-              <HiRectangleStack className="w-5 h-5 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900">Grid Layout Preferences</h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-            {/* Columns Selection */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <HiRectangleStack className="w-4 h-4" />
-                Preferred Columns
-              </label>
-              <select
-                name="gridColumns"
-                value={localParams.gridPreferences?.columns || 'auto'}
-                onChange={(e) => {
-                  const value = e.target.value === 'auto' ? undefined : parseInt(e.target.value);
-                  updateParam('gridPreferences', {
-                    ...localParams.gridPreferences,
-                    columns: value
-                  });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="auto">Auto-detect</option>
-                <option value="1">1 Column</option>
-                <option value="2">2 Columns</option>
-                <option value="3">3 Columns</option>
-                <option value="4">4 Columns</option>
-              </select>
-              <p className="text-xs text-gray-500">Number of columns for grid layouts</p>
-            </div>
-
-            {/* Rows Selection */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <HiRectangleStack className="w-4 h-4 rotate-90" />
-                Preferred Rows
-              </label>
-              <select
-                name="gridRows"
-                value={localParams.gridPreferences?.rows || 'auto'}
-                onChange={(e) => {
-                  const value = e.target.value === 'auto' ? undefined : parseInt(e.target.value);
-                  updateParam('gridPreferences', {
-                    ...localParams.gridPreferences,
-                    rows: value
-                  });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="auto">Auto-detect</option>
-                <option value="1">1 Row</option>
-                <option value="2">2 Rows</option>
-                <option value="3">3 Rows</option>
-              </select>
-              <p className="text-xs text-gray-500">Number of rows for grid layouts</p>
-            </div>
-
-            {/* Cell Spacing Selection */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <HiPhoto className="w-4 h-4" />
-                Cell Spacing
-              </label>
-              <select
-                name="gridSpacing"
-                value={localParams.gridPreferences?.cellSpacing || 'normal'}
-                onChange={(e) => {
-                  updateParam('gridPreferences', {
-                    ...localParams.gridPreferences,
-                    cellSpacing: e.target.value as 'tight' | 'normal' | 'spacious'
-                  });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="tight">Tight</option>
-                <option value="normal">Normal</option>
-                <option value="spacious">Spacious</option>
-              </select>
-              <p className="text-xs text-gray-500">Spacing between grid cells</p>
-            </div>
-          </div>
-
-          {/* Auto-format toggle */}
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <input
-              type="checkbox"
-              id="autoFormat"
-              checked={localParams.gridPreferences?.autoFormat !== false}
-              onChange={(e) => {
-                updateParam('gridPreferences', {
-                  ...localParams.gridPreferences,
-                  autoFormat: e.target.checked
-                });
-              }}
-              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-            />
-            <label htmlFor="autoFormat" className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <HiSparkles className="w-4 h-4 text-blue-600" />
-              Enable auto-formatting within grid cells
-            </label>
-          </div>
-          <p className="text-xs text-gray-500 ml-7">
-            When enabled, content within each grid cell will be automatically formatted for optimal readability
-          </p>
-        </motion.div>
-
-        {/* Additional Parameters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-        >
-          {/* Industry Selection */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <HiBriefcase className="w-4 h-4" />
-              Industry Context
-            </label>
-            <select
-              name="industry"
-              value={localParams.industry || 'general'}
-              onChange={(e) => updateParam('industry', e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="general">General</option>
-              <option value="technology">Technology</option>
-              <option value="healthcare">Healthcare</option>
-              <option value="finance">Finance</option>
-              <option value="education">Education</option>
-              <option value="marketing">Marketing</option>
-            </select>
-            <p className="text-xs text-gray-500">What industry context should be considered?</p>
-          </div>
-        </motion.div>
-
-        {/* Layout and Image Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-        >
-          {/* Layout Selection */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <HiRectangleStack className="w-4 h-4" />
-              Slide Layout
-            </label>
-            <select
-              name="layout"
-              value={localParams.layout || ''}
-              onChange={(e) => updateParam('layout', e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Auto-select (Recommended)</option>
-              <option value="title-bullets">Title with Bullets</option>
-              <option value="title-paragraph">Title with Paragraph</option>
-              <option value="two-column">Two Column</option>
-              <option value="image-left">Image Left</option>
-              <option value="image-right">Image Right</option>
-            </select>
-            <p className="text-xs text-gray-500">Choose a specific layout or let AI decide</p>
-          </div>
-
-          {/* AI Image Generation */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <HiPhoto className="w-4 h-4 text-primary-500" />
-              AI Image Generation
+              <HiRectangleStack className="w-4 h-4 text-primary-500" />
+              Slide Components
             </label>
-            <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl bg-gray-50">
-              <input
-                type="checkbox"
-                id="with-image"
-                checked={localParams.withImage || false}
-                onChange={(e) => updateParam('withImage', e.target.checked)}
-                className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
-              />
-              <label htmlFor="with-image" className="flex-1 cursor-pointer">
-                <div className="text-sm font-medium text-gray-900">
-                  Generate AI image with DALL-E
-                </div>
-                <div className="text-xs text-gray-600 mt-1">
-                  Automatically create a relevant image for your presentation using AI
-                </div>
-              </label>
-              <HiSparkles className={`w-5 h-5 transition-colors ${
-                localParams.withImage ? "text-primary-500" : "text-gray-400"
-              }`} />
-            </div>
-            {localParams.withImage && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <HiSparkles className="w-4 h-4" />
-                  <span>AI will generate a custom image based on your presentation content</span>
-                </div>
+            <p className="text-xs text-gray-600">Select ONE content type for your slide (mutually exclusive)</p>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {/* Paragraph */}
+              <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <input
+                  type="radio"
+                  name="component-type"
+                  id="component-paragraph"
+                  checked={localParams.components?.paragraph || false}
+                  onChange={(e) => updateParam('components', {
+                    paragraph: e.target.checked,
+                    bulletList: false,
+                    chart: false,
+                    table: false,
+                    quote: false
+                  })}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 focus:ring-2"
+                />
+                <label htmlFor="component-paragraph" className="flex-1 cursor-pointer">
+                  <div className="text-sm font-medium text-gray-900">Paragraph</div>
+                  <div className="text-xs text-gray-600">Narrative text content</div>
+                </label>
               </div>
-            )}
+
+              {/* Bullet List */}
+              <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <input
+                  type="radio"
+                  name="component-type"
+                  id="component-bullets"
+                  checked={localParams.components?.bulletList || (!localParams.components?.paragraph && !localParams.components?.chart && !localParams.components?.table && !localParams.components?.quote)}
+                  onChange={(e) => updateParam('components', {
+                    paragraph: false,
+                    bulletList: e.target.checked,
+                    chart: false,
+                    table: false,
+                    quote: false
+                  })}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 focus:ring-2"
+                />
+                <label htmlFor="component-bullets" className="flex-1 cursor-pointer">
+                  <div className="text-sm font-medium text-gray-900">Bullet List</div>
+                  <div className="text-xs text-gray-600">Key points and items (default)</div>
+                </label>
+              </div>
+
+              {/* Chart */}
+              <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <input
+                  type="radio"
+                  name="component-type"
+                  id="component-chart"
+                  checked={localParams.components?.chart || false}
+                  onChange={(e) => updateParam('components', {
+                    paragraph: false,
+                    bulletList: false,
+                    chart: e.target.checked,
+                    table: false,
+                    quote: false
+                  })}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 focus:ring-2"
+                />
+                <label htmlFor="component-chart" className="flex-1 cursor-pointer">
+                  <div className="text-sm font-medium text-gray-900">Chart</div>
+                  <div className="text-xs text-gray-600">Data visualization (auto-generates data)</div>
+                </label>
+              </div>
+
+              {/* Table */}
+              <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <input
+                  type="radio"
+                  name="component-type"
+                  id="component-table"
+                  checked={localParams.components?.table || false}
+                  onChange={(e) => updateParam('components', {
+                    paragraph: false,
+                    bulletList: false,
+                    chart: false,
+                    table: e.target.checked,
+                    quote: false
+                  })}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 focus:ring-2"
+                />
+                <label htmlFor="component-table" className="flex-1 cursor-pointer">
+                  <div className="text-sm font-medium text-gray-900">Table</div>
+                  <div className="text-xs text-gray-600">Structured data (auto-generates data)</div>
+                </label>
+              </div>
+
+              {/* Quote */}
+              <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <input
+                  type="radio"
+                  name="component-type"
+                  id="component-quote"
+                  checked={localParams.components?.quote || false}
+                  onChange={(e) => updateParam('components', {
+                    paragraph: false,
+                    bulletList: false,
+                    chart: false,
+                    table: false,
+                    quote: e.target.checked
+                  })}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 focus:ring-2"
+                />
+                <label htmlFor="component-quote" className="flex-1 cursor-pointer">
+                  <div className="text-sm font-medium text-gray-900">Quote</div>
+                  <div className="text-xs text-gray-600">Highlighted text or testimonial</div>
+                </label>
+              </div>
+            </div>
           </div>
         </motion.div>
+
         {/* Enhanced Theme Gallery */}
 
 

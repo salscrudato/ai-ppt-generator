@@ -83,12 +83,7 @@ const VALIDATION_PATTERNS = {
     .min(1, 'Font family is required')
     .refine((val) => /^[\w\s\-,'"]+$/.test(val), 'Font family contains invalid characters'),
 
-  imagePrompt: z
-    .string()
-    .min(20, 'Image prompt must be at least 20 characters for quality generation')
-    .max(500, 'Image prompt must be under 500 characters for optimal AI processing')
-    .refine((val) => val.trim().length >= 20, 'Image prompt cannot be mostly whitespace')
-    .transform((v) => v.trim()),
+
 
   percentage: z.coerce.number().min(0, 'Percentage cannot be negative').max(100, 'Percentage cannot exceed 100'),
 
@@ -137,7 +132,7 @@ export const SLIDE_LAYOUTS = [
   'card-grid',
   'split-content',
   'accent-quote',
-  'grid-layout',
+
 ] as const;
 
 export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
@@ -185,18 +180,7 @@ const GridCellSchema = z.object({
   }).optional(),
 });
 
-const GridLayoutSchema = z.object({
-  columns: z.number().int().min(1).max(4, 'Maximum 4 columns supported'),
-  rows: z.number().int().min(1).max(3, 'Maximum 3 rows supported'),
-  cells: z.array(GridCellSchema).max(12, 'Maximum 12 cells supported'),
-  showBorders: z.boolean().optional(),
-  cellSpacing: z.enum(['tight', 'normal', 'spacious']).optional(),
-}).refine((data) => {
-  // Validate that all cells fit within the grid dimensions
-  return data.cells.every(cell =>
-    cell.row < data.rows && cell.column < data.columns
-  );
-}, 'All cells must fit within the specified grid dimensions');
+
 
 /* -------------------------------------------------------------------------------------------------
  * Slide Spec (Primary Schema used by the current generator)
@@ -246,8 +230,7 @@ export const SlideSpecSchema = z
           )
           .max(5, 'Maximum 5 metrics per column')
           .optional(),
-        imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
-        generateImage: z.boolean().optional(),
+
       })
       .optional(),
 
@@ -261,8 +244,7 @@ export const SlideSpecSchema = z
           .transform((arr) => arr?.map((s) => s.trim()))
           .optional(),
         paragraph: VALIDATION_PATTERNS.longText.optional(),
-        imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
-        generateImage: z.boolean().optional(),
+
         metrics: z
           .array(
             z.object({
@@ -390,11 +372,7 @@ export const SlideSpecSchema = z
     /** Source citations */
     sources: z.array(z.string().url('Must be a valid URL').or(z.string().min(1))).max(5, 'Maximum 5 sources allowed').optional(),
 
-    /** Image prompt for full-image layouts */
-    imagePrompt: VALIDATION_PATTERNS.imagePrompt.optional(),
 
-    /** Whether to generate the image */
-    generateImage: z.boolean().optional(),
 
     /** Premium/advanced properties */
     imageUrl: z.string().url().optional(),
@@ -410,8 +388,12 @@ export const SlideSpecSchema = z
     /** Speaker notes for presentation guidance */
     speakerNotes: z.string().max(1000, 'Speaker notes should be concise for effective presentation').optional(),
 
-    /** Grid layout configuration for flexible content arrangement */
-    gridLayout: GridLayoutSchema.optional(),
+    /** Quote content for quote layout */
+    quote: z.string().max(1200, 'Quote should be concise and impactful').optional(),
+
+    /** Quote author for attribution */
+    author: z.string().max(160, 'Author name should be concise').optional(),
+
   })
   .superRefine((spec, ctx) => {
     // two-column layout must include both sides
@@ -450,22 +432,7 @@ export const SlideSpecSchema = z
       });
     }
 
-    // "grid-layout" layout requires gridLayout configuration
-    if (spec.layout === 'grid-layout') {
-      if (!spec.gridLayout) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['gridLayout'],
-          message: 'Grid layout requires gridLayout configuration.',
-        });
-      } else if (spec.gridLayout.cells.length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['gridLayout', 'cells'],
-          message: 'Grid layout requires at least one cell with content.',
-        });
-      }
-    }
+
 
     // "process-flow" layout requires ≥ 2 steps
     if (spec.layout === 'process-flow') {
@@ -491,18 +458,17 @@ export const SlideSpecSchema = z
 
     // image-* layouts require at least one image source (url or prompt)
     if (spec.layout === 'image-full' || spec.layout === 'image-left' || spec.layout === 'image-right') {
-      const hasAnyImage =
-        !!spec.imageUrl || !!spec.imagePrompt || !!spec.left?.imagePrompt || !!spec.right?.imagePrompt;
+      const hasAnyImage = !!spec.imageUrl;
       if (!hasAnyImage) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['imageUrl'],
-          message: `${spec.layout} layout requires an imageUrl or an imagePrompt.`,
+          message: `${spec.layout} layout requires an imageUrl.`,
         });
       }
       // Encourage alt text for accessibility when an image exists
       if (
-        (spec.imageUrl || spec.imagePrompt || spec.left?.imagePrompt || spec.right?.imagePrompt) &&
+        spec.imageUrl &&
         !spec.altText
       ) {
         ctx.addIssue({
@@ -575,50 +541,18 @@ export const GenerationParamsSchema = z.object({
     .transform((str) => str.trim())
     .refine((val) => val.length >= 10, 'Prompt cannot be mostly whitespace'),
 
-  /** Target audience */
-  audience: z
-    .enum(
-      [
-        'general',
-        'executives',
-        'technical',
-        'sales',
-        'investors',
-        'students',
-        'healthcare',
-        'education',
-        'marketing',
-        'finance',
-        'startup',
-        'government',
-        'business',
-      ],
-      { errorMap: () => ({ message: 'Invalid audience type. Must be one of the supported audience categories.' }) }
-    )
-    .default('general'),
+  /** Slide components to include */
+  components: z.object({
+    paragraph: z.boolean().optional(),
+    bulletList: z.boolean().optional(),
+    chart: z.boolean().optional(),
+    table: z.boolean().optional(),
+    quote: z.boolean().optional(),
+  }).optional(),
 
-  /** Presentation tone */
-  tone: z
-    .enum(
-      ['professional', 'casual', 'persuasive', 'educational', 'inspiring', 'authoritative', 'friendly', 'urgent', 'confident', 'analytical'],
-      { errorMap: () => ({ message: 'Invalid tone type. Must be one of the supported tone styles.' }) }
-    )
-    .default('professional'),
 
-  /** Content length */
-  contentLength: z
-    .enum(['minimal', 'brief', 'moderate', 'detailed', 'comprehensive'], {
-      errorMap: () => ({ message: 'Invalid content length. Must be minimal, brief, moderate, detailed, or comprehensive.' }),
-    })
-    .default('moderate'),
 
-  /** Presentation type */
-  presentationType: z.enum(['general', 'pitch', 'report', 'training', 'proposal', 'update', 'analysis', 'comparison', 'timeline', 'process', 'strategy']).default('general'),
 
-  /** Industry context */
-  industry: z
-    .enum(['general', 'technology', 'healthcare', 'finance', 'education', 'retail', 'manufacturing', 'consulting', 'nonprofit', 'government', 'startup', 'hospitality'])
-    .default('general'),
 
   /** Design preferences and branding */
   design: z
@@ -639,9 +573,7 @@ export const GenerationParamsSchema = z.object({
     })
     .optional(),
 
-  /** AI image generation preferences */
-  withImage: z.boolean().default(false),
-  imageStyle: z.enum(['realistic', 'illustration', 'abstract', 'professional', 'minimal']).default('professional'),
+
 
   /** Content quality and validation preferences */
   qualityLevel: z.enum(['standard', 'high', 'premium']).default('standard'),
@@ -817,7 +749,7 @@ export function validateContentQuality(spec: SlideSpec): {
   }
 
   // Image: ensure descriptive text
-  const anyImage = spec.imageUrl || spec.imagePrompt || spec.left?.imagePrompt || spec.right?.imagePrompt;
+  const anyImage = spec.imageUrl;
   if (anyImage && !spec.altText) {
     accessibilityIssues.push('Add altText to describe images for screen readers.');
     accessibilityScore -= 10;
@@ -931,7 +863,7 @@ export function generateContentImprovements(
   if (!spec.notes) {
     quickFixes.push('Add speaker notes to provide context and accessibility.');
   }
-  if ((spec.imageUrl || spec.imagePrompt || spec.left?.imagePrompt || spec.right?.imagePrompt) && !spec.altText) {
+  if (spec.imageUrl && !spec.altText) {
     quickFixes.push('Add altText for any images to improve accessibility.');
   }
 

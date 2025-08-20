@@ -23,10 +23,10 @@ const LAYOUT = {
   // Professional typography scale optimized for maximum readability and visual impact
   type: {
     display:  { fontSize: 56, lineHeight: 1.0, letterSpacing: -0.03, fontWeight: 800 },    // Hero titles - maximum impact for title slides
-    title:    { fontSize: 42, lineHeight: 1.1, letterSpacing: -0.02, fontWeight: 700 },    // Main slide titles - enhanced prominence
+    title:    { fontSize: 24, lineHeight: 1.1, letterSpacing: -0.02, fontWeight: 700 },    // Main slide titles - modern 24pt size
     subtitle: { fontSize: 28, lineHeight: 1.2, letterSpacing: -0.01, fontWeight: 600 },    // Section headers - improved hierarchy
-    body:     { fontSize: 20, lineHeight: 1.4, letterSpacing: 0.003, fontWeight: 400 },    // Body text - optimized readability
-    bullet:   { fontSize: 18, lineHeight: 1.35, letterSpacing: 0.002, fontWeight: 400 },   // Bullet points - enhanced scanning
+    body:     { fontSize: 12, lineHeight: 1.4, letterSpacing: 0.003, fontWeight: 400 },    // Body text - 12pt for content
+    bullet:   { fontSize: 12, lineHeight: 1.35, letterSpacing: 0.002, fontWeight: 400 },   // Bullet points - 12pt for content
     caption:  { fontSize: 16, lineHeight: 1.3, letterSpacing: 0.01, fontWeight: 500 },     // Small text - better visibility
     quote:    { fontSize: 26, lineHeight: 1.5, letterSpacing: 0.005, fontWeight: 400 },    // Quote text - enhanced emphasis
     accent:   { fontSize: 15, lineHeight: 1.25, letterSpacing: 0.015, fontWeight: 600 },   // Accent text - labels, tags
@@ -34,12 +34,13 @@ const LAYOUT = {
 
   // Professional spacing system optimized for modern business presentations
   spacing: {
-    titleToContent: 0.8,     // Tighter spacing for better content density
+    titleToContent: 1.2,     // Increased spacing to prevent title-content overlap
     colGap: 0.6,             // Enhanced column separation for better readability
     bulletSpacing: 0.18,     // Optimized bullet spacing for professional appearance
     sectionGap: 0.6,         // Increased section gaps for better visual hierarchy
     cardPadding: 0.5,        // Generous padding for premium card design
-    accentHeight: 0.15,      // Prominent accent bars for strong visual impact
+    accentHeight: 0.08,      // Thin accent bar for modern professional look
+    topAccentHeight: 0.08,   // Top accent bar height
     elementPadding: 0.25,    // Enhanced element padding for better content organization
     borderRadius: 0.15,      // Modern rounded corners for contemporary design
     shadowOffset: 0.06,      // Enhanced shadow for superior depth perception
@@ -55,10 +56,10 @@ const LAYOUT = {
 // Professional content area calculations optimized for modern business presentations
 const CONTENT = {
   x: LAYOUT.margins.left + LAYOUT.spacing.visualMargin,
-  y: LAYOUT.margins.top + LAYOUT.spacing.visualMargin,
+  y: LAYOUT.spacing.topAccentHeight + LAYOUT.spacing.microSpacing, // Start below top accent bar
   width: SLIDE.width - LAYOUT.margins.left - LAYOUT.margins.right - (LAYOUT.spacing.visualMargin * 2),
-  height: SLIDE.height - LAYOUT.margins.top - LAYOUT.margins.bottom - (LAYOUT.spacing.visualMargin * 2),
-  titleH: 1.0, // Optimized for professional title spacing with enhanced visual balance
+  height: SLIDE.height - LAYOUT.margins.top - LAYOUT.margins.bottom - (LAYOUT.spacing.visualMargin * 2) - LAYOUT.spacing.topAccentHeight,
+  titleH: 0.6, // Reduced title height for 24pt font
 };
 
 // Improved column calculations for two-column layouts with better proportions
@@ -191,6 +192,58 @@ function defineMasters(pres: pptxgen, theme: ProfessionalTheme) {
 /* -------------------------------------------------------------------------------------------------
  * Blocks
  * ------------------------------------------------------------------------------------------------- */
+
+/**
+ * Add modern top accent bar with sophisticated gradient effect
+ */
+function addTopAccentBar(slide: pptxgen.Slide, theme: ProfessionalTheme) {
+  const colors = getThemeColors(theme);
+
+  // Create sophisticated gradient effect using multiple rectangles
+  const segments = 100; // More segments for ultra-smooth gradient
+  const segmentWidth = SLIDE.width / segments;
+
+  for (let i = 0; i < segments; i++) {
+    const ratio = i / (segments - 1);
+    // Smooth interpolation between primary and secondary colors
+    const primaryRGB = hexToRgb(colors.primary);
+    const secondaryRGB = hexToRgb(colors.secondary);
+
+    // Use smooth curve for more natural gradient
+    const smoothRatio = 0.5 * (1 + Math.sin(Math.PI * (ratio - 0.5)));
+
+    const r = Math.round(primaryRGB.r + (secondaryRGB.r - primaryRGB.r) * smoothRatio);
+    const g = Math.round(primaryRGB.g + (secondaryRGB.g - primaryRGB.g) * smoothRatio);
+    const b = Math.round(primaryRGB.b + (secondaryRGB.b - primaryRGB.b) * smoothRatio);
+
+    const segmentColor = rgbToHex(r, g, b);
+
+    slide.addShape("rect", {
+      x: i * segmentWidth,
+      y: 0,
+      w: segmentWidth + 0.005, // Minimal overlap to prevent gaps
+      h: LAYOUT.spacing.topAccentHeight,
+      fill: { color: segmentColor },
+      line: { width: 0 }
+    });
+  }
+}
+
+// Helper functions for color interpolation
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  // Remove # if present and ensure 6 characters
+  const cleanHex = hex.replace('#', '').padStart(6, '0');
+  const result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(cleanHex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 30, g: 64, b: 175 }; // Default to primary blue if parsing fails
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+}
 /**
  * Enhanced title slide matching live preview exactly - modern and professional
  * Features: Bold typography, subtle gradients, modern styling, professional appearance
@@ -218,22 +271,8 @@ function addTitleSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
     line: { width: 0 },
   });
 
-  // Primary accent bar with enhanced visual prominence and modern shadow
-  slide.addShape("rect", {
-    x: 0,
-    y: 0,
-    w: SLIDE.width,
-    h: LAYOUT.spacing.accentHeight,
-    fill: { color: colors.primary },
-    line: { width: 0 },
-    shadow: {
-      type: 'outer',
-      blur: LAYOUT.spacing.modernShadowBlur,
-      offset: LAYOUT.spacing.shadowOffset,
-      color: colors.primary,
-      opacity: 0.25
-    }
-  });
+  // Add modern top accent bar with gradient
+  addTopAccentBar(slide, theme);
 
   // Secondary accent bar with sophisticated gradient and layered design
   slide.addShape("rect", {
@@ -319,74 +358,31 @@ function addTitleSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
 }
 
 /**
- * Superior content title with enhanced modern design and optimized visual hierarchy
- * Features: Advanced typography, sophisticated accent elements, premium professional styling
+ * Modern content title with full width and professional 24pt styling
+ * Features: Full width title, positioned below top accent bar, clean modern design
  */
 function addContentTitle(slide: pptxgen.Slide, title: string, theme: ProfessionalTheme, fonts: { heading: string }) {
   const colors = getThemeColors(theme);
 
+  // Add top accent bar first
+  addTopAccentBar(slide, theme);
+
   const cleanTitle = sanitizeText(title, 120);
 
-  // Professional title with enhanced typography and modern visual effects
+  // Professional title with full width and 24pt font - positioned directly below accent bar
   slide.addText(cleanTitle, {
-    x: CONTENT.x,
-    y: CONTENT.y + LAYOUT.spacing.microSpacing,
-    w: CONTENT.width,
-    h: CONTENT.titleH - LAYOUT.spacing.microSpacing,
+    x: 0.3, // Small margin from edge
+    y: LAYOUT.spacing.topAccentHeight + 0.1, // Position directly below accent bar
+    w: SLIDE.width - 0.6, // Full width minus small margins
+    h: CONTENT.titleH,
     fontFace: fonts.heading,
-    fontSize: LAYOUT.type.title.fontSize,
-    color: colors.textPrimary, // Use primary text color for better readability
+    fontSize: LAYOUT.type.title.fontSize, // 24pt
+    color: colors.textPrimary,
     bold: true,
     align: 'left',
     valign: 'top',
     lineSpacingMultiple: LAYOUT.type.title.lineHeight,
-    wrap: true,
-    shadow: {
-      type: 'outer',
-      blur: 2,
-      offset: LAYOUT.spacing.shadowOffset,
-      color: colors.textSecondary,
-      opacity: 0.2 // Enhanced shadow for better depth
-    }
-  });
-
-  // Enhanced dynamic underline positioning with improved spacing
-  const estTitleH = estimateTextHeightIn(
-    cleanTitle,
-    CONTENT.width,
-    LAYOUT.type.title.fontSize,
-    LAYOUT.type.title.lineHeight
-  );
-  const underlineY = CONTENT.y + Math.min(estTitleH + LAYOUT.spacing.microSpacing, CONTENT.titleH - LAYOUT.spacing.microSpacing);
-
-  // Modern accent underline with sophisticated design
-  slide.addShape("rect", {
-    x: CONTENT.x,
-    y: underlineY,
-    w: CONTENT.width * 0.25, // Wider underline for better visual impact
-    h: LAYOUT.spacing.accentHeight * 0.4, // Proportional height
-    fill: { color: colors.primary, transparency: 5 }, // Primary color for consistency
-    line: { width: 0 },
-  });
-
-  // Secondary accent element for modern layered effect
-  slide.addShape("rect", {
-    x: CONTENT.x,
-    y: underlineY + LAYOUT.spacing.accentHeight * 0.4,
-    w: CONTENT.width * 0.15, // Shorter secondary accent
-    h: LAYOUT.spacing.accentHeight * 0.2,
-    fill: { color: colors.accent, transparency: 15 },
-    line: { width: 0 },
-  });
-
-  // Secondary accent for modern depth like preview
-  slide.addShape("rect", {
-    x: CONTENT.x,
-    y: underlineY + 0.03,
-    w: CONTENT.width * 0.08, // 8% width like preview
-    h: 0.02,
-    fill: { color: colors.primary, transparency: 30 },
-    line: { width: 0 },
+    wrap: true
   });
 }
 
@@ -397,100 +393,103 @@ function addContentTitle(slide: pptxgen.Slide, title: string, theme: Professiona
 function addBulletsOrParagraph(slide: pptxgen.Slide, spec: SlideSpec, theme: ProfessionalTheme, fonts: { body: string }) {
   const colors = getThemeColors(theme);
   const bullets = sanitizeBullets(spec.bullets);
-  const y = CONTENT.y + CONTENT.titleH + LAYOUT.spacing.titleToContent;
-  const h = CONTENT.height - CONTENT.titleH - LAYOUT.spacing.titleToContent;
+  // Adjust content positioning to account for new title position
+  const y = LAYOUT.spacing.topAccentHeight + CONTENT.titleH + 0.3;
+  const h = SLIDE.height - y - 0.8; // Leave space at bottom
 
   if (bullets.length) {
-    // Professional shadow layer for depth
+    // Modern container with subtle shadow
     slide.addShape("rect", {
-      x: CONTENT.x + LAYOUT.spacing.shadowOffset,
-      y: y + LAYOUT.spacing.shadowOffset,
+      x: CONTENT.x + 0.05,
+      y: y + 0.05,
       w: CONTENT.width,
       h: h,
-      fill: { color: colors.textSecondary, transparency: 80 },
+      fill: { color: colors.textSecondary, transparency: 90 },
       line: { width: 0 },
     });
 
-    // Premium card background with modern styling
+    // Main content container with modern styling
     slide.addShape("rect", {
       x: CONTENT.x,
       y: y,
       w: CONTENT.width,
       h: h,
-      fill: { color: colors.surface, transparency: 4 },
-      line: { color: colors.borderMedium, width: 1.5 },
+      fill: { color: colors.background, transparency: 2 },
+      line: { color: colors.primary, width: 2 },
     });
 
-    // Modern accent bar at top of content area
+    // Top accent strip for modern look
     slide.addShape("rect", {
       x: CONTENT.x,
       y: y,
       w: CONTENT.width,
-      h: LAYOUT.spacing.accentHeight * 0.5,
-      fill: { color: colors.primary, transparency: 10 },
+      h: 0.05,
+      fill: { color: colors.primary },
       line: { width: 0 },
     });
 
-    // Professional bullet rendering with enhanced formatting
-    slide.addText(bullets.join('\n'), {
-      x: CONTENT.x + LAYOUT.spacing.cardPadding,
-      y: y + LAYOUT.spacing.elementPadding,
-      w: CONTENT.width - (LAYOUT.spacing.cardPadding * 2),
-      h: h - (LAYOUT.spacing.elementPadding * 2),
+    // Professional bullet rendering with enhanced bullet points
+    const bulletText = bullets.map(bullet => `• ${bullet}`).join('\n');
+    slide.addText(bulletText, {
+      x: CONTENT.x + 0.3,
+      y: y + 0.2,
+      w: CONTENT.width - 0.6,
+      h: h - 0.4,
       fontFace: fonts.body,
-      fontSize: LAYOUT.type.bullet.fontSize,
+      fontSize: LAYOUT.type.bullet.fontSize, // 12pt
       color: colors.textPrimary,
-      bullet: {
-        type: 'bullet',
-        style: '•',
-        startAt: 1,
-        indent: 0.25 // Enhanced indent for better hierarchy
-      },
-      lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
-      paraSpaceAfter: 12, // Increased spacing between bullets
+      lineSpacingMultiple: 1.5,
+      paraSpaceAfter: 8,
       valign: 'top',
       wrap: true
     });
 
   } else if (spec.paragraph) {
-    // Modern card background with shadow matching preview
+    // Modern container with subtle shadow
     slide.addShape("rect", {
-      x: CONTENT.x + 0.02,
-      y: y + 0.02,
+      x: CONTENT.x + 0.05,
+      y: y + 0.05,
       w: CONTENT.width,
       h: h,
-      fill: { color: colors.textSecondary, transparency: 85 },
+      fill: { color: colors.textSecondary, transparency: 90 },
       line: { width: 0 },
     });
 
-    // Main card background matching preview styling
+    // Main content container with modern styling
     slide.addShape("rect", {
       x: CONTENT.x,
       y: y,
       w: CONTENT.width,
       h: h,
-      fill: { color: colors.surface, transparency: 8 },
-      line: { color: colors.borderLight, width: 0.5 },
+      fill: { color: colors.background, transparency: 2 },
+      line: { color: colors.primary, width: 2 },
     });
 
-    // Enhanced paragraph rendering matching preview with overflow guard
-    {
-      const text = sanitizeText(spec.paragraph, 1200);
-      const fitFont = computeAdjustedFontSize(text, CONTENT.width - 0.3, h - 0.2, LAYOUT.type.body.fontSize, LAYOUT.type.body.lineHeight, 12);
-      slide.addText(text, {
-        x: CONTENT.x + 0.15,
-        y: y + 0.1,
-        w: CONTENT.width - 0.3,
-        h: h - 0.2,
-        fontFace: fonts.body,
-        fontSize: fitFont,
-        color: colors.textPrimary,
-        lineSpacingMultiple: LAYOUT.type.body.lineHeight,
-        paraSpaceAfter: 4,
-        valign: 'top',
-        wrap: true
-      });
-    }
+    // Top accent strip for modern look
+    slide.addShape("rect", {
+      x: CONTENT.x,
+      y: y,
+      w: CONTENT.width,
+      h: 0.05,
+      fill: { color: colors.primary },
+      line: { width: 0 },
+    });
+
+    // Enhanced paragraph rendering with 12pt font
+    const text = sanitizeText(spec.paragraph, 1200);
+    slide.addText(text, {
+      x: CONTENT.x + 0.3,
+      y: y + 0.2,
+      w: CONTENT.width - 0.6,
+      h: h - 0.4,
+      fontFace: fonts.body,
+      fontSize: LAYOUT.type.body.fontSize, // 12pt
+      color: colors.textPrimary,
+      lineSpacingMultiple: 1.5,
+      paraSpaceAfter: 4,
+      valign: 'top',
+      wrap: true
+    });
 
   } else {
     // Fallback for empty content with modern styling
@@ -554,7 +553,8 @@ function addTwoColumn(slide: pptxgen.Slide, spec: SlideSpec, theme: Professional
 
   // Professional left column with enhanced styling and better spacing
   if (leftBul.length) {
-    slide.addText(leftBul.join('\n'), {
+    const leftBulletText = leftBul.map(bullet => `• ${bullet}`).join('\n');
+    slide.addText(leftBulletText, {
       x: CONTENT.x + LAYOUT.spacing.cardPadding,
       y: y + LAYOUT.spacing.elementPadding + LAYOUT.spacing.microSpacing,
       w: colWidth - (LAYOUT.spacing.cardPadding * 2),
@@ -562,12 +562,6 @@ function addTwoColumn(slide: pptxgen.Slide, spec: SlideSpec, theme: Professional
       fontFace: fonts.body,
       fontSize: LAYOUT.type.bullet.fontSize,
       color: colors.textPrimary,
-      bullet: {
-        type: 'bullet',
-        style: '•',
-        startAt: 1,
-        indent: 0.2 // Enhanced indent for better hierarchy
-      },
       lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
       paraSpaceAfter: 14, // Increased spacing for better readability
       valign: 'top',
@@ -600,7 +594,8 @@ function addTwoColumn(slide: pptxgen.Slide, spec: SlideSpec, theme: Professional
 
   // Professional right column with enhanced styling and better spacing
   if (rightBul.length) {
-    slide.addText(rightBul.join('\n'), {
+    const rightBulletText = rightBul.map(bullet => `• ${bullet}`).join('\n');
+    slide.addText(rightBulletText, {
       x: CONTENT.x + colWidth + LAYOUT.spacing.colGap + LAYOUT.spacing.cardPadding,
       y: y + LAYOUT.spacing.elementPadding + LAYOUT.spacing.microSpacing,
       w: colWidth - (LAYOUT.spacing.cardPadding * 2),
@@ -608,12 +603,6 @@ function addTwoColumn(slide: pptxgen.Slide, spec: SlideSpec, theme: Professional
       fontFace: fonts.body,
       fontSize: LAYOUT.type.bullet.fontSize,
       color: colors.textPrimary,
-      bullet: {
-        type: 'bullet',
-        style: '•',
-        startAt: 1,
-        indent: 0.2 // Enhanced indent for better hierarchy
-      },
       lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
       paraSpaceAfter: 14, // Increased spacing for better readability
       valign: 'top',
@@ -658,7 +647,8 @@ function addImageRightSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Profes
   // Add content (bullets or paragraph) on the left
   const bullets = sanitizeBullets(spec.bullets);
   if (bullets.length) {
-    slide.addText(bullets.join('\n'), {
+    const bulletText = bullets.map(bullet => `• ${bullet}`).join('\n');
+    slide.addText(bulletText, {
       x: CONTENT.x + 0.05,
       y,
       w: contentWidth - 0.05,
@@ -666,12 +656,6 @@ function addImageRightSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Profes
       fontFace: fonts.body,
       fontSize: LAYOUT.type.bullet.fontSize,
       color: colors.textPrimary,
-      bullet: {
-        type: 'bullet',
-        style: '•',
-        startAt: 1,
-        indent: 0.15
-      },
       lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
       paraSpaceAfter: 8,
       valign: 'top',
@@ -703,7 +687,8 @@ function addImageRightSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Profes
     h: h - 0.2,
     colors,
     imagePrompt: (spec as any).imagePrompt,
-    generatedImageUrl: (spec as any).generatedImageUrl || spec.imageUrl
+    generatedImageUrl: (spec as any).generatedImageUrl || spec.imageUrl,
+    generatedImageData: (spec as any).generatedImageData,
   });
 }
 
@@ -804,7 +789,8 @@ function addMixedContentSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Prof
       });
 
       if (leftBul.length) {
-        slide.addText(leftBul.join('\n'), {
+        const leftBulletText = leftBul.map(bullet => `• ${bullet}`).join('\n');
+        slide.addText(leftBulletText, {
           x: CONTENT.x + 0.15,
           y: currentY + 0.1,
           w: colWidth - 0.25,
@@ -812,12 +798,6 @@ function addMixedContentSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Prof
           fontFace: fonts.body,
           fontSize: LAYOUT.type.bullet.fontSize,
           color: colors.textPrimary,
-          bullet: {
-            type: 'bullet',
-            style: '•',
-            startAt: 1,
-            indent: 0.15
-          },
           lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
           paraSpaceAfter: 10,
           valign: 'top',
@@ -876,7 +856,8 @@ function addMixedContentSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Prof
       });
 
       if (rightBul.length) {
-        slide.addText(rightBul.join('\n'), {
+        const rightBulletText = rightBul.map(bullet => `• ${bullet}`).join('\n');
+        slide.addText(rightBulletText, {
           x: rightX + 0.15,
           y: currentY + 0.1,
           w: colWidth - 0.25,
@@ -884,12 +865,6 @@ function addMixedContentSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Prof
           fontFace: fonts.body,
           fontSize: LAYOUT.type.bullet.fontSize,
           color: colors.textPrimary,
-          bullet: {
-            type: 'bullet',
-            style: '•',
-            startAt: 1,
-            indent: 0.15
-          },
           lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
           paraSpaceAfter: 10,
           valign: 'top',
@@ -939,13 +914,15 @@ function addImageLeftSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Profess
     h: h - 0.2,
     colors,
     imagePrompt: (spec as any).imagePrompt,
-    generatedImageUrl: (spec as any).generatedImageUrl || spec.imageUrl
+    generatedImageUrl: (spec as any).generatedImageUrl || spec.imageUrl,
+    generatedImageData: (spec as any).generatedImageData,
   });
 
   // Add content (bullets or paragraph) on the right
   const bullets = sanitizeBullets(spec.bullets);
   if (bullets.length) {
-    slide.addText(bullets.join('\n'), {
+    const bulletText = bullets.map(bullet => `• ${bullet}`).join('\n');
+    slide.addText(bulletText, {
       x: contentX + 0.05,
       y,
       w: contentWidth - 0.05,
@@ -953,12 +930,6 @@ function addImageLeftSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Profess
       fontFace: fonts.body,
       fontSize: LAYOUT.type.bullet.fontSize,
       color: colors.textPrimary,
-      bullet: {
-        type: 'bullet',
-        style: '•',
-        startAt: 1,
-        indent: 0.15
-      },
       lineSpacingMultiple: LAYOUT.type.bullet.lineHeight,
       paraSpaceAfter: 8,
       valign: 'top',
@@ -998,6 +969,7 @@ function addImageFullSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Profess
     colors,
     imagePrompt: (spec as any).imagePrompt,
     generatedImageUrl: (spec as any).generatedImageUrl || spec.imageUrl,
+    generatedImageData: (spec as any).generatedImageData,
     isFullScreen: true
   });
 
@@ -1055,11 +1027,12 @@ function addImagePlaceholder(slide: pptxgen.Slide, options: {
   colors: any;
   imagePrompt?: string;
   generatedImageUrl?: string;
+  generatedImageData?: string; // data URL or base64
   isFullScreen?: boolean;
 }) {
-  const { x, y, w, h, colors, imagePrompt, generatedImageUrl, isFullScreen = false } = options;
+  const { x, y, w, h, colors, imagePrompt, generatedImageUrl, generatedImageData, isFullScreen = false } = options;
 
-  if (generatedImageUrl) {
+  if (generatedImageUrl || generatedImageData) {
     // Add actual image with superior styling and enhanced visual effects
     try {
       // Enhanced shadow layer for depth (behind image)
@@ -1074,15 +1047,19 @@ function addImagePlaceholder(slide: pptxgen.Slide, options: {
         });
       }
 
-      slide.addImage({
-        path: generatedImageUrl,
+      const imageOpts: any = {
         x,
         y,
         w,
         h,
         sizing: { type: 'cover', w, h },
-        rounding: !isFullScreen, // Enhanced border radius for modern look (boolean value)
-      });
+      };
+      if (generatedImageData) {
+        imageOpts.data = generatedImageData;
+      } else if (generatedImageUrl) {
+        imageOpts.path = generatedImageUrl;
+      }
+      slide.addImage(imageOpts);
 
       // Enhanced image border with sophisticated styling for non-fullscreen images
       if (!isFullScreen) {
@@ -1383,8 +1360,8 @@ function addQuoteSlide(
     line: { width: 0 },
   });
 
-  const quote = (spec as any).quote || spec.paragraph || 'Add an inspiring quotation here.';
-  const author = (spec as any).author || '';
+  const quote = (spec as any).quote || spec.paragraph || 'Innovation distinguishes between a leader and a follower.';
+  const author = (spec as any).author || 'Steve Jobs';
 
   // Quote text
   slide.addText(sanitizeText(quote, 900), {
@@ -1644,20 +1621,23 @@ function addChartSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
     line: { width: 0 },
   });
 
-  // Superior color palette with enhanced theme integration and professional harmony
+  // Modern data visualization color palette with enhanced accessibility and visual harmony
   const chartColors = [
-    colors.primary,
-    colors.accent,
-    colors.secondary,
-    '#10B981', // success green - enhanced with proper hex format
-    '#F59E0B', // warning amber - professional color consistency
-    '#EF4444', // error red - improved accessibility
-    '#8B5CF6', // purple - modern accent
-    '#06B6D4', // cyan - contemporary palette
-    '#EC4899', // pink - vibrant accent
-    '#84CC16', // lime - fresh highlight
-    '#6366F1', // indigo - sophisticated addition
-    '#F97316', // orange - warm accent
+    colors.primary,      // Primary brand color
+    colors.accent,       // Accent color for emphasis
+    colors.secondary,    // Secondary brand color
+    '#10B981',          // Emerald - success/positive data
+    '#F59E0B',          // Amber - warning/neutral data
+    '#EF4444',          // Red - error/negative data
+    '#8B5CF6',          // Violet - premium accent
+    '#06B6D4',          // Cyan - technology/innovation
+    '#EC4899',          // Pink - creative/dynamic
+    '#84CC16',          // Lime - growth/fresh
+    '#6366F1',          // Indigo - trust/stability
+    '#F97316',          // Orange - energy/enthusiasm
+    '#14B8A6',          // Teal - balance/harmony
+    '#A855F7',          // Purple - luxury/premium
+    '#F43F5E',          // Rose - passion/attention
   ];
 
   // Chart validation for quality output
@@ -1688,7 +1668,7 @@ function addChartSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
 
   const chartType = chartTypeFor(data as any[], spec.chart?.type);
 
-  // Enhanced chart options with superior professional styling and modern design
+  // Modern chart options with sophisticated styling and enhanced visual appeal
   const opts: pptxgen.IChartOpts = {
     x: CONTENT.x + LAYOUT.spacing.cardPadding,
     y: chartY + LAYOUT.spacing.elementPadding,
@@ -1697,13 +1677,14 @@ function addChartSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
     chartColors,
     showLegend: (data as any[])?.length > 1,
     legendPos: 'r',
-    legendFontSize: 14, // Increased for better readability
+    legendFontSize: 15, // Enhanced for better readability
     legendFontFace: fonts.body,
+    legendColor: colors.textPrimary,
     title: '', // Remove chart title to avoid duplication
     titleFontFace: fonts.heading,
-    titleFontSize: 18, // Increased for prominence
-    // Enhanced grid styling for superior readability
-    catGridLine: { style: 'solid', size: 1, color: colors.borderMedium }, // Slightly thicker
+    titleFontSize: 20, // Enhanced prominence
+    // Modern grid styling with subtle professional appearance
+    catGridLine: { style: 'solid', size: 1.2, color: colors.borderLight }, // Refined grid lines
     valGridLine: { style: 'solid', size: 0.75, color: colors.borderLight }, // Enhanced visibility
     plotArea: {
       fill: { color: colors.background, transparency: 99 } // Cleaner background
@@ -1861,31 +1842,39 @@ function addTableSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
   const [header, ...rows] = data;
   const styled: pptxgen.TableRow[] = [];
 
-  // Superior header row with premium modern styling and enhanced visual hierarchy
+  // Modern header row with sophisticated styling and enhanced visual hierarchy
   styled.push(
     header.map((h: string, colIndex: number) => ({
       text: h,
       options: {
         bold: true,
         fontFace: fonts.heading,
-        fontSize: LAYOUT.type.body.fontSize + 1, // Enhanced header font size for better hierarchy
+        fontSize: LAYOUT.type.body.fontSize + 2, // Enhanced header font size for superior hierarchy
         color: 'FFFFFF',
         fill: {
           type: 'gradient',
-          angle: 90,
+          angle: 135, // Modern diagonal gradient
           colors: [
             { color: colors.primary, position: 0 },
-            { color: colors.secondary, position: 100 }
+            { color: colors.secondary, position: 50 },
+            { color: colors.accent, position: 100 }
           ]
-        }, // Enhanced gradient header background
+        }, // Sophisticated three-color gradient header
         align: colIndex === 0 ? 'left' : 'center',
         valign: 'middle',
-        margin: [0.12, 0.18, 0.12, 0.18], // Enhanced padding for premium spacing
+        margin: [0.15, 0.22, 0.15, 0.22], // Premium padding for superior spacing
+        shadow: {
+          type: 'outer',
+          blur: 3,
+          offset: 1,
+          color: colors.textPrimary,
+          opacity: 20
+        }, // Subtle text shadow for depth
       },
     }))
   );
 
-  // Superior data rows with premium alternating design and enhanced visual appeal
+  // Modern data rows with sophisticated alternating design and enhanced visual appeal
   rows.forEach((r: string[], i: number) => {
     const isEven = i % 2 === 0;
     const fill = isEven ? colors.surface : colors.background;
@@ -1896,15 +1885,26 @@ function addTableSlide(slide: pptxgen.Slide, spec: SlideSpec, theme: Professiona
         text: c,
         options: {
           fontFace: fonts.body,
-          fontSize: LAYOUT.type.body.fontSize, // Consistent body font size
+          fontSize: LAYOUT.type.body.fontSize + 0.5, // Slightly enhanced for better readability
           color: textColor,
-          fill: { color: fill, transparency: isEven ? 92 : 98 }, // Enhanced alternating visibility
+          fill: {
+            color: fill,
+            transparency: isEven ? 88 : 96 // Enhanced contrast for better readability
+          },
           align: colIndex === 0 ? 'left' : 'center',
           valign: 'middle',
-          margin: [0.1, 0.18, 0.1, 0.18], // Premium padding for better spacing
+          margin: [0.12, 0.22, 0.12, 0.22], // Enhanced padding for premium spacing
           border: {
             color: colors.borderLight,
-            pt: 0.5 // Subtle cell borders for better definition
+            pt: 0.75 // Slightly stronger borders for better definition
+          },
+          // Add subtle hover effect simulation through enhanced styling
+          shadow: isEven ? undefined : {
+            type: 'outer',
+            blur: 1,
+            offset: 0.5,
+            color: colors.borderMedium,
+            opacity: 10
           },
         },
       }))
@@ -2018,6 +2018,10 @@ export async function generateSimplePpt(
         case 'comparison-table':
           addTableSlide(slide, spec, theme, fonts);
           break;
+        case 'mixed-content':
+          // Dynamic layout for mixed content types (e.g., text + chart, bullets + chart)
+          addMixedContentSlide(slide, spec, theme, fonts);
+          break;
         case 'two-column':
           addTwoColumn(slide, spec, theme, fonts);
           break;
@@ -2095,6 +2099,8 @@ export async function generateSimplePpt(
   validateBuffer(buffer);
   return buffer;
 }
+
+
 
 // Backward-compatible alias
 export const generatePpt = generateSimplePpt;

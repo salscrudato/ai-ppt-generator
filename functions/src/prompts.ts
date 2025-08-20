@@ -445,17 +445,16 @@ function selectOptimalFramework(input: GenerationParams): {
     selectedFramework = 'beforeAfter';
   } else if (prompt.includes('timeline') || prompt.includes('history') || prompt.includes('journey') || prompt.includes('progress') || prompt.includes('story')) {
     selectedFramework = 'heroJourney';
-  } else if (prompt.includes('recommend') || prompt.includes('analysis') || prompt.includes('conclusion') || input.audience === 'executives') {
+  } else if (prompt.includes('recommend') || prompt.includes('analysis') || prompt.includes('conclusion')) {
     selectedFramework = 'pyramid';
-  } else if (input.contentLength === 'minimal' || input.contentLength === 'brief') {
+  } else if (prompt.includes('brief') || prompt.includes('minimal')) {
     selectedFramework = 'microStory';
   } else {
     selectedFramework = 'problemSolution'; // Default fallback
   }
 
   const framework = STORYTELLING_FRAMEWORKS[selectedFramework];
-  const toneGuidance = (FRAMEWORK_TONE_ADAPTATIONS[selectedFramework] as any)?.[input.tone] ||
-                      FRAMEWORK_TONE_ADAPTATIONS[selectedFramework]?.professional ||
+  const toneGuidance = FRAMEWORK_TONE_ADAPTATIONS[selectedFramework]?.professional ||
                       'Use professional tone with clear, concise language';
 
   // Generate narrative strategy based on framework and audience
@@ -488,8 +487,8 @@ function generateNarrativeStrategy(frameworkKey: keyof typeof STORYTELLING_FRAME
     comprehensive: 'Cover all aspects thoroughly, include extensive context, provide complete analysis'
   };
 
-  const audienceStrategy = (audienceStrategies as any)[input.audience] || audienceStrategies.general;
-  const lengthStrategy = lengthStrategies[input.contentLength] || lengthStrategies.moderate;
+  const audienceStrategy = audienceStrategies.general;
+  const lengthStrategy = lengthStrategies.moderate;
 
   return `${audienceStrategy}. ${lengthStrategy}. Framework: ${STORYTELLING_FRAMEWORKS[frameworkKey].structure}`;
 }
@@ -820,38 +819,68 @@ function extractKeyThemes(prompt: string): string[] {
 }
 
 export function generateContentPrompt(input: GenerationParams): string {
-  const { framework, toneGuidance, narrativeStrategy } = selectOptimalFramework(input);
-  const audienceGuidance = AUDIENCE_GUIDANCE[input.audience] || AUDIENCE_GUIDANCE.general;
-  const toneSpec = TONE_SPECIFICATIONS[input.tone] || TONE_SPECIFICATIONS.professional;
-  const lengthSpec = CONTENT_LENGTH_SPECS[input.contentLength] || CONTENT_LENGTH_SPECS.moderate;
+  // Determine which components to include - MUTUALLY EXCLUSIVE SELECTION
+  const components = input.components || {};
+  const hasComponents = Object.values(components).some(Boolean);
+
+  // Enforce mutually exclusive component selection
+  const selectedComponents = Object.entries(components).filter(([_, enabled]) => enabled);
+  const primaryComponent = selectedComponents.length > 0 ? selectedComponents[0][0] : 'bulletList';
+
+  // STRICT COMPONENT ENFORCEMENT - Only one component type per slide
+  const shouldIncludeBullets = primaryComponent === 'bulletList' || !hasComponents;
+  const shouldIncludeParagraph = primaryComponent === 'paragraph';
+  const shouldIncludeChart = primaryComponent === 'chart';
+  const shouldIncludeTable = primaryComponent === 'table';
+  const shouldIncludeQuote = primaryComponent === 'quote';
 
   return `## CONTENT GENERATION TASK
 Create professional slide content for: "${input.prompt}"
 
-## STRICT REQUIREMENTS:
-**Target Audience**: ${input.audience} - ${audienceGuidance.focus}
-**Communication Style**: ${toneSpec.style}
-**Content Depth**: ${lengthSpec.description}
-**Framework**: ${framework.name} - ${framework.structure}
+## STRICT COMPONENT ENFORCEMENT:
+**PRIMARY COMPONENT**: ${primaryComponent.toUpperCase()}
+**SELECTED COMPONENTS**: ${selectedComponents.map(([key]) => key).join(', ') || 'bulletList (default)'}
+
+## MUTUALLY EXCLUSIVE COMPONENT REQUIREMENTS:
+${shouldIncludeBullets ? '✅ **BULLET POINTS ONLY**: Include 3-5 key points, 12-20 words each. Set bullets array with content, paragraph to empty string.' : ''}
+${shouldIncludeParagraph ? '✅ **PARAGRAPH ONLY**: Include narrative text content (100-200 words). Set paragraph with content, bullets to empty array.' : ''}
+${shouldIncludeChart ? '✅ **CHART ONLY**: Include data visualization with realistic data. Set chart object with data, bullets to empty array, paragraph to empty string.' : ''}
+${shouldIncludeTable ? '✅ **TABLE ONLY**: Include structured data in table format. Set comparisonTable with data, bullets to empty array, paragraph to empty string.' : ''}
+${shouldIncludeQuote ? '✅ **QUOTE ONLY**: Include relevant quote or testimonial. Set quote and author, bullets to empty array, paragraph to empty string.' : ''}
+
+## STRICT CONTENT OVERLAP PREVENTION:
+- Generate ONLY the selected component type
+- ALWAYS set unused fields to empty values (empty array [] for bullets, empty string "" for paragraph)
+- If chart/table selected but no data provided, generate realistic stub data
+- The selected component must be the ONLY content on the slide
+
+## MANDATORY FIELD REQUIREMENTS:
+${shouldIncludeChart ? '- bullets: [] (MUST be empty array)' : ''}
+${shouldIncludeChart ? '- paragraph: "" (MUST be empty string)' : ''}
+${shouldIncludeTable ? '- bullets: [] (MUST be empty array)' : ''}
+${shouldIncludeTable ? '- paragraph: "" (MUST be empty string)' : ''}
+${shouldIncludeQuote ? '- bullets: [] (MUST be empty array)' : ''}
+${shouldIncludeQuote ? '- paragraph: "" (MUST be empty string)' : ''}
+${shouldIncludeParagraph ? '- bullets: [] (MUST be empty array)' : ''}
+${shouldIncludeBullets ? '- paragraph: "" (MUST be empty string)' : ''}
 
 ## MANDATORY QUALITY STANDARDS:
 - **Title**: Outcome-focused, 15-60 characters, quantified when possible
-- **Bullets**: 3-5 bullets maximum, 12-20 words each, action-oriented
 - **Language**: Active voice, specific metrics, professional terminology
 - **Data**: Realistic percentages, contextual timeframes
-- **Tone**: Executive-level, confident, evidence-based
+- **Tone**: Professional, confident, evidence-based
 
 ## CONTENT SPECIFICATIONS:
-- Drive specific business outcome for ${input.audience}
+- Drive specific business outcomes
 - Include quantified benefits and clear value proposition
 - Use realistic, contextually appropriate metrics
-- Maintain C-suite level communication quality
+- Maintain professional communication quality
 
-## INDUSTRY CONTEXT:
-${input.industry && input.industry !== 'general' ? `**Industry Focus**: ${input.industry} - Tailor content with industry-specific terminology, metrics, and challenges relevant to ${input.industry} professionals.` : '**Industry**: General business context - Use universally applicable language and examples.'}
+## CONTEXT:
+**Industry**: General business context - Use universally applicable language and examples.
 
 ## PRESENTATION TYPE GUIDANCE:
-${input.presentationType && input.presentationType !== 'general' ? `**Presentation Type**: ${input.presentationType} - Structure content optimally for ${input.presentationType} format with appropriate pacing and emphasis.` : '**Type**: General presentation - Use balanced structure suitable for broad business contexts.'}
+**Type**: General presentation - Use balanced structure suitable for broad business contexts.
 
 ## QUALITY EXAMPLES:
 
@@ -916,24 +945,51 @@ If content naturally fits a structured format (comparisons, features, metrics, t
 }
 \`\`\`
 
+## STUB DATA GENERATION (for chart/table components):
+${shouldIncludeChart ? `
+**CHART STUB DATA REQUIREMENTS**:
+- Generate realistic business data with 3-6 data points
+- Use appropriate categories (Q1-Q4, months, departments, etc.)
+- Include realistic percentage growth (10-40% ranges)
+- Provide proper chart structure with categories and series
+- Example: {"categories": ["Q1", "Q2", "Q3", "Q4"], "series": [{"name": "Revenue", "data": [2.4, 3.1, 3.8, 4.5]}]}
+` : ''}
+${shouldIncludeTable ? `
+**TABLE STUB DATA REQUIREMENTS**:
+- Generate 3-5 rows of realistic business data
+- Include appropriate headers (Feature, Metric, Department, etc.)
+- Use realistic values and percentages
+- Ensure data supports the slide's main message
+- Example: {"headers": ["Metric", "Q3", "Q4", "Growth"], "rows": [["Revenue", "$2.1M", "$2.8M", "33%"]]}
+` : ''}
+
 ## OUTPUT REQUIREMENTS:
 Create a JSON object with these exact fields (STRICT SCHEMA COMPLIANCE REQUIRED):
 {
   "title": "Specific, compelling title with clear benefit/outcome (15-60 characters)",
-  "layout": "title-paragraph", // Will be optimized in next step - consider "grid-layout" for structured content
-  "paragraph": "Engaging narrative content (if using paragraph format)",
-  "bullets": ["Specific, metric-driven bullet points (15-25 words each, max 5 total)"],
+  "layout": "${shouldIncludeChart ? 'chart' : shouldIncludeTable ? 'comparison-table' : shouldIncludeQuote ? 'quote' : shouldIncludeParagraph ? 'title-paragraph' : 'title-bullets'}",
+  ${shouldIncludeParagraph ? '"paragraph": "Engaging narrative content (100-200 words)",' : '"paragraph": "",'}
+  ${shouldIncludeBullets ? '"bullets": ["Specific, metric-driven bullet points (15-25 words each, max 5 total)"],' : '"bullets": [],'}
+  ${shouldIncludeChart ? '"chart": {"type": "column", "categories": ["Category1", "Category2", "Category3"], "series": [{"name": "Series Name", "data": [value1, value2, value3]}], "title": "Chart Title"},' : ''}
+  ${shouldIncludeTable ? '"comparisonTable": {"headers": ["Header1", "Header2", "Header3"], "rows": [["Row1Col1", "Row1Col2", "Row1Col3"], ["Row2Col1", "Row2Col2", "Row2Col3"]]},' : ''}
+  ${shouldIncludeQuote ? '"quote": "Inspiring or relevant quote text", "author": "Quote Attribution",' : ''}
   "notes": "Speaker delivery guidance and key talking points",
-  "sources": ["Credible source references if applicable"],
-  "gridLayout": { /* Only include if layout should be "grid-layout" */ }
+  "sources": ["Credible source references if applicable"]
 }
+
+## CRITICAL CONTENT EXCLUSION RULES:
+${shouldIncludeChart ? '- DO NOT include bullets or paragraph content when chart is selected' : ''}
+${shouldIncludeTable ? '- DO NOT include bullets or paragraph content when table is selected' : ''}
+${shouldIncludeQuote ? '- DO NOT include bullets or paragraph content when quote is selected' : ''}
+${shouldIncludeParagraph ? '- DO NOT include bullets when paragraph is selected' : ''}
+${shouldIncludeBullets ? '- DO NOT include paragraph, chart, table, or quote when bullets are selected' : ''}
 
 ## MANDATORY VALIDATION CHECKLIST:
 Before responding, STRICTLY verify each requirement:
 - ✅ Title is specific and benefit-focused (15-60 characters) - COUNT THE CHARACTERS
-- ✅ Content matches audience sophistication level (${input.audience})
-- ✅ Tone aligns with ${input.tone} requirements - NO DEVIATION
-- ✅ Length matches ${input.contentLength} specification
+- ✅ Content matches professional audience sophistication level
+- ✅ Tone aligns with professional requirements - NO DEVIATION
+- ✅ Length matches moderate specification
 - ✅ Each bullet point is 15-25 words maximum - COUNT EVERY WORD
 - ✅ Maximum 5 bullet points total for optimal impact - NO EXCEPTIONS
 - ✅ JSON format is valid and complete - TEST PARSING
@@ -966,8 +1022,21 @@ Aim for the excellence level shown in the good examples.`;
  * Incorporates UX principles, accessibility guidelines, and data-driven layout selection
  */
 export function generateLayoutPrompt(input: GenerationParams, partialSpec: Partial<SlideSpec>): string {
-  // Analyze content to suggest optimal layout
-  const contentAnalysis = analyzeContentForLayout(partialSpec);
+  // Enforce mutually exclusive component selection
+  const components = input.components || {};
+  const selectedComponents = Object.entries(components).filter(([_, enabled]) => enabled);
+  const primaryComponent = selectedComponents.length > 0 ? selectedComponents[0][0] : 'bulletList';
+
+  // STRICT layout mapping based on primary component
+  const layoutMapping = {
+    'chart': 'chart',
+    'table': 'comparison-table',
+    'quote': 'quote',
+    'paragraph': 'title-paragraph',
+    'bulletList': 'title-bullets'
+  };
+
+  const requiredLayout = layoutMapping[primaryComponent as keyof typeof layoutMapping] || 'title-bullets';
 
   return `## LAYOUT OPTIMIZATION TASK
 Optimize visual layout for maximum impact and comprehension.
@@ -975,27 +1044,19 @@ Optimize visual layout for maximum impact and comprehension.
 ## CURRENT CONTENT ANALYSIS:
 ${JSON.stringify(partialSpec, null, 2)}
 
-## DESIGN CONTEXT:
-**Audience**: ${input.audience} (affects complexity and visual preferences)
-**Tone**: ${input.tone} (influences layout formality and structure)
-**User Preference**: ${input.design?.layout || 'auto-select based on content'}
-**Image Integration**: ${input.withImage ? 'Required - optimize for visual storytelling' : 'Text-focused design'}
-**Content Type**: ${contentAnalysis.type} (${contentAnalysis.reasoning})
+## STRICT COMPONENT-BASED LAYOUT ENFORCEMENT:
+**Primary Component**: ${primaryComponent.toUpperCase()}
+**Required Layout**: ${requiredLayout}
+**Theme**: ${input.design?.theme || 'corporate-blue'}
 
-## LAYOUT DECISION FRAMEWORK:
-
-### Content Analysis Results:
-- **Information Type**: ${contentAnalysis.type}
-- **Complexity Level**: ${contentAnalysis.complexity}
-- **Recommended Layouts**: ${contentAnalysis.recommendedLayouts.join(', ')}
-- **Visual Priority**: ${contentAnalysis.visualPriority}
-
-### Step 2: Audience-Optimized Layout Strategy
-**${input.audience} audience optimization:**
-${input.audience === 'executives' ? '- Prioritize high-impact visuals with minimal text\n- Use layouts that support quick decision-making\n- Emphasize outcomes and ROI metrics\n- Prefer clean, authoritative designs that convey competence' :
-  input.audience === 'technical' ? '- Support detailed information with logical progression\n- Use process-oriented and data-visualization layouts\n- Enable deep-dive analysis with structured information\n- Prefer layouts that show technical relationships and workflows' :
-  input.audience === 'students' ? '- Create engaging, educational progressions\n- Use visual learning aids and step-by-step layouts\n- Support knowledge retention with clear structure\n- Prefer layouts that facilitate understanding and engagement' :
-  '- Balance information density with accessibility\n- Use clear, scannable structures for broad appeal\n- Support both quick scanning and detailed reading\n- Prefer professional but approachable layouts'}
+## MANDATORY LAYOUT REQUIREMENTS:
+- MUST use layout: "${requiredLayout}" (no alternatives allowed)
+- Layout MUST match the selected component type exactly
+- Do NOT mix multiple content types in the layout
+- Ensure the selected component is the primary focus
+- Optimize for professional presentation quality
+- Maintain clean, readable design without content overlap
+- Support the specific component type's requirements
 
 ### Step 3: Content-Layout Matching Intelligence
 **Smart Layout Selection Based on Content Type:**
@@ -1088,7 +1149,7 @@ Return the complete, optimized slide specification with:
 3. **All original content** preserved and enhanced
 4. **Professional formatting** that serves the audience
 
-Focus on creating a layout that maximizes comprehension and visual impact for ${input.audience} audience.
+Focus on creating a layout that maximizes comprehension and visual impact for professional audience.
 
 ## LAYOUT OPTIMIZATION REFLECTION:
 ${SELF_REFLECTION_PROMPTS.layoutReflection}
@@ -1097,166 +1158,12 @@ ${SELF_REFLECTION_PROMPTS.layoutReflection}
 ${CHAIN_OF_THOUGHT_TEMPLATES.layoutOptimization}`;
 }
 
-/**
- * Step 3: Enhanced context-aware image generation (C-2: Context-Aware Image Prompts)
- * Incorporates theme alignment, emotional psychology, and technical optimization
- */
-export function generateImagePrompt(input: GenerationParams, partialSpec: Partial<SlideSpec>): string {
-  // Enhanced content analysis with theme integration
-  const imageAnalysis = analyzeContentForImagery(partialSpec, input);
 
-  return `## CONTEXT-AWARE IMAGE PROMPT GENERATION TASK
-Create a compelling, professional image prompt that perfectly aligns with the slide's message, selected theme, and emotional impact.
 
-## COMPREHENSIVE SLIDE ANALYSIS:
-**Title**: ${partialSpec.title}
-**Layout**: ${partialSpec.layout}
-**Content Type**: ${imageAnalysis.contentType}
-**Key Themes**: ${imageAnalysis.themes.join(', ')}
-**Selected Theme**: ${input.design?.theme || 'professional'}
 
-## ENHANCED VISUAL STRATEGY CONTEXT:
-**Audience**: ${input.audience} - Professional expectations and visual preferences
-**Tone**: ${input.tone} - Emotional and stylistic alignment required
-**Image Style**: ${input.imageStyle || 'professional'} - Technical approach for generation
-**Recommended Concept**: ${imageAnalysis.recommendedConcept}
-**Visual Metaphor**: ${imageAnalysis.visualMetaphor}
-**Theme Alignment**: ${imageAnalysis.themeAlignment}
-**Emotional Tone**: ${imageAnalysis.emotionalTone}
-**Technical Specifications**: ${imageAnalysis.technicalSpecs}
 
-## ENHANCED IMAGE PROMPT DEVELOPMENT PROCESS:
 
-### Step 1: Strategic Visual Alignment
-- **Core Business Message**: What specific outcome or insight does this slide communicate?
-- **Emotional Resonance**: What feeling will drive action (confidence, urgency, excitement, trust)?
-- **Visual Metaphor**: What concrete imagery best represents abstract concepts?
-- **Brand Alignment**: How formal and professional should the visual tone be?
-- **Cultural Sensitivity**: Ensure inclusive, diverse, and globally appropriate imagery
 
-### Step 2: Audience-Optimized Visual Strategy
-**For ${input.audience} audience:**
-${input.audience === 'executives' ? '- Sophisticated, boardroom-quality imagery conveying success and competence\n- Clean, uncluttered compositions that support quick decision-making\n- Professional environments with subtle luxury indicators\n- Diverse leadership representation and global business contexts' :
-  input.audience === 'technical' ? '- Precise, technically accurate imagery with attention to detail\n- Clean, functional aesthetics that support logical thinking\n- Modern technology and innovation themes with authentic feel\n- Systematic visual elements that reflect engineering mindset' :
-  input.audience === 'students' ? '- Engaging, relatable imagery that supports learning and growth\n- Bright, optimistic compositions that inspire and motivate\n- Diverse, inclusive representations that reflect modern classrooms\n- Educational metaphors and knowledge-building visual themes' :
-  '- Professional yet approachable imagery that builds trust\n- Clear, universally understandable visual concepts\n- Balanced sophistication that appeals to broad audiences\n- Authentic, realistic representations that feel genuine'}
-
-### Step 3: Content-Specific Visual Themes
-**Match imagery to content type:**
-- **Financial Results**: Professional charts, growth imagery, business success indicators
-- **Technical Solutions**: Modern interfaces, clean technology, innovation themes
-- **Team Performance**: Diverse collaboration, professional environments, achievement
-- **Process Improvements**: Streamlined workflows, efficiency metaphors, optimization
-- **Market Expansion**: Global themes, growth trajectories, opportunity landscapes
-
-### Step 3: Technical Image Specifications
-**Style Requirements**: ${input.imageStyle || 'professional'}
-- **Professional**: Clean, corporate, high-quality photography style
-- **Illustration**: Modern, clean vector-style illustrations
-- **Abstract**: Conceptual, artistic representations
-- **Realistic**: Photorealistic imagery with authentic feel
-- **Minimal**: Simple, clean, uncluttered compositions
-
-### Step 4: Image Prompt Quality Standards
-**Excellent Image Prompts Include:**
-✅ Specific visual elements and composition
-✅ Professional quality and lighting specifications
-✅ Emotional tone and atmosphere description
-✅ Color palette guidance aligned with content
-✅ Technical quality specifications (high-resolution, clean)
-
-**EXCELLENT Image Prompt Examples (FOLLOW THESE PATTERNS):**
-✅ "Diverse executive team reviewing growth charts on a large monitor in a modern boardroom, natural lighting, professional attire, confident expressions, clean corporate environment, high-resolution photography style" (SPECIFIC: people, action, setting, lighting, style)
-✅ "Abstract visualization of upward growth trajectory with clean geometric elements, corporate blue and green gradient, minimalist professional design, high-quality digital illustration" (SPECIFIC: concept, elements, colors, style, quality)
-✅ "Modern data dashboard interface displaying key performance metrics, clean typography, professional color scheme, sleek design elements, high-tech corporate atmosphere" (SPECIFIC: interface, content, design, atmosphere)
-✅ "Professional handshake between diverse business partners in a bright modern office, symbolizing successful partnership, natural lighting, corporate setting, authentic business photography" (SPECIFIC: action, people, setting, symbolism, style)
-
-**MANDATORY PROMPT ELEMENTS:**
-1. **Subject/Action**: What is happening or being shown
-2. **Setting/Environment**: Where this takes place
-3. **Style/Quality**: Photography, illustration, abstract, etc.
-4. **Lighting/Atmosphere**: Professional, natural, clean, modern
-5. **Color Guidance**: Corporate colors, professional palette
-6. **Composition**: Clean, minimalist, high-resolution
-
-**POOR Image Prompt Examples (NEVER DO THIS):**
-❌ "Some people in an office" (too vague, no specific details, unprofessional)
-❌ "Colorful chart" (lacks context, professional specifications, no style guidance)
-❌ "Business stuff" (meaningless, no visual direction, completely useless)
-❌ "Happy workers" (unprofessional tone, no context, too generic)
-❌ "Nice picture" (no direction, completely unhelpful)
-❌ "Graph showing data" (too basic, no style or quality specifications)
-
-## LAYOUT-SPECIFIC IMAGE PLACEMENT:
-Based on layout "${partialSpec.layout}", place image prompt in:
-${partialSpec.layout === 'image-right' ? '- "right.imagePrompt" field for right-side placement' :
-  partialSpec.layout === 'image-left' ? '- "left.imagePrompt" field for left-side placement' :
-  partialSpec.layout === 'image-full' ? '- "imagePrompt" field for full-slide background' :
-  '- "imagePrompt" field for general image integration'}
-
-## FINAL OUTPUT REQUIREMENTS (STRICT COMPLIANCE REQUIRED):
-Return the COMPLETE slide specification with:
-1. **All existing content preserved** - Do not remove any fields from the original specification
-2. **Professional image prompt added** - 50-200 characters, specific and actionable
-3. **Proper field placement** - Based on layout requirements (imagePrompt, left.imagePrompt, or right.imagePrompt)
-4. **Quality validation** - Ensure prompt would generate professional, boardroom-quality imagery
-5. **Mandatory elements included** - Subject, setting, style, lighting, and composition details
-6. **Professional language only** - No casual or unprofessional terminology
-
-## VALIDATION CHECKLIST (VERIFY BEFORE RESPONDING):
-- ✅ Image prompt is 50-200 characters (COUNT THE CHARACTERS)
-- ✅ Includes all 6 mandatory elements (subject, setting, style, lighting, color, composition)
-- ✅ Uses professional, specific language throughout
-- ✅ Aligns with ${input.audience} audience expectations
-- ✅ Would generate imagery suitable for Fortune 500 presentations
-- ✅ Avoids all patterns shown in "POOR" examples
-- ✅ Follows patterns shown in "EXCELLENT" examples
-- ✅ JSON structure is complete and valid
-
-Create an image prompt that elevates the slide's professional impact and supports the core message for ${input.audience} audience. NO EXCEPTIONS TO QUALITY STANDARDS.`;
-}
-
-/**
- * NEW: Batch image prompt generation for multiple slides
- * Optimizes API calls by generating image prompts for all slides in one request
- */
-export function generateBatchImagePrompts(input: GenerationParams, slideSpecs: Partial<SlideSpec>[]): string {
-  const slideSummaries = slideSpecs.map((spec, index) =>
-    `Slide ${index + 1}: "${spec.title}" (${spec.layout})`
-  ).join('\n');
-
-  return `## BATCH IMAGE PROMPT GENERATION TASK
-Generate optimized image prompts for ${slideSpecs.length} slides in a cohesive presentation.
-
-## PRESENTATION CONTEXT:
-**Topic**: ${input.prompt}
-**Audience**: ${input.audience}
-**Tone**: ${input.tone}
-**Style**: ${input.imageStyle || 'professional'}
-
-## SLIDES TO PROCESS:
-${slideSummaries}
-
-## BATCH PROCESSING REQUIREMENTS:
-1. **Visual Consistency**: Ensure all images work together as a cohesive presentation
-2. **Style Uniformity**: Maintain consistent visual style and quality across all slides
-3. **Audience Alignment**: All prompts should resonate with ${input.audience} expectations
-4. **Professional Quality**: Each prompt should generate boardroom-quality imagery
-
-## OUTPUT FORMAT:
-Return a JSON array with image prompts for each slide:
-[
-  {
-    "slideIndex": 0,
-    "title": "slide title",
-    "imagePrompt": "specific, professional image prompt (20-200 characters)",
-    "placement": "field name for image placement based on layout",
-    "reasoning": "brief explanation of visual choice"
-  }
-]
-
-Generate cohesive, professional image prompts that enhance the overall presentation narrative.`;
-}
 
 /**
  * Step 4: Enhanced final refinement prompt with comprehensive quality assurance
@@ -1280,7 +1187,7 @@ Perform targeted refinement to achieve professional excellence.
 **Strengths**: ${qualityCheck.strengths.join(', ')}
 
 ## TARGET STANDARDS:
-**Audience**: ${input.audience} - Must meet professional expectations
+**Audience**: Professional - Must meet professional expectations
 **Quality Goal**: 90+ score (A-grade) across all criteria
 **Business Context**: Executive-level presentation quality
 
@@ -1289,8 +1196,8 @@ Perform targeted refinement to achieve professional excellence.
 ### 1. Content Quality Analysis (30% weight)
 **Evaluation Criteria:**
 - Title specificity and benefit focus (15-60 characters optimal)
-- Content depth matches "${input.contentLength}" specification
-- Language level appropriate for ${input.audience} audience
+- Content depth matches moderate specification
+- Language level appropriate for professional audience
 - Key messages are clear, actionable, and compelling
 - Logical flow and persuasive structure
 
@@ -1315,14 +1222,14 @@ Perform targeted refinement to achieve professional excellence.
 
 ### 3. Audience Alignment (20% weight)
 **Evaluation Criteria:**
-- Language sophistication matches ${input.audience} expectations
-- Tone aligns with "${input.tone}" specification
+- Language sophistication matches professional expectations
+- Tone aligns with professional specification
 - Content complexity matches audience needs
 - Psychological triggers appropriate for audience motivation
 - Professional standards met for business context
 
 **Audience Check:**
-- Would ${input.audience} find this compelling and credible?
+- Would professionals find this compelling and credible?
 - Does tone create appropriate emotional response?
 - Is complexity level perfectly calibrated?
 
@@ -1380,7 +1287,7 @@ Before outputting, verify:
 Return the refined slide specification that:
 1. **Maintains all core content** while enhancing quality
 2. **Achieves A-grade standards** across all criteria
-3. **Perfectly serves** the ${input.audience} audience
+3. **Perfectly serves** the professional audience
 4. **Creates compelling impact** for business presentations
 
 Focus on elevating this to the quality level expected in Fortune 500 boardrooms.`;

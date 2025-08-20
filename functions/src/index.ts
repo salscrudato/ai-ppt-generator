@@ -52,7 +52,7 @@ import {
   NetworkError
 } from "./llm";
 import { PROFESSIONAL_THEMES, selectThemeForContent } from "./professionalThemes";
-import { logger } from "./utils/smartLogger";
+import { logger } from "./utils/cleanLogger";
 import { generatePpt } from "./pptGenerator-simple";
 
 // Import new modular services
@@ -216,7 +216,7 @@ function endPerformanceTracking(
   }
   Object.assign(metric, extra);
 
-  logger.info("Performance metric", metric);
+  // Performance metrics removed for clean logging
 
   if (performanceMetrics.length > 1000) {
     performanceMetrics.splice(0, performanceMetrics.length - 1000);
@@ -378,13 +378,10 @@ app.get("/health", async (_req, res) => {
     (healthCheck as any).openaiDiagnostics = validation;
 
     if (!validation.isValid) {
-      logger.warn("⚠️ OpenAI API key not properly configured", {
-        source: validation.source,
-        environment: validation.environment
-      });
+      logger.error("OpenAI API key not properly configured");
     }
   } catch (error) {
-    logger.error("API key validation error:", {}, error as Error);
+    logger.error("API key validation failed", {}, error as Error);
     healthCheck.apiKeyStatus = "error";
   }
 
@@ -393,7 +390,7 @@ app.get("/health", async (_req, res) => {
     const memUsage = process.memoryUsage();
     healthCheck.systemChecks.memory = memUsage.heapUsed < 500 * 1024 * 1024; // 500MB threshold
   } catch (error) {
-    logger.warn("Memory check failed:", {}, error as Error);
+    logger.error("Memory check failed", {}, error as Error);
   }
 
   // Test PowerPoint generation capability
@@ -406,13 +403,17 @@ app.get("/health", async (_req, res) => {
     logger.error("PowerPoint generation test failed:", {}, error as Error);
   }
 
-  // Determine overall health status
-  const allChecksPass = Object.values(healthCheck.systemChecks).every(check => check);
-  if (!allChecksPass) {
+  // Determine overall health status - be more lenient in development
+  const criticalChecks = [healthCheck.systemChecks.openai, healthCheck.systemChecks.memory];
+  const criticalChecksFail = criticalChecks.some(check => !check);
+
+  if (criticalChecksFail) {
     healthCheck.status = "degraded";
   }
 
-  const statusCode = healthCheck.status === "healthy" ? 200 : 503;
+  // Always return 200 in development for better UX, 503 only for critical failures in production
+  const isProduction = process.env.NODE_ENV === "production";
+  const statusCode = (healthCheck.status === "healthy" || !isProduction) ? 200 : 503;
 
   return res.status(statusCode).json({
     ...healthCheck,
@@ -544,18 +545,12 @@ app.post("/draft", async (req, res) => {
   const performanceMetric = startPerformanceTracking("/draft", req);
 
   try {
-    logger.info("Draft generation request", {
-      prompt: (req.body.prompt as string | undefined)?.substring(0, 100),
-      audience: req.body.audience,
-      tone: req.body.tone,
-      contentLength: req.body.contentLength,
-      withImage: req.body.withImage,
-      timestamp: new Date().toISOString()
-    });
+    const requestId = logger.generateRequestId();
+    logger.generation("Starting draft generation", requestId);
 
     // Simple parameter validation
     if (!req.body.prompt || typeof req.body.prompt !== 'string') {
-      logger.warn("Invalid generation parameters: missing prompt");
+      logger.error("Missing prompt parameter");
       endPerformanceTracking(performanceMetric, false, "INVALID_PARAMS_ERROR");
       return res.status(400).json({
         error: "Invalid generation parameters: prompt is required",
@@ -567,8 +562,8 @@ app.post("/draft", async (req, res) => {
     const slideSpec = await aiService.generateSlideContent(req.body);
 
     // Simple content validation
-    if (!slideSpec || !Array.isArray(slideSpec) || slideSpec.length === 0) {
-      logger.warn("Generated content failed validation: no slides generated");
+    if (!slideSpec) {
+      logger.error("Generated content failed validation: no slides generated");
       endPerformanceTracking(performanceMetric, false, "CONTENT_VALIDATION_ERROR");
       return res.status(422).json({
         error: "Generated content failed validation: no slides generated",
@@ -576,10 +571,14 @@ app.post("/draft", async (req, res) => {
       });
     }
 
+    // Wrap single slide in array for consistent API response
+    const slideArray = [slideSpec];
+
     endPerformanceTracking(performanceMetric, true);
+    logger.success("Draft generation completed successfully");
 
     return res.json({
-      spec: slideSpec,
+      spec: slideArray,
       quality: {
         score: 85,
         grade: 'B',
@@ -598,40 +597,24 @@ app.post("/draft", async (req, res) => {
       status = 503;
       code = "AI_SERVICE_ERROR";
       message = "AI service temporarily unavailable. Please try again in a moment.";
-      logger.error("AI service error during draft generation", {
-        message: error.message,
-        step: error.step,
-        attempt: error.attempt
-      });
+      logger.error("AI service error during draft generation");
     } else if (error instanceof ValidationError) {
       status = 422;
       code = "CONTENT_VALIDATION_ERROR";
       message = "Generated content failed validation. Please try different parameters.";
-      logger.error("Content validation failed during draft generation", {
-        message: error.message,
-        validationErrors: (error as ValidationError).validationErrors
-      });
+      logger.error("Content validation failed during draft generation");
     } else if (error instanceof TimeoutError) {
       status = 504;
       code = "TIMEOUT_ERROR";
       message = "Request timed out. Please try again.";
-      logger.error("Timeout during draft generation", {
-        message: error.message,
-        timeoutMs: (error as TimeoutError).timeoutMs
-      });
+      logger.error("Timeout during draft generation");
     } else if (error instanceof RateLimitError) {
       status = 429;
       code = "RATE_LIMIT_ERROR";
       message = error.message;
-      logger.warn("Rate limit exceeded during draft generation", {
-        message: error.message,
-        retryAfter: (error as RateLimitError).retryAfter
-      });
+      logger.error("Rate limit exceeded during draft generation");
     } else {
-      logger.error("Unexpected error during draft generation", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      logger.error("Unexpected error during draft generation");
     }
 
     endPerformanceTracking(performanceMetric, false, code);
@@ -678,7 +661,7 @@ app.post("/validate-content", async (req, res) => {
     });
 
     if (errors.length > 0) {
-      logger.warn("Slide validation failed", { errors });
+      logger.error("Slide validation failed");
       endPerformanceTracking(performanceMetric, false, "VALIDATION_ERROR");
       return res.status(400).json({
         error: "Slide validation failed",
@@ -707,10 +690,7 @@ app.post("/validate-content", async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error("Content validation failed", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    logger.error("Content validation failed");
 
     endPerformanceTracking(performanceMetric, false, "VALIDATION_SERVICE_ERROR");
     return res.status(500).json({
@@ -731,12 +711,7 @@ app.post("/generate/professional", async (req, res) => {
     const requestId = logger.generateRequestId();
     const context = { requestId, operation: "ppt-generation" };
 
-    logger.info("Professional PowerPoint generation request", {
-      hasSpec: !!req.body.spec,
-      colorPalette: req.body.colorPalette || "corporate",
-      metadata: req.body.metadata,
-      timestamp: new Date().toISOString()
-    });
+    logger.generation("PowerPoint generation request", requestId);
 
     let spec: SlideSpec[];
     let slideCount = 1;
@@ -745,7 +720,7 @@ app.post("/generate/professional", async (req, res) => {
     // Validate color palette
     const validPalettes = ["corporate", "creative", "finance", "tech", "ocean"];
     if (!validPalettes.includes(colorPalette)) {
-      logger.warn("Invalid color palette provided", { colorPalette });
+      logger.error("Invalid color palette provided");
       endPerformanceTracking(performanceMetric, false, "INVALID_PALETTE_ERROR");
       return res.status(400).json({
         error: "Invalid color palette provided",
@@ -758,7 +733,7 @@ app.post("/generate/professional", async (req, res) => {
     if (!req.body.spec && req.body.prompt) {
       // Generate slides from parameters using AI service
       if (!req.body.prompt || typeof req.body.prompt !== 'string') {
-        logger.warn("Invalid generation parameters provided: missing prompt");
+        logger.error("Invalid generation parameters provided: missing prompt");
         endPerformanceTracking(performanceMetric, false, "INVALID_PARAMS_ERROR");
         return res.status(400).json({
           error: "Invalid generation parameters: prompt is required",
@@ -771,9 +746,7 @@ app.post("/generate/professional", async (req, res) => {
         spec = [generatedSpec];
         logger.info("Successfully generated slide from parameters");
       } catch (error) {
-        logger.error("Failed to generate slide from parameters", {
-          error: error instanceof Error ? error.message : "Unknown error"
-        });
+        logger.error("Failed to generate slide from parameters");
         endPerformanceTracking(performanceMetric, false, "AI_GENERATION_ERROR");
         return res.status(500).json({
           error: "Failed to generate slide content",
@@ -802,7 +775,7 @@ app.post("/generate/professional", async (req, res) => {
         }
 
         if (validationErrors.length > 0) {
-          logger.warn("Some slide specifications failed validation", { validationErrors });
+          logger.error("Some slide specifications failed validation");
           endPerformanceTracking(performanceMetric, false, "VALIDATION_ERROR");
           return res.status(400).json({
             error: "Some slide specifications failed validation",
@@ -815,7 +788,7 @@ app.post("/generate/professional", async (req, res) => {
       } else {
         const validation = safeValidateSlideSpec(req.body.spec);
         if (!validation.success) {
-          logger.warn("Slide specification validation failed", { errors: validation.errors });
+          logger.error("Slide specification validation failed");
           endPerformanceTracking(performanceMetric, false, "VALIDATION_ERROR");
           return res.status(400).json({
             error: "Slide specification validation failed",
@@ -830,7 +803,7 @@ app.post("/generate/professional", async (req, res) => {
         }
       }
     } else {
-      logger.warn("No slide specification or generation parameters provided");
+      logger.error("No slide specification or generation parameters provided");
       endPerformanceTracking(performanceMetric, false, "MISSING_INPUT_ERROR");
       return res.status(400).json({
         error: 'Either slide specification or generation parameters (prompt) must be provided',
@@ -853,15 +826,7 @@ app.post("/generate/professional", async (req, res) => {
 
     // Generate PowerPoint using enhanced generator
 
-    logger.startPerf(`ppt-gen-${requestId}`, context);
-    logger.info("Starting enhanced PowerPoint generation", context, {
-      slideCount: Array.isArray(spec) ? spec.length : 1,
-      withValidation: req.body.withValidation ?? true,
-      firstSlideTitle: spec[0]?.title,
-      firstSlideLayout: spec[0]?.layout,
-      themeId: req.body.themeId,
-      quality: req.body.quality || 'standard'
-    });
+    logger.generation("Starting PowerPoint generation", requestId);
 
     // Enhanced generation options
     const generationOptions = {
@@ -880,10 +845,7 @@ app.post("/generate/professional", async (req, res) => {
       generationOptions
     );
 
-    logger.endPerf(`ppt-gen-${requestId}`, context, {
-      bufferSize: pptBuffer.length,
-      sizeKB: Math.round(pptBuffer.length / 1024)
-    });
+    // PowerPoint generation completed
 
     // Validate buffer before sending
     if (!pptBuffer || pptBuffer.length === 0) {
@@ -894,11 +856,7 @@ app.post("/generate/professional", async (req, res) => {
     const zipSignature = pptBuffer.subarray(0, 4);
     const expectedSignature = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
     if (!zipSignature.equals(expectedSignature)) {
-      logger.error('Invalid PowerPoint file signature detected', context, {
-        actualSignature: Array.from(zipSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-        expectedSignature: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-        bufferSize: pptBuffer.length
-      });
+      logger.error('Invalid PowerPoint file signature detected');
       throw new Error('Generated PowerPoint file has invalid format signature');
     }
 
@@ -917,22 +875,13 @@ app.post("/generate/professional", async (req, res) => {
     res.setHeader("Expires", "0");
 
     endPerformanceTracking(performanceMetric, true);
-    logger.info("Professional PowerPoint generated successfully", {
-      slideCount,
-      colorPalette,
-      bufferSize: pptBuffer.length,
-      filename,
-      signatureValid: true
-    });
+    logger.success("PowerPoint generation completed successfully");
 
     // Send buffer directly without any encoding transformations
     res.end(pptBuffer);
     return;
   } catch (error) {
-    logger.error("Professional PowerPoint generation failed", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    logger.error("Professional PowerPoint generation failed");
 
     endPerformanceTracking(performanceMetric, false, "GENERATION_ERROR");
 
@@ -980,30 +929,17 @@ app.post("/generate", async (req, res) => {
   const performanceMetric = startPerformanceTracking("/generate", req);
 
   try {
-    logger.info("PowerPoint generation request", {
-      hasSpec: !!req.body.spec,
-      directGeneration: !req.body.spec,
-      themeId: req.body.themeId,
-      withValidation: req.body.withValidation ?? true,
-      timestamp: new Date().toISOString(),
-      userAgent: req.headers['user-agent']?.substring(0, 100)
-    });
+    const requestId = logger.generateRequestId();
+    logger.generation("Starting PowerPoint generation", requestId);
 
     // Validate theme ID if provided
     if (req.body.themeId) {
       const themeExists = PROFESSIONAL_THEMES.some(t => t.id === req.body.themeId);
       if (!themeExists) {
-        logger.warn("Invalid theme ID provided", {
-          themeId: req.body.themeId,
-          availableThemes: PROFESSIONAL_THEMES.map(t => t.id)
-        });
+        logger.error("Invalid theme ID provided");
       } else {
         const selectedTheme = PROFESSIONAL_THEMES.find(t => t.id === req.body.themeId);
-        logger.info("Theme validation passed", {
-          themeId: req.body.themeId,
-          themeName: selectedTheme?.name,
-          themeCategory: selectedTheme?.category
-        });
+        logger.info("Theme validation passed");
       }
     }
 
@@ -1013,11 +949,11 @@ app.post("/generate", async (req, res) => {
 
     // Check if we need to generate slides from parameters
     if (!req.body.spec && req.body.prompt) {
-      logger.info("Generating slides from parameters", { prompt: req.body.prompt });
+      logger.info("Generating slides from parameters");
 
       // Validate generation parameters
       if (!req.body.prompt || typeof req.body.prompt !== 'string') {
-        logger.warn("Invalid generation parameters provided: missing prompt");
+        logger.error("Invalid generation parameters provided: missing prompt");
         endPerformanceTracking(performanceMetric, false, "INVALID_PARAMS_ERROR");
         return res.status(400).json({
           error: "Invalid generation parameters: prompt is required",
@@ -1030,9 +966,7 @@ app.post("/generate", async (req, res) => {
         spec = await aiService.generateSlideContent(req.body);
         logger.info("Successfully generated slide from parameters");
       } catch (error) {
-        logger.error("Failed to generate slide from parameters", {
-          error: error instanceof Error ? error.message : "Unknown error"
-        });
+        logger.error("Failed to generate slide from parameters");
         endPerformanceTracking(performanceMetric, false, "AI_GENERATION_ERROR");
         return res.status(500).json({
           error: "Failed to generate slide content",
@@ -1055,7 +989,7 @@ app.post("/generate", async (req, res) => {
       }
 
       if (validationErrors.length > 0) {
-        logger.warn("Invalid slide specifications provided", { errors: validationErrors });
+        logger.error("Invalid slide specifications provided");
         endPerformanceTracking(performanceMetric, false, "INVALID_SPEC_ERROR");
         return res.status(400).json({
           error: "Invalid slide specifications provided",
@@ -1068,7 +1002,7 @@ app.post("/generate", async (req, res) => {
     } else if (req.body.spec) {
       const validation = safeValidateSlideSpec(req.body.spec);
       if (!validation.success) {
-        logger.warn("Invalid slide specification provided", { errors: validation.errors });
+        logger.error("Invalid slide specification provided");
         endPerformanceTracking(performanceMetric, false, "INVALID_SPEC_ERROR");
         return res.status(400).json({
           error: "Invalid slide specification provided",
@@ -1080,7 +1014,7 @@ app.post("/generate", async (req, res) => {
       spec = validation.data as SlideSpec;
     } else {
       // Neither spec nor prompt provided
-      logger.warn("No slide specification or generation parameters provided");
+      logger.error("No slide specification or generation parameters provided");
       endPerformanceTracking(performanceMetric, false, "MISSING_INPUT_ERROR");
       return res.status(400).json({
         error: 'Either slide specification or generation parameters (prompt) must be provided',
@@ -1110,9 +1044,7 @@ app.post("/generate", async (req, res) => {
     } else {
       const exists = PROFESSIONAL_THEMES.some((t) => t.id === req.body.themeId);
       if (!exists) {
-        logger.warn("Provided themeId not found. Falling back to auto-selection.", {
-          themeId: req.body.themeId
-        });
+        logger.error("Provided themeId not found. Falling back to auto-selection.");
         const firstSpec = Array.isArray(spec) ? (spec as SlideSpec[])[0] : (spec as SlideSpec);
         const contentForAnalysis = `${firstSpec.title || ''} ${firstSpec.paragraph || ''} ${firstSpec.layout || ''}`;
         themeUsed = selectThemeForContent(contentForAnalysis).id;
@@ -1129,43 +1061,18 @@ app.post("/generate", async (req, res) => {
     const { PowerPointService } = await import('./services/powerPointService');
     const powerPointService = new PowerPointService();
 
+    const includeImages = Boolean(req.body.includeImages);
+
     const powerPointResult = await powerPointService.generatePresentation(slides, {
       theme,
+      includeImages,
       includeNotes: true,
       includeMetadata: true,
-      quality: (req.body.quality as any) || "standard",
-      optimizeForSize: Boolean(req.body.optimizeFileSize ?? true),
-      author: req.body.author,
-      company: req.body.company,
-      subject: req.body.subject
+      quality: 'standard'
     });
 
-    // Log comprehensive theme verification results
-    logger.info("🎨 PowerPoint generation completed with theme verification", {
-      requestedTheme: req.body.themeId,
-      appliedTheme: theme.id,
-      themeMatched: req.body.themeId === theme.id,
-      themeDetails: {
-        id: theme.id,
-        name: theme.name,
-        category: theme.category,
-        colors: {
-          primary: theme.colors.primary,
-          secondary: theme.colors.secondary,
-          accent: theme.colors.accent,
-          background: theme.colors.background,
-          textPrimary: theme.colors.text.primary
-        }
-      },
-      generationResult: {
-        success: true,
-        fileSize: powerPointResult.buffer.length,
-        slideCount: slides.length,
-        generationTime: powerPointResult.metadata.generationTime,
-        theme: powerPointResult.metadata.theme,
-        quality: powerPointResult.metadata.quality
-      }
-    });
+    logger.success("PowerPoint generation completed successfully");
+
 
     const pptBuffer = powerPointResult.buffer;
 
@@ -1184,11 +1091,7 @@ app.post("/generate", async (req, res) => {
     const zipSignature = pptBuffer.subarray(0, 4);
     const expectedSignature = Buffer.from([0x50, 0x4B, 0x03, 0x04]); // "PK\x03\x04"
     if (!zipSignature.equals(expectedSignature)) {
-      logger.error('Invalid PowerPoint file signature detected', {
-        actualSignature: Array.from(zipSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-        expectedSignature: Array.from(expectedSignature).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
-        bufferSize: pptBuffer.length
-      });
+      logger.error('Invalid PowerPoint file signature detected');
       throw new Error('Generated PowerPoint file has invalid format signature');
     }
 
@@ -1200,14 +1103,7 @@ app.post("/generate", async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    logger.info("PowerPoint generation successful", {
-      filename,
-      fileSize: pptBuffer.length,
-      slideTitle: sanitizedTitle,
-      slideCount,
-      themeUsed,
-      signatureValid: true
-    });
+    logger.info("PowerPoint generation successful");
 
     endPerformanceTracking(performanceMetric, true, undefined, { slideCount, themeUsed, aiSteps: 4 });
 
@@ -1223,58 +1119,34 @@ app.post("/generate", async (req, res) => {
       status = 503;
       code = "AI_SERVICE_ERROR";
       message = "AI service temporarily unavailable during PowerPoint generation.";
-      logger.error("AI generation failed during PPT creation", {
-        step: error.step,
-        attempt: error.attempt,
-        message: error.message
-      });
+      logger.error("AI generation failed during PPT creation");
     } else if (error instanceof ValidationError) {
       status = 422;
       code = "CONTENT_VALIDATION_ERROR";
       message = "Generated content failed validation during PowerPoint creation.";
-      logger.error("Content validation failed during PPT creation", {
-        message: error.message,
-        validationErrors: (error as ValidationError).validationErrors
-      });
+      logger.error("Content validation failed during PPT creation");
     } else if (error instanceof TimeoutError) {
       status = 408;
       code = "TIMEOUT_ERROR";
       message = "PowerPoint generation timed out. Please try again.";
-      logger.error("Timeout during PPT generation", {
-        message: error.message,
-        timeoutMs: (error as TimeoutError).timeoutMs
-      });
+      logger.error("Timeout during PPT generation");
     } else if (error instanceof RateLimitError) {
       status = 429;
       code = "RATE_LIMIT_ERROR";
       message = "Too many requests. Please wait a moment and try again.";
-      logger.warn("Rate limit exceeded during PPT generation", {
-        message: error.message,
-        retryAfter: (error as RateLimitError).retryAfter
-      });
+      logger.error("Rate limit exceeded during PPT generation");
     } else if (error instanceof ContentFilterError) {
       status = 400;
       code = "CONTENT_FILTER_ERROR";
       message = "Content was filtered due to policy violations. Please try different wording.";
-      logger.warn("Content filtered during PPT generation", {
-        message: error.message,
-        filteredContent: (error as ContentFilterError).filteredContent
-      });
+      logger.error("Content filtered during PPT generation");
     } else if (error instanceof NetworkError) {
       status = 502;
       code = "NETWORK_ERROR";
       message = "Network error occurred. Please check your connection and try again.";
-      logger.error("Network error during PPT generation", {
-        message: error.message,
-        statusCode: (error as NetworkError).statusCode
-      });
+      logger.error("Network error during PPT generation");
     } else {
-      logger.error("PowerPoint generation failed", {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        hasSpec: !!req.body.spec,
-        timestamp: new Date().toISOString()
-      });
+      logger.error("PowerPoint generation failed");
     }
 
     endPerformanceTracking(performanceMetric, false, code);
@@ -1297,11 +1169,7 @@ app.use((req, res) => {
 // Global error handler (final safety net)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-  logger.error("Unhandled error", {
-    message: err?.message,
-    stack: err?.stack,
-    requestId: (req as any).requestId
-  });
+  logger.error("Unhandled error");
   return res.status(500).json({
     error: "Internal server error",
     code: "INTERNAL_SERVER_ERROR",

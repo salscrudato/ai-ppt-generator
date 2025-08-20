@@ -27,7 +27,23 @@ export interface SlideSpec {
   title: string;
 
   /** The layout type that determines how content is arranged on the slide */
-  layout: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'image-full' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution' | 'mixed-content' | 'agenda' | 'grid-layout';
+  layout:
+    | 'title'
+    | 'title-bullets'
+    | 'title-paragraph'
+    | 'bullets'
+    | 'paragraph'
+    | 'two-column'
+    | 'image-right'
+    | 'image-left'
+    | 'image-full'
+    | 'chart'
+    | 'comparison-table'
+    | 'timeline'
+    | 'process-flow'
+    | 'quote'
+    | 'mixed-content'
+    | 'problem-solution';
 
   /** Bullet points for scannable, list-based content */
   bullets?: string[];
@@ -35,53 +51,9 @@ export interface SlideSpec {
   /** Paragraph text for narrative or explanatory content */
   paragraph?: string;
 
-  /** Image prompt for AI-generated images */
-  imagePrompt?: string;
 
-  /** Whether to generate the image (explicit user request) */
-  generateImage?: boolean;
 
-  /** Left column content for two-column layouts */
-  left?: {
-    heading?: string;
-    bullets?: string[];
-    paragraph?: string;
-    imagePrompt?: string;
-    generateImage?: boolean;
-    metrics?: Array<{
-      value: string;
-      label: string;
-      unit?: string;
-    }>;
-  };
 
-  /** Right column content for two-column layouts */
-  right?: {
-    heading?: string;
-    bullets?: string[];
-    paragraph?: string;
-    imagePrompt?: string;
-    generateImage?: boolean;
-    metrics?: Array<{
-      value: string;
-      label: string;
-      unit?: string;
-    }>;
-  };
-
-  /** Timeline configuration for chronological content */
-  timeline?: Array<{
-    date: string;
-    title: string;
-    description?: string;
-    milestone?: boolean;
-  }>;
-
-  /** Process steps configuration for workflow and procedure layouts */
-  processSteps?: Array<{
-    title: string;
-    description?: string;
-  }>;
 
   /** Chart configuration for data visualization slides */
   chart?: {
@@ -94,8 +66,8 @@ export interface SlideSpec {
     }>;
   };
 
-  /** Comparison table configuration for feature/option comparisons */
-  comparisonTable?: {
+  /** Table configuration for structured data */
+  table?: {
     headers?: string[];
     rows?: string[][];
   };
@@ -118,19 +90,7 @@ export interface SlideSpec {
   /** Source citations for credibility */
   sources?: string[];
 
-  /** Grid layout configuration for flexible content arrangement */
-  gridLayout?: {
-    /** Number of columns (1-4) */
-    columns: number;
-    /** Number of rows (1-3) */
-    rows: number;
-    /** Content for each grid cell */
-    cells: GridCell[];
-    /** Whether to show grid borders for visual separation */
-    showBorders?: boolean;
-    /** Spacing between grid cells */
-    cellSpacing?: 'tight' | 'normal' | 'spacious';
-  };
+
 
   /** Accessibility features */
   accessibility?: {
@@ -145,48 +105,7 @@ export interface SlideSpec {
   };
 }
 
-/**
- * Represents content within a grid cell
- */
-export interface GridCell {
-  /** Row position (0-based) */
-  row: number;
-  /** Column position (0-based) */
-  column: number;
-  /** Cell content type */
-  type: 'header' | 'bullets' | 'paragraph' | 'metric' | 'image' | 'chart' | 'empty';
-  /** Cell title/header text */
-  title?: string;
-  /** Bullet points for this cell */
-  bullets?: string[];
-  /** Paragraph content for this cell */
-  paragraph?: string;
-  /** Metric value and label */
-  metric?: {
-    value: string;
-    label: string;
-    trend?: 'up' | 'down' | 'neutral';
-  };
-  /** Image configuration */
-  image?: {
-    src?: string;
-    alt?: string;
-    prompt?: string;
-  };
-  /** Chart configuration */
-  chart?: {
-    type: 'bar' | 'line' | 'pie' | 'donut';
-    data: any[];
-    title?: string;
-  };
-  /** Cell styling options */
-  styling?: {
-    backgroundColor?: string;
-    textColor?: string;
-    emphasis?: 'normal' | 'bold' | 'highlight';
-    alignment?: 'left' | 'center' | 'right';
-  };
-}
+
 
 /**
  * Parameters for generating a slide specification
@@ -195,41 +114,26 @@ export interface GenerationParams {
   /** The user's input prompt describing what they want in the slide */
   prompt: string;
 
-  /** Target audience for content adaptation */
-  audience?: 'general' | 'executives' | 'technical' | 'sales' | 'investors' | 'students' | 'healthcare' | 'education' | 'marketing' | 'finance' | 'startup' | 'government';
-
-  /** Tone and style for content generation */
-  tone?: 'professional' | 'casual' | 'persuasive' | 'educational' | 'inspiring' | 'authoritative' | 'friendly' | 'urgent' | 'confident' | 'analytical';
-
-  /** Desired content length and detail level */
-  contentLength?: 'minimal' | 'brief' | 'moderate' | 'detailed' | 'comprehensive';
-
-  /** Grid layout preferences for content organization */
-  gridPreferences?: {
-    /** Preferred number of columns (1-4) */
-    columns?: number;
-    /** Preferred number of rows (1-3) */
-    rows?: number;
-    /** Whether to allow auto-formatting within grid cells */
-    autoFormat?: boolean;
-    /** Preferred cell spacing */
-    cellSpacing?: 'tight' | 'normal' | 'spacious';
+  /** Slide components to include */
+  components?: {
+    paragraph?: boolean;
+    bulletList?: boolean;
+    chart?: boolean;
+    table?: boolean;
+    quote?: boolean;
   };
 
-  /** Presentation type for context-aware generation */
-  presentationType?: 'general' | 'pitch' | 'report' | 'training' | 'proposal' | 'update' | 'analysis' | 'comparison' | 'timeline' | 'process' | 'strategy';
 
-  /** Industry context for specialized content */
-  industry?: 'general' | 'technology' | 'healthcare' | 'finance' | 'education' | 'retail' | 'manufacturing' | 'consulting' | 'nonprofit' | 'government' | 'startup';
 
-  /** Preferred layout type for the slide */
-  layout?: 'title' | 'title-bullets' | 'title-paragraph' | 'two-column' | 'image-right' | 'image-left' | 'quote' | 'chart' | 'timeline' | 'process-flow' | 'comparison-table' | 'before-after' | 'problem-solution';
 
-  /** Whether to generate an AI image using DALL-E */
-  withImage?: boolean;
 
-  /** Image style for AI generation */
-  imageStyle?: 'realistic' | 'illustration' | 'abstract' | 'professional' | 'minimal';
+
+
+
+
+
+
+
 
   /** Design and layout preferences */
   design?: {

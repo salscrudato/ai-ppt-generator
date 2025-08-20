@@ -748,22 +748,22 @@ export const PROFESSIONAL_THEMES: ProfessionalTheme[] = [
     modernEffects: true
   }),
 
-  // 2. Modern Executive - Exact match with frontend
+  // 2. Modern Executive - Enhanced with better contrast and modern styling
   createTheme('executive-dark', 'Modern Executive', 'corporate', {
-    primary: '#3B82F6',
-    secondary: '#64748B',
-    accent: '#10B981',
-    background: '#1E293B',
-    surface: '#334155',
-    textPrimary: '#F8FAFC',
-    textSecondary: '#CBD5E1',
-    textMuted: '#94A3B8',
+    primary: '#3B82F6', // Vibrant blue for strong contrast
+    secondary: '#8B5CF6', // Purple accent for sophistication
+    accent: '#10B981', // Emerald green for highlights
+    background: '#0F172A', // Deep navy background
+    surface: '#1E293B', // Elevated surface color
+    textPrimary: '#FFFFFF', // Pure white for maximum contrast
+    textSecondary: '#E2E8F0', // Light gray for secondary text
+    textMuted: '#CBD5E1', // Muted but still readable
   }, {
     headingFont: 'Inter',
     bodyFont: 'Inter',
     scale: 'normal'
   }, {
-    enforceAccessibility: false,
+    enforceAccessibility: true, // Enable accessibility for better contrast
     generateHarmonious: false,
     modernEffects: true
   }),
